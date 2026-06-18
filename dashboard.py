@@ -150,5 +150,27 @@ def api_health():
     return jsonify({"ok": True})
 
 
+@app.route("/api/stream")
+@require_auth
+def api_stream():
+    def generate():
+        try:
+            with open(LOG_PATH, "r") as f:
+                f.seek(0, 2)  # seek to end
+                while True:
+                    line = f.readline()
+                    if line:
+                        yield f"data: {line.rstrip()}\n\n"
+                    else:
+                        import time as _time
+                        _time.sleep(0.5)
+        except GeneratorExit:
+            pass
+        except Exception:
+            yield "data: [stream error]\n\n"
+    return Response(generate(), mimetype="text/event-stream",
+                    headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
+
+
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=8080, debug=False)
+    app.run(host="0.0.0.0", port=8080, debug=False, threaded=True)
