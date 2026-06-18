@@ -78,13 +78,26 @@ def _call_claude(client: anthropic.Anthropic, model: str, system: str, user_msg:
     return None
 
 
+def _extract_json(raw: str) -> str:
+    """Strip markdown code fences if present."""
+    raw = raw.strip()
+    if raw.startswith("```"):
+        lines = raw.splitlines()
+        raw = "\n".join(lines[1:-1] if lines[-1].strip() == "```" else lines[1:])
+    return raw.strip()
+
+
 def score_relevance(client: anthropic.Anthropic, model: str, item: dict) -> tuple[str, str]:
-    user_msg = f"Titel: {item['title']}\n\nZusammenfassung: {item.get('summary', '')[:500]}\n\nQuelle: {item.get('source_id', '')}"
+    title = item.get("title", "").strip()
+    summary = item.get("summary", "").strip()
+    if not title and not summary:
+        return "LOW", "Kein Inhalt verfügbar"
+    user_msg = f"Titel: {title}\n\nZusammenfassung: {summary[:500]}\n\nQuelle: {item.get('source_id', '')}"
     raw = _call_claude(client, model, SCORE_SYSTEM, user_msg)
     if not raw:
         return "LOW", "API-Fehler bei Bewertung"
     try:
-        data = json.loads(raw)
+        data = json.loads(_extract_json(raw))
         return data.get("relevance", "LOW"), data.get("reason", "")
     except json.JSONDecodeError:
         logger.warning("Could not parse relevance JSON: %s", raw[:200])
