@@ -376,22 +376,39 @@ async function refreshAll() {
   } catch(e) { console.error(e); }
 }
 
+const SHOW_FIRST = 5;
+
+function makeCard(i, idx) {
+  const c = srcColor(i.source_id);
+  const isPosted = i.tweet_id && !['skipped_history','dry_run','pending'].includes(i.tweet_id) && i.posted_at;
+  const statusCls = isPosted ? 'posted' : 'pending';
+  const statusTxt = isPosted ? '✓ Gepostet' : '⏳ Pending';
+  return `<div class="item-card ${statusCls}" onclick="openModal(${idx})">
+    <span class="item-source" style="background:${c}22;color:${c};border:1px solid ${c}44">${esc(i.source_id)}</span>
+    <span class="item-title">${esc(trunc(i.title,90))}</span>
+    <span class="item-meta">${fmt(i.fetched_at)}</span>
+    <span class="item-status ${statusCls}">${statusTxt}</span>
+  </div>`;
+}
+
 function renderHighItems(items) {
   document.getElementById('high-count').textContent = items.length;
   const list = document.getElementById('high-list');
   if (!items.length) { list.innerHTML = '<div class="empty">Noch keine HIGH-Artikel</div>'; return; }
-  list.innerHTML = items.map((i,idx) => {
-    const c = srcColor(i.source_id);
-    const isPosted = i.tweet_id && !['skipped_history','dry_run','pending'].includes(i.tweet_id) && i.posted_at;
-    const statusCls = isPosted ? 'posted' : 'pending';
-    const statusTxt = isPosted ? '✓ Gepostet' : '⏳ Pending';
-    return `<div class="item-card ${statusCls}" onclick="openModal(${idx})">
-      <span class="item-source" style="background:${c}22;color:${c};border:1px solid ${c}44">${esc(i.source_id)}</span>
-      <span class="item-title">${esc(trunc(i.title,90))}</span>
-      <span class="item-meta">${fmt(i.fetched_at)}</span>
-      <span class="item-status ${statusCls}">${statusTxt}</span>
-    </div>`;
-  }).join('');
+  const top = items.slice(0, SHOW_FIRST);
+  const rest = items.slice(SHOW_FIRST);
+  let html = top.map((i,idx) => makeCard(i, idx)).join('');
+  if (rest.length) {
+    html += `<details style="margin-top:4px">
+      <summary style="cursor:pointer;padding:8px 4px;color:var(--muted);font-size:12px;list-style:none;user-select:none">
+        ▼ ${rest.length} ältere Artikel anzeigen
+      </summary>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-top:8px">
+        ${rest.map((i,idx) => makeCard(i, SHOW_FIRST + idx)).join('')}
+      </div>
+    </details>`;
+  }
+  list.innerHTML = html;
 }
 
 document.getElementById('high-search').addEventListener('input', function() {
