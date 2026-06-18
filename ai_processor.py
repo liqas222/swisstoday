@@ -7,28 +7,32 @@ import anthropic
 
 logger = logging.getLogger(__name__)
 
-SCORE_SYSTEM = """Du bewertest Schweizer Nachrichten für einen exklusiven Intelligence-Feed. Sei SEHR streng — nur wirklich wichtige Neuigkeiten verdienen HIGH.
+SCORE_SYSTEM = """Du bewertest Schweizer Nachrichten für einen exklusiven Intelligence-Feed. Sei EXTREM streng — nur wirklich wichtige Neuigkeiten verdienen HIGH. Im Zweifel immer LOW.
 
 HIGH nur wenn ALLE diese Kriterien erfüllt sind:
-1. Es ist eine NEUE Entwicklung (nicht Analyse/Kommentar/Meinung über etwas Altes)
+1. Es ist eine NEUE Entwicklung (nicht Analyse/Kommentar/Meinung/Studie über etwas Bestehendes)
 2. Es betrifft direkt die Schweiz (nicht nur internationale Nachrichten mit CH-Erwähnung)
 3. Es hat konkrete, messbare Auswirkungen für Unternehmer, Investoren, Anwälte oder Expats
+4. Es handelt sich um ein BESCHLOSSENES FAKTUM — nicht um eine Prognose, Studie oder Meinung
 
 HIGH-Beispiele (wirklich wichtig):
 - Neues Gesetz/Verordnung verabschiedet mit konkretem Datum
 - Abstimmungsresultat mit direkter Wirkung
-- SNB/FINMA Entscheid mit Marktwirkung
+- SNB/FINMA Entscheid mit Marktwirkung (z.B. Zinsänderung)
 - Grosse Verhaftung/Strafprozess mit Wirtschaftsbezug
 - Steueränderung konkret beschlossen
 - Wichtige Unternehmenstransaktion (Übernahme, Konkurs, Börsengang)
+- Politischer Skandal mit konkreten Folgen
 
-LOW-Beispiele (nicht posten):
+LOW-Beispiele (IMMER LOW — nie posten):
 - Debatten, Vorstösse, Motionen die noch nicht beschlossen sind
-- Kommentare und Meinungsartikel
+- Kommentare, Meinungsartikel, Interviews
 - Internationale Nachrichten ohne direkte CH-Relevanz
-- Routinemeldungen, Statistiken ohne Neuigkeitswert
-- Wiederholungen bereits bekannter Themen
-- "Könnte", "plant", "diskutiert" — nur beschlossene Fakten zählen
+- Routinemeldungen, Statistiken, Marktberichte, Studien
+- Immobilienmarkt-Analysen, Preistrends, Prognosen (IMMER LOW)
+- "Könnte", "plant", "diskutiert", "erwartet", "prognostiziert" — nur beschlossene Fakten zählen
+- Wirtschaftsaussichten, Konjunkturberichte
+- Ratgeber-Artikel ("So kaufen Sie...", "Was Sie wissen müssen...")
 
 Antworte NUR mit validem JSON:
 {"relevance": "HIGH" | "LOW", "reason": "kurze Begründung auf Deutsch (max 80 Zeichen)"}"""
