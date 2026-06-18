@@ -208,14 +208,10 @@ footer { text-align: center; padding: 16px; color: var(--muted); font-size: 11px
 .live-circle-wrap { position: relative; width: 130px; height: 130px; }
 .live-circle-wrap svg { position: absolute; top: 0; left: 0; transform: rotate(-90deg); }
 .live-ring-bg { fill: none; stroke: var(--border); stroke-width: 7; }
-.live-ring { fill: none; stroke: var(--border); stroke-width: 7; stroke-linecap: round; transition: stroke-dashoffset 0.5s ease, stroke 0.4s; }
-.live-ring.scanning { stroke: var(--green); filter: drop-shadow(0 0 6px rgba(63,185,80,0.5)); }
-@keyframes spin-ping {
-  0% { transform: rotate(-90deg) scale(1); }
-  50% { transform: rotate(-90deg) scale(1.04); }
-  100% { transform: rotate(-90deg) scale(1); }
-}
-.live-ring.scanning { animation: spin-ping 2s ease-in-out infinite; }
+.live-ring { fill: none; stroke: var(--border); stroke-width: 7; stroke-linecap: round; transition: stroke-dashoffset 0.5s ease, stroke 0.4s; transform-origin: 65px 65px; }
+.live-ring.scanning { stroke: var(--green); filter: drop-shadow(0 0 8px rgba(63,185,80,0.6)); }
+@keyframes ring-pulse { 0%,100% { opacity:1; } 50% { opacity:0.6; } }
+.live-ring.scanning { animation: ring-pulse 1.2s ease-in-out infinite; }
 .live-num {
   position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
   font-size: 36px; font-weight: 700; color: var(--text); letter-spacing: -1px;
@@ -451,6 +447,13 @@ async function refreshAll() {
     runChart.data.datasets[2].data = runs.map(r => r.posted||0);
     runChart.update('none');
 
+    // Live panel today totals
+    const todayRuns = runs.filter(r => {
+      const d = new Date(r.run_at.endsWith('Z') ? r.run_at : r.run_at + 'Z');
+      return d.toDateString() === new Date().toDateString();
+    });
+    syncTodayFromRuns(todayRuns);
+
     // HIGH items
     allHighItems = high;
     renderHighItems(high);
@@ -567,12 +570,84 @@ async function fetchLog() {
 }
 
 // ── Live panel ───────────────────────────────────────────────────────────
-let liveScanned = 0, liveHigh = 0, liveLow = 0, liveRunning = false, liveResetTimer = null;
 const RING_CIRC = 351.9;
+let liveRunning = false;
+// today totals (always visible)
+let todayScanned = 0, todayHigh = 0, todayLow = 0;
+// current run delta
+let runScanned = 0, runHigh = 0, runLow = 0;
 
-// Countdown to next run (15 min interval)
+// idle rotation angle
+let idleAngle = 0;
+let idleAnim = null;
+
+function startIdleAnim() {
+  if (idleAnim) return;
+  idleAnim = setInterval(() => {
+    idleAngle = (idleAngle + 0.5) % 360;
+    const svg = document.querySelector('#live-ring');
+    if (svg) svg.style.transform = `rotate(${idleAngle - 90}deg)`;
+  }, 30);
+}
+function stopIdleAnim() {
+  clearInterval(idleAnim); idleAnim = null;
+  const svg = document.querySelector('#live-ring');
+  if (svg) svg.style.transform = '';
+}
+
+function updateLivePanel() {
+  const ring = document.getElementById('live-ring');
+  const num  = document.getElementById('live-num');
+  const sub  = document.getElementById('live-sublabel');
+
+  if (liveRunning) {
+    // show current run progress
+    const max = Math.max(runScanned, 30);
+    const offset = RING_CIRC - (runScanned / max) * RING_CIRC;
+    ring.style.strokeDashoffset = offset;
+    num.textContent = runScanned;
+    sub.textContent = 'Scannt...';
+  } else {
+    // show today's total, ring filled proportionally to high/total
+    const max = Math.max(todayScanned, 1);
+    const pct = Math.min(todayHigh / max, 1);
+    ring.style.strokeDashoffset = RING_CIRC - pct * RING_CIRC;
+    num.textContent = todayScanned;
+    sub.textContent = todayScanned > 0 ? 'Heute gescannt' : 'Warte auf Run';
+  }
+
+  document.getElementById('live-high').textContent = liveRunning ? runHigh : todayHigh;
+  document.getElementById('live-low').textContent  = liveRunning ? runLow  : todayLow;
+}
+
+function setLiveRunning(on) {
+  liveRunning = on;
+  const panel = document.getElementById('live-panel');
+  const dot   = document.getElementById('live-dot');
+  const label = document.getElementById('live-label');
+  const ring  = document.getElementById('live-ring');
+  dot.className   = 'live-dot'   + (on ? ' active' : '');
+  label.className = 'live-label' + (on ? ' active' : '');
+  ring.className  = 'live-ring'  + (on ? ' scanning' : '');
+  panel.classList.toggle('scanning', on);
+  if (on) { stopIdleAnim(); }
+  else    { startIdleAnim(); }
+}
+
+function syncTodayFromStats(stats) {
+  // sum today's runs for total scanned/high/low
+  // we use stats.today_runs as a proxy; actual totals come from runs API
+}
+
+function syncTodayFromRuns(runs) {
+  todayScanned = runs.reduce((a, r) => a + (r.fetched||0), 0);
+  todayHigh    = runs.reduce((a, r) => a + (r.high_relevance||0), 0);
+  todayLow     = runs.reduce((a, r) => a + ((r.fetched||0) - (r.high_relevance||0)), 0);
+  if (!liveRunning) updateLivePanel();
+}
+
+// Countdown
 let nextRunSecs = 300, runInterval = 300;
-let lastRunTime = null;
 
 function updateCountdown() {
   if (liveRunning) {
@@ -584,8 +659,7 @@ function updateCountdown() {
   const m = Math.floor(nextRunSecs / 60);
   const s = nextRunSecs % 60;
   document.getElementById('lcd-val').textContent = `${m}:${String(s).padStart(2,'0')}`;
-  const pct = (nextRunSecs / runInterval) * 100;
-  document.getElementById('lcd-fill').style.width = pct + '%';
+  document.getElementById('lcd-fill').style.width = (nextRunSecs / runInterval * 100) + '%';
 }
 
 function syncCountdownFromLastRun(lastRunAt) {
@@ -597,56 +671,27 @@ function syncCountdownFromLastRun(lastRunAt) {
 
 setInterval(updateCountdown, 1000);
 
-function setLiveActive(on) {
-  document.getElementById('live-dot').className = 'live-dot' + (on ? ' active' : '');
-  document.getElementById('live-label').className = 'live-label' + (on ? ' active' : '');
-  document.getElementById('live-ring').className = 'live-ring' + (on ? ' scanning' : '');
-  document.getElementById('live-sublabel').textContent = on ? 'Scannt...' : (liveScanned > 0 ? 'Run abgeschlossen' : 'Warte auf Run');
-}
-
-function updateLiveCircle() {
-  const max = Math.max(liveScanned, 30);
-  const pct = liveScanned / max;
-  const offset = RING_CIRC - pct * RING_CIRC;
-  document.getElementById('live-ring').style.strokeDashoffset = offset;
-  document.getElementById('live-num').textContent = liveScanned;
-  document.getElementById('live-high').textContent = liveHigh;
-  document.getElementById('live-low').textContent = liveLow;
-}
-
-function resetLiveAfterDelay() {
-  if (liveResetTimer) clearTimeout(liveResetTimer);
-  liveResetTimer = setTimeout(() => {
-    liveScanned = 0; liveHigh = 0; liveLow = 0;
-    setLiveActive(false);
-    updateLiveCircle();
-  }, 30000);
-}
-
 function startLiveStream() {
   const es = new EventSource('/api/stream');
   es.onmessage = e => {
     const line = e.data;
     if (!line) return;
     if (/Pipeline run started/.test(line)) {
-      liveScanned = 0; liveHigh = 0; liveLow = 0;
-      liveRunning = true;
-      setLiveActive(true);
-      document.getElementById('live-panel').classList.add('scanning');
-      if (liveResetTimer) clearTimeout(liveResetTimer);
-      updateLiveCircle();
+      runScanned = 0; runHigh = 0; runLow = 0;
+      setLiveRunning(true);
+      updateLivePanel();
     }
     if (/→ HIGH|→ LOW/.test(line)) {
-      liveScanned++;
-      if (/→ HIGH/.test(line)) liveHigh++;
-      else liveLow++;
-      setLiveActive(true);
-      updateLiveCircle();
+      runScanned++;
+      if (/→ HIGH/.test(line)) { runHigh++; todayHigh++; }
+      else { runLow++; todayLow++; }
+      todayScanned++;
+      updateLivePanel();
     }
     if (/Run complete/.test(line)) {
-      liveRunning = false;
-      setLiveActive(false);
-      document.getElementById('live-panel').classList.remove('scanning');
+      setLiveRunning(false);
+      nextRunSecs = runInterval;
+      updateLivePanel();
       nextRunSecs = runInterval;
       resetLiveAfterDelay();
       refreshAll();
@@ -666,6 +711,7 @@ document.addEventListener('DOMContentLoaded', () => {
   refreshAll();
   fetchLog();
   startLiveStream();
+  startIdleAnim();
   setInterval(refreshAll, 60000);
   setInterval(fetchLog, 10000);
 });
