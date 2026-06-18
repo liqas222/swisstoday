@@ -52,7 +52,7 @@ Regeln:
 Format:
 EMOJI [erster Satz: Was passiert ist]
 
-[zweiter Satz: Warum das relevant ist / was es bedeutet für Unternehmer, Investoren oder Expats]
+[2-3 Sätze: Was das konkret bedeutet, welche Auswirkungen es hat, wer davon betroffen ist — verständlich für jemanden ohne Vorkenntnisse]
 
 [URL]
 
@@ -61,7 +61,7 @@ Erster Satz: Aktiv, direkt, klar. Kein fixer Hook wie "Jetzt offiziell" — nur 
 Zweiter Satz: Kurz erklären was das konkret bedeutet — verständlich für jemanden ohne Vorkenntnisse.
 Keine Aufzählungspunkte. Kein Fachjargon.
 
-Max 280 Zeichen gesamt wenn möglich, sonst max 400. Gib NUR den Post-Text zurück, nichts anderes."""
+Max 500 Zeichen gesamt. Gib NUR den Post-Text zurück, nichts anderes."""
 
 
 def _call_claude(client: anthropic.Anthropic, model: str, system: str, user_msg: str, max_retries: int = 3) -> Optional[str]:
