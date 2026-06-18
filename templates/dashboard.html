@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SwissToday Intelligence Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d1117;
+    --card: #161b22;
+    --card2: #1c2128;
+    --border: #30363d;
+    --text: #e6edf3;
+    --muted: #8b949e;
+    --green: #3fb950;
+    --red: #f85149;
+    --yellow: #d29922;
+    --blue: #58a6ff;
+    --purple: #bc8cff;
+    --accent: #1f6feb;
+    --orange: #f0883e;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Inter', system-ui, sans-serif; font-size: 14px; line-height: 1.6; min-height: 100vh; }
+
+  /* ── Header ──────────────────────────────────────────────────────────── */
+  .site-header {
+    background: var(--card);
+    border-bottom: 1px solid var(--border);
+    padding: 16px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .header-left { display: flex; align-items: center; gap: 12px; }
+  .logo-icon { font-size: 28px; }
+  .header-left h1 { font-size: 20px; font-weight: 700; letter-spacing: -0.3px; }
+  .header-left h1 .accent { color: var(--blue); }
+  .header-left .subtitle { color: var(--muted); font-size: 12px; }
+  .header-right { display: flex; align-items: center; gap: 16px; }
+  .status-badge {
+    display: flex; align-items: center; gap: 8px;
+    padding: 6px 12px; border-radius: 20px;
+    background: var(--card2); border: 1px solid var(--border);
+    font-size: 13px; font-weight: 500;
+  }
+  .status-dot {
+    width: 8px; height: 8px; border-radius: 50%; background: var(--muted);
+  }
+  .status-running .status-dot { background: var(--green); animation: pulse 2s infinite; }
+  .status-stopped .status-dot { background: var(--red); }
+  .status-running { border-color: var(--green) !important; color: var(--green); }
+  .status-stopped { border-color: var(--red) !important; color: var(--red); }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(63,185,80,0.4); }
+    50% { opacity: 0.8; box-shadow: 0 0 0 4px rgba(63,185,80,0); }
+  }
+  .last-run-info { color: var(--muted); font-size: 12px; }
+
+  /* ── Main ────────────────────────────────────────────────────────────── */
+  main { max-width: 1400px; margin: 0 auto; padding: 24px; display: flex; flex-direction: column; gap: 20px; }
+
+  /* ── Cards ───────────────────────────────────────────────────────────── */
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+  }
+  .card h2 { font-size: 15px; font-weight: 600; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+
+  /* ── Stats Row ───────────────────────────────────────────────────────── */
+  .stats-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; }
+  .stat-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+    display: flex; flex-direction: column; gap: 4px;
+    transition: border-color 0.2s;
+  }
+  .stat-card:hover { border-color: var(--accent); }
+  .stat-icon { font-size: 22px; margin-bottom: 4px; }
+  .stat-value { font-size: 28px; font-weight: 700; letter-spacing: -1px; }
+  .stat-label { color: var(--muted); font-size: 12px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; }
+  .stat-card.green .stat-value { color: var(--green); }
+  .stat-card.blue .stat-value { color: var(--blue); }
+  .stat-card.purple .stat-value { color: var(--purple); }
+  .stat-card.yellow .stat-value { color: var(--yellow); }
+
+  /* ── Charts ──────────────────────────────────────────────────────────── */
+  .charts-grid { display: grid; grid-template-columns: 3fr 2fr; gap: 20px; }
+  .chart-card { position: relative; }
+  .chart-wrapper { position: relative; height: 220px; }
+
+  /* ── Section header ──────────────────────────────────────────────────── */
+  .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+  .section-header h2 { margin-bottom: 0; }
+  .search-input {
+    background: var(--card2); border: 1px solid var(--border);
+    color: var(--text); padding: 6px 12px; border-radius: 6px;
+    font-size: 13px; width: 200px; outline: none;
+  }
+  .search-input:focus { border-color: var(--accent); }
+
+  /* ── Badge ───────────────────────────────────────────────────────────── */
+  .badge {
+    background: var(--card2); border: 1px solid var(--border);
+    color: var(--muted); padding: 2px 8px; border-radius: 12px; font-size: 12px; font-weight: 500;
+  }
+  .badge-green { background: rgba(63,185,80,0.1); border-color: var(--green); color: var(--green); }
+  .badge-blue { background: rgba(88,166,255,0.1); border-color: var(--blue); color: var(--blue); }
+
+  /* ── Tables ──────────────────────────────────────────────────────────── */
+  .table-wrapper { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; }
+  th {
+    text-align: left; padding: 8px 12px;
+    color: var(--muted); font-size: 11px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.5px;
+    border-bottom: 1px solid var(--border);
+  }
+  td {
+    padding: 10px 12px; border-bottom: 1px solid rgba(48,54,61,0.5);
+    vertical-align: top; font-size: 13px;
+  }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: rgba(255,255,255,0.02); }
+  .td-source .source-badge {
+    display: inline-block; padding: 2px 8px; border-radius: 4px;
+    font-size: 11px; font-weight: 600; white-space: nowrap;
+  }
+  .td-title a { color: var(--text); text-decoration: none; }
+  .td-title a:hover { color: var(--blue); text-decoration: underline; }
+  .td-reason { color: var(--muted); max-width: 200px; }
+  .td-post { color: var(--text); max-width: 250px; font-size: 12px; }
+  .td-time { color: var(--muted); white-space: nowrap; font-size: 12px; }
+  .posted-link { color: var(--blue); text-decoration: none; font-size: 18px; }
+  .posted-link:hover { color: var(--purple); }
+  .not-posted { color: var(--muted); font-size: 11px; }
+  .posted-yes { color: var(--green); font-size: 11px; font-weight: 600; }
+
+  /* ── Collapsible (LOW items) ─────────────────────────────────────────── */
+  details.card { padding: 0; overflow: hidden; }
+  details.card summary {
+    padding: 20px; cursor: pointer; display: flex;
+    align-items: center; justify-content: space-between;
+    list-style: none; user-select: none;
+  }
+  details.card summary::-webkit-details-marker { display: none; }
+  details.card summary h2 { margin-bottom: 0; }
+  details.card summary .toggle-hint { color: var(--muted); font-size: 12px; }
+  details.card[open] .toggle-hint::before { content: '▲ '; }
+  details.card:not([open]) .toggle-hint::before { content: '▼ '; }
+  details.card .table-wrapper { padding: 0 20px 20px; }
+
+  /* ── Log ─────────────────────────────────────────────────────────────── */
+  .log-controls { display: flex; align-items: center; gap: 16px; color: var(--muted); font-size: 12px; }
+  .log-controls label { display: flex; align-items: center; gap: 6px; cursor: pointer; }
+  .log-container {
+    background: #010409; border: 1px solid var(--border);
+    border-radius: 6px; height: 320px; overflow-y: auto; padding: 12px;
+  }
+  .log-container pre { font-family: 'JetBrains Mono', monospace; font-size: 12px; white-space: pre-wrap; word-break: break-all; }
+  .log-info { color: #8b949e; }
+  .log-warn { color: var(--yellow); }
+  .log-error { color: var(--red); }
+  .log-high { color: var(--green); font-weight: 600; }
+  .log-posted { color: var(--blue); }
+
+  /* ── Footer ──────────────────────────────────────────────────────────── */
+  footer {
+    text-align: center; padding: 20px; color: var(--muted);
+    font-size: 12px; border-top: 1px solid var(--border);
+    margin-top: 8px; display: flex; justify-content: center; gap: 24px;
+  }
+
+  /* ── Responsive ──────────────────────────────────────────────────────── */
+  @media (max-width: 1000px) {
+    .charts-grid { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 768px) {
+    .stats-grid { grid-template-columns: repeat(2, 1fr); }
+    .site-header { flex-direction: column; gap: 12px; align-items: flex-start; }
+    main { padding: 12px; }
+    .search-input { width: 140px; }
+  }
+  @media (max-width: 480px) {
+    .stats-grid { grid-template-columns: 1fr 1fr; }
+  }
+
+  /* ── Empty state ─────────────────────────────────────────────────────── */
+  .empty-state { text-align: center; padding: 40px; color: var(--muted); }
+  .empty-state .empty-icon { font-size: 32px; margin-bottom: 8px; }
+</style>
+</head>
+<body>
+
+<!-- ── Header ──────────────────────────────────────────────────────────── -->
+<header class="site-header">
+  <div class="header-left">
+    <span class="logo-icon">🇨🇭</span>
+    <div>
+      <h1>SwissToday <span class="accent">Intelligence</span></h1>
+      <p class="subtitle">Swiss News Monitoring · Automated X Publisher</p>
+    </div>
+  </div>
+  <div class="header-right">
+    <div id="bot-status" class="status-badge status-unknown">
+      <span class="status-dot"></span>
+      <span class="status-text">Checking...</span>
+    </div>
+    <div id="last-run" class="last-run-info">Last run: —</div>
+  </div>
+</header>
+
+<!-- ── Main ────────────────────────────────────────────────────────────── -->
+<main>
+
+  <!-- Stats Row -->
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-icon">📰</div>
+      <div class="stat-value" id="stat-total">—</div>
+      <div class="stat-label">Articles Analyzed</div>
+    </div>
+    <div class="stat-card green">
+      <div class="stat-icon">🔴</div>
+      <div class="stat-value" id="stat-high">—</div>
+      <div class="stat-label">HIGH Relevance</div>
+    </div>
+    <div class="stat-card blue">
+      <div class="stat-icon">🐦</div>
+      <div class="stat-value" id="stat-posted">—</div>
+      <div class="stat-label">Tweets Posted</div>
+    </div>
+    <div class="stat-card purple">
+      <div class="stat-icon">📡</div>
+      <div class="stat-value" id="stat-sources">—</div>
+      <div class="stat-label">Sources Monitored</div>
+    </div>
+    <div class="stat-card yellow">
+      <div class="stat-icon">🔄</div>
+      <div class="stat-value" id="stat-runs">—</div>
+      <div class="stat-label">Runs Today</div>
+    </div>
+  </div>
+
+  <!-- Charts Row -->
+  <div class="charts-grid">
+    <div class="card chart-card">
+      <h2>Run History <span class="badge">Last 20 Runs</span></h2>
+      <div class="chart-wrapper">
+        <canvas id="runChart"></canvas>
+      </div>
+    </div>
+    <div class="card chart-card">
+      <h2>Sources <span class="badge">Articles per Source</span></h2>
+      <div class="chart-wrapper">
+        <canvas id="sourceChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- HIGH Items -->
+  <div class="card">
+    <div class="section-header">
+      <h2>HIGH Relevance Items <span id="high-count" class="badge badge-green">0</span></h2>
+      <input type="text" id="high-search" class="search-input" placeholder="Filter...">
+    </div>
+    <div class="table-wrapper">
+      <table id="high-table">
+        <thead>
+          <tr>
+            <th>Source</th>
+            <th>Title</th>
+            <th>AI Reason</th>
+            <th>Post Preview</th>
+            <th>Fetched</th>
+            <th>Tweet</th>
+          </tr>
+        </thead>
+        <tbody id="high-tbody">
+          <tr><td colspan="6"><div class="empty-state"><div class="empty-icon">⏳</div>Loading...</div></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- LOW Items (collapsible) -->
+  <details class="card">
+    <summary>
+      <h2>LOW Relevance Items <span id="low-count" class="badge">0</span></h2>
+      <span class="toggle-hint">Click to expand</span>
+    </summary>
+    <div class="table-wrapper">
+      <table id="low-table">
+        <thead>
+          <tr>
+            <th>Source</th>
+            <th>Title</th>
+            <th>AI Reason</th>
+            <th>Fetched</th>
+          </tr>
+        </thead>
+        <tbody id="low-tbody">
+          <tr><td colspan="4"><div class="empty-state"><div class="empty-icon">⏳</div>Loading...</div></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </details>
+
+  <!-- Log -->
+  <div class="card">
+    <div class="section-header">
+      <h2>Live Bot Log</h2>
+      <div class="log-controls">
+        <label><input type="checkbox" id="log-autoscroll" checked> Auto-scroll</label>
+        <span id="log-updated">—</span>
+      </div>
+    </div>
+    <div class="log-container" id="log-container">
+      <pre id="log-content">Loading log...</pre>
+    </div>
+  </div>
+
+</main>
+
+<!-- ── Footer ───────────────────────────────────────────────────────────── -->
+<footer>
+  <span id="last-refresh">Last refresh: —</span>
+  <span id="next-refresh">Next refresh in 60s</span>
+  <span>SwissToday Intelligence Dashboard</span>
+</footer>
+
+<script>
+// ── Source color palette ────────────────────────────────────────────────
+const PALETTE = ['#58a6ff','#3fb950','#bc8cff','#f0883e','#d29922','#79c0ff','#56d364','#d2a8ff','#ffa657','#e3b341'];
+function sourceColor(id) {
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) hash += id.charCodeAt(i);
+  return PALETTE[hash % PALETTE.length];
+}
+
+// ── Chart instances ─────────────────────────────────────────────────────
+let runChart = null;
+let sourceChart = null;
+
+Chart.defaults.color = '#8b949e';
+Chart.defaults.borderColor = '#30363d';
+
+function initCharts() {
+  const runCtx = document.getElementById('runChart').getContext('2d');
+  runChart = new Chart(runCtx, {
+    type: 'bar',
+    data: { labels: [], datasets: [
+      { label: 'Fetched',  data: [], backgroundColor: 'rgba(31,111,235,0.3)',  borderColor: '#1f6feb', borderWidth: 1 },
+      { label: 'HIGH',     data: [], backgroundColor: 'rgba(63,185,80,0.3)',   borderColor: '#3fb950', borderWidth: 1 },
+      { label: 'Posted',   data: [], backgroundColor: 'rgba(188,140,255,0.3)', borderColor: '#bc8cff', borderWidth: 1 },
+    ]},
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { labels: { color: '#8b949e', boxWidth: 12, font: { size: 11 } } } },
+      scales: {
+        x: { ticks: { color: '#8b949e', maxRotation: 45, font: { size: 10 } }, grid: { color: '#1c2128' } },
+        y: { ticks: { color: '#8b949e', font: { size: 10 } }, grid: { color: '#1c2128' } }
+      }
+    }
+  });
+
+  const srcCtx = document.getElementById('sourceChart').getContext('2d');
+  sourceChart = new Chart(srcCtx, {
+    type: 'bar',
+    data: { labels: [], datasets: [
+      { label: 'Articles', data: [], backgroundColor: [], borderColor: [], borderWidth: 1 }
+    ]},
+    options: {
+      indexAxis: 'y',
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { color: '#8b949e', font: { size: 10 } }, grid: { color: '#1c2128' } },
+        y: { ticks: { color: '#8b949e', font: { size: 10 } }, grid: { display: false } }
+      }
+    }
+  });
+}
+
+// ── Helpers ─────────────────────────────────────────────────────────────
+function fmt(dt) {
+  if (!dt) return '—';
+  const d = new Date(dt.endsWith('Z') ? dt : dt + 'Z');
+  return d.toLocaleString('de-CH', { month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+}
+function trunc(s, n) {
+  if (!s) return '—';
+  return s.length > n ? s.slice(0, n) + '…' : s;
+}
+
+// ── Data fetchers ────────────────────────────────────────────────────────
+async function fetchJSON(url) {
+  const r = await fetch(url);
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  return r.json();
+}
+
+async function refreshAll() {
+  try {
+    const [stats, runs, high, low, sources] = await Promise.all([
+      fetchJSON('/api/stats'),
+      fetchJSON('/api/runs'),
+      fetchJSON('/api/items/high'),
+      fetchJSON('/api/items/low'),
+      fetchJSON('/api/sources'),
+    ]);
+    updateStats(stats);
+    updateRunChart(runs);
+    updateSourceChart(sources);
+    updateHighTable(high);
+    updateLowTable(low);
+    document.getElementById('last-refresh').textContent = 'Last refresh: ' + new Date().toLocaleTimeString('de-CH');
+  } catch(e) {
+    console.error('Refresh failed:', e);
+  }
+}
+
+async function fetchLog() {
+  try {
+    const data = await fetchJSON('/api/log');
+    const pre = document.getElementById('log-content');
+    pre.innerHTML = data.lines.map(line => {
+      let cls = 'log-info';
+      if (/ERROR|error/.test(line)) cls = 'log-error';
+      else if (/WARNING|WARNING/.test(line)) cls = 'log-warn';
+      else if (/→ HIGH|high_relevance/.test(line)) cls = 'log-high';
+      else if (/Posted tweet/.test(line)) cls = 'log-posted';
+      return `<span class="${cls}">${escHtml(line)}</span>`;
+    }).join('\n');
+    document.getElementById('log-updated').textContent = 'Updated: ' + new Date().toLocaleTimeString('de-CH');
+    if (document.getElementById('log-autoscroll').checked) {
+      const c = document.getElementById('log-container');
+      c.scrollTop = c.scrollHeight;
+    }
+  } catch(e) {}
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ── Renderers ────────────────────────────────────────────────────────────
+function updateStats(d) {
+  document.getElementById('stat-total').textContent   = d.total.toLocaleString();
+  document.getElementById('stat-high').textContent    = d.high.toLocaleString();
+  document.getElementById('stat-posted').textContent  = d.posted.toLocaleString();
+  document.getElementById('stat-sources').textContent = d.sources.toLocaleString();
+  document.getElementById('stat-runs').textContent    = d.today_runs.toLocaleString();
+
+  const badge = document.getElementById('bot-status');
+  const dot = badge.querySelector('.status-dot');
+  const txt = badge.querySelector('.status-text');
+  badge.className = 'status-badge ' + (d.bot_running ? 'status-running' : 'status-stopped');
+  txt.textContent = d.bot_running ? `Running (PID ${d.bot_pid})` : 'Stopped';
+
+  if (d.last_run) {
+    document.getElementById('last-run').textContent = 'Last run: ' + fmt(d.last_run);
+  }
+}
+
+function updateRunChart(runs) {
+  runChart.data.labels = runs.map(r => fmt(r.run_at));
+  runChart.data.datasets[0].data = runs.map(r => r.fetched || 0);
+  runChart.data.datasets[1].data = runs.map(r => r.high_relevance || 0);
+  runChart.data.datasets[2].data = runs.map(r => r.posted || 0);
+  runChart.update('none');
+}
+
+function updateSourceChart(sources) {
+  const top = sources.slice(0, 15);
+  const colors = top.map(s => sourceColor(s.source_id));
+  sourceChart.data.labels = top.map(s => s.source_id);
+  sourceChart.data.datasets[0].data = top.map(s => s.total);
+  sourceChart.data.datasets[0].backgroundColor = colors.map(c => c + '44');
+  sourceChart.data.datasets[0].borderColor = colors;
+  sourceChart.update('none');
+}
+
+function updateHighTable(items) {
+  document.getElementById('high-count').textContent = items.length;
+  const tbody = document.getElementById('high-tbody');
+  if (!items.length) {
+    tbody.innerHTML = '<tr><td colspan="6"><div class="empty-state"><div class="empty-icon">✅</div>No HIGH items yet</div></td></tr>';
+    return;
+  }
+  tbody.innerHTML = items.map(i => {
+    const color = sourceColor(i.source_id);
+    const tweetLink = i.tweet_id && i.tweet_id !== 'skipped_history'
+      ? `<a class="posted-link" href="https://x.com/i/web/status/${i.tweet_id}" target="_blank">🐦</a>`
+      : (i.posted_at ? '<span class="posted-yes">✓ Posted</span>' : '<span class="not-posted">Pending</span>');
+    return `<tr>
+      <td class="td-source"><span class="source-badge" style="background:${color}22;color:${color};border:1px solid ${color}44">${i.source_id}</span></td>
+      <td class="td-title"><a href="${escHtml(i.url||'#')}" target="_blank">${escHtml(trunc(i.title,80))}</a></td>
+      <td class="td-reason">${escHtml(trunc(i.relevance_reason,60))}</td>
+      <td class="td-post">${escHtml(trunc(i.post_text,100))}</td>
+      <td class="td-time">${fmt(i.fetched_at)}</td>
+      <td>${tweetLink}</td>
+    </tr>`;
+  }).join('');
+}
+
+function updateLowTable(items) {
+  document.getElementById('low-count').textContent = items.length;
+  const tbody = document.getElementById('low-tbody');
+  if (!items.length) {
+    tbody.innerHTML = '<tr><td colspan="4"><div class="empty-state"><div class="empty-icon">📭</div>No items</div></td></tr>';
+    return;
+  }
+  tbody.innerHTML = items.map(i => {
+    const color = sourceColor(i.source_id);
+    return `<tr>
+      <td class="td-source"><span class="source-badge" style="background:${color}22;color:${color};border:1px solid ${color}44">${i.source_id}</span></td>
+      <td class="td-title"><a href="${escHtml(i.url||'#')}" target="_blank">${escHtml(trunc(i.title,80))}</a></td>
+      <td class="td-reason">${escHtml(trunc(i.relevance_reason,80))}</td>
+      <td class="td-time">${fmt(i.fetched_at)}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ── Search filter ────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('high-search').addEventListener('input', function() {
+    const q = this.value.toLowerCase();
+    document.querySelectorAll('#high-tbody tr').forEach(row => {
+      row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+    });
+  });
+});
+
+// ── Countdown ────────────────────────────────────────────────────────────
+function startCountdown() {
+  let remaining = 60;
+  const el = document.getElementById('next-refresh');
+  setInterval(() => {
+    remaining = remaining <= 1 ? 60 : remaining - 1;
+    el.textContent = 'Next refresh in ' + remaining + 's';
+  }, 1000);
+}
+
+// ── Bootstrap ────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  initCharts();
+  refreshAll();
+  fetchLog();
+  setInterval(refreshAll, 60000);
+  setInterval(fetchLog, 10000);
+  startCountdown();
+});
+</script>
+</body>
+</html>

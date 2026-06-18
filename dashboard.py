@@ -1,0 +1,144 @@
+import os
+import sqlite3
+import subprocess
+import functools
+from datetime import datetime, timezone
+from flask import Flask, render_template, jsonify, request, Response
+from dotenv import load_dotenv
+
+load_dotenv()
+
+app = Flask(__name__)
+DB_PATH = os.getenv("DB_PATH", "swissintel.db")
+LOG_PATH = os.getenv("LOG_PATH", "bot.log")
+DASHBOARD_PASSWORD = os.getenv("DASHBOARD_PASSWORD", "swiss2024")
+
+
+def require_auth(f):
+    @functools.wraps(f)
+    def decorated(*args, **kwargs):
+        auth = request.authorization
+        if not auth or auth.password != DASHBOARD_PASSWORD:
+            return Response(
+                "Authentication required", 401,
+                {"WWW-Authenticate": 'Basic realm="SwissToday"'}
+            )
+        return f(*args, **kwargs)
+    return decorated
+
+
+def query_db(sql, params=()):
+    try:
+        conn = sqlite3.connect(f"file:{DB_PATH}?mode=ro", uri=True)
+        conn.row_factory = sqlite3.Row
+        cur = conn.execute(sql, params)
+        rows = [dict(r) for r in cur.fetchall()]
+        conn.close()
+        return rows
+    except Exception:
+        return []
+
+
+def get_bot_status():
+    try:
+        result = subprocess.run(
+            ["pgrep", "-f", "main.py"], capture_output=True, text=True
+        )
+        running = result.returncode == 0
+        pid = result.stdout.strip().split("\n")[0] if running else None
+        return {"running": running, "pid": pid}
+    except Exception:
+        return {"running": False, "pid": None}
+
+
+@app.route("/")
+@require_auth
+def index():
+    return render_template("dashboard.html")
+
+
+@app.route("/api/stats")
+@require_auth
+def api_stats():
+    total = query_db("SELECT COUNT(*) as c FROM seen_items")
+    high = query_db("SELECT COUNT(*) as c FROM seen_items WHERE relevance='HIGH'")
+    posted = query_db("SELECT COUNT(*) as c FROM seen_items WHERE posted_at IS NOT NULL AND tweet_id != 'skipped_history'")
+    sources = query_db("SELECT COUNT(DISTINCT source_id) as c FROM seen_items")
+    today_runs = query_db("SELECT COUNT(*) as c FROM run_log WHERE date(run_at)=date('now')")
+    last_run = query_db("SELECT run_at FROM run_log ORDER BY id DESC LIMIT 1")
+    bot = get_bot_status()
+    return jsonify({
+        "total": total[0]["c"] if total else 0,
+        "high": high[0]["c"] if high else 0,
+        "posted": posted[0]["c"] if posted else 0,
+        "sources": sources[0]["c"] if sources else 0,
+        "today_runs": today_runs[0]["c"] if today_runs else 0,
+        "last_run": last_run[0]["run_at"] if last_run else None,
+        "bot_running": bot["running"],
+        "bot_pid": bot["pid"],
+    })
+
+
+@app.route("/api/runs")
+@require_auth
+def api_runs():
+    rows = query_db(
+        "SELECT id, run_at, fetched, new_items, high_relevance, posted, errors "
+        "FROM run_log ORDER BY id DESC LIMIT 20"
+    )
+    return jsonify(list(reversed(rows)))
+
+
+@app.route("/api/items/high")
+@require_auth
+def api_high():
+    rows = query_db(
+        "SELECT source_id, title, url, relevance_reason, post_text, posted_at, tweet_id, fetched_at "
+        "FROM seen_items WHERE relevance='HIGH' ORDER BY id DESC LIMIT 100"
+    )
+    return jsonify(rows)
+
+
+@app.route("/api/items/low")
+@require_auth
+def api_low():
+    rows = query_db(
+        "SELECT source_id, title, url, relevance_reason, fetched_at "
+        "FROM seen_items WHERE relevance='LOW' ORDER BY id DESC LIMIT 50"
+    )
+    return jsonify(rows)
+
+
+@app.route("/api/sources")
+@require_auth
+def api_sources():
+    rows = query_db(
+        "SELECT source_id, COUNT(*) as total, "
+        "SUM(CASE WHEN relevance='HIGH' THEN 1 ELSE 0 END) as high_count, "
+        "SUM(CASE WHEN posted_at IS NOT NULL AND tweet_id != 'skipped_history' THEN 1 ELSE 0 END) as posted_count "
+        "FROM seen_items GROUP BY source_id ORDER BY total DESC"
+    )
+    return jsonify(rows)
+
+
+@app.route("/api/log")
+@require_auth
+def api_log():
+    try:
+        with open(LOG_PATH, "r") as f:
+            lines = f.readlines()
+        return jsonify({
+            "lines": [l.rstrip() for l in lines[-50:]],
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        })
+    except FileNotFoundError:
+        return jsonify({"lines": ["Log file not found"], "timestamp": ""})
+
+
+@app.route("/api/health")
+def api_health():
+    return jsonify({"ok": True})
+
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=8080, debug=False)
