@@ -43,7 +43,14 @@ def _parse_date(date_str: Optional[str]) -> str:
 
 def _text(el, *tags) -> str:
     for tag in tags:
-        child = el.find(tag) or el.find(f"dc:{tag}", NS) or el.find(f"atom:{tag}", NS)
+        # Try direct tag name first (handles plain RSS)
+        child = el.find(tag)
+        if child is None:
+            # Try with common namespaces
+            for ns_prefix in ("dc", "atom", "content"):
+                child = el.find(f"{{{NS.get(ns_prefix, '')}}}{tag}")
+                if child is not None:
+                    break
         if child is not None and child.text:
             return child.text.strip()
     return ""
@@ -62,7 +69,7 @@ def _parse_rss(content: bytes, source_id: str) -> list[dict]:
         return []
 
     # Detect Atom vs RSS
-    is_atom = root.tag == "{http://www.w3.org/2005/Atom}feed" or "feed" in root.tag.lower()
+    is_atom = root.tag == "{http://www.w3.org/2005/Atom}feed"
 
     if is_atom:
         entries = root.findall("{http://www.w3.org/2005/Atom}entry")
