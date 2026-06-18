@@ -436,6 +436,7 @@ async function refreshAll() {
     const badge = document.getElementById('bot-status');
     badge.className = 'status-pill ' + (stats.bot_running ? 'running' : 'stopped');
     document.getElementById('status-txt').textContent = stats.bot_running ? `Running (PID ${stats.bot_pid})` : 'Stopped';
+    if (stats.interval_seconds) runInterval = stats.interval_seconds;
     if (stats.last_run) {
       document.getElementById('last-run-txt').textContent = 'Last run: ' + fmt(stats.last_run);
       syncCountdownFromLastRun(stats.last_run);
@@ -567,7 +568,7 @@ let liveScanned = 0, liveHigh = 0, liveLow = 0, liveRunning = false, liveResetTi
 const RING_CIRC = 351.9;
 
 // Countdown to next run (15 min interval)
-let nextRunSecs = 900, runInterval = 900;
+let nextRunSecs = 300, runInterval = 300;
 let lastRunTime = null;
 
 function updateCountdown() {

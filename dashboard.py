@@ -12,6 +12,7 @@ app = Flask(__name__)
 DB_PATH = os.getenv("DB_PATH", "swissintel.db")
 LOG_PATH = os.getenv("LOG_PATH", "bot.log")
 DASHBOARD_PASSWORD = os.getenv("DASHBOARD_PASSWORD", "swiss2024")
+CHECK_INTERVAL_MINUTES = int(os.getenv("CHECK_INTERVAL_MINUTES", "15"))
 
 
 def require_auth(f):
@@ -86,6 +87,7 @@ def api_stats():
         "last_run": last_run[0]["run_at"] if last_run else None,
         "bot_running": bot["running"],
         "bot_pid": bot["pid"],
+        "interval_seconds": CHECK_INTERVAL_MINUTES * 60,
     })
 
 
