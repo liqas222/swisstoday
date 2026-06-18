@@ -1,61 +1,5 @@
 SOURCES = [
-    # ── Official government sources ──────────────────────────────────────────
-    {
-        "id": "bundesrat",
-        "name": "Bundesrat / Bundesverwaltung",
-        "type": "rss",
-        "url": "https://www.newsd.admin.ch/newsd/message/rss/1",
-    },
-    {
-        "id": "estv",
-        "name": "Eidg. Steuerverwaltung (ESTV)",
-        "type": "rss",
-        "url": "https://www.newsd.admin.ch/newsd/message/rss/319",
-    },
-    {
-        "id": "seco",
-        "name": "Staatssekretariat für Wirtschaft (SECO)",
-        "type": "rss",
-        "url": "https://www.newsd.admin.ch/newsd/message/rss/703",
-    },
-    {
-        "id": "bfs",
-        "name": "Bundesamt für Statistik (BFS)",
-        "type": "rss",
-        "url": "https://www.newsd.admin.ch/newsd/message/rss/2",
-    },
-    {
-        "id": "sem",
-        "name": "Staatssekretariat für Migration (SEM)",
-        "type": "rss",
-        "url": "https://www.newsd.admin.ch/newsd/message/rss/443",
-    },
-    {
-        "id": "fedpol",
-        "name": "fedpol (Bundespolizei)",
-        "type": "rss",
-        "url": "https://www.newsd.admin.ch/newsd/message/rss/247",
-    },
-    {
-        "id": "finma",
-        "name": "FINMA",
-        "type": "rss",
-        "url": "https://www.finma.ch/de/news/medienmitteilungen/rss.xml",
-    },
-    {
-        "id": "snb",
-        "name": "Schweizerische Nationalbank (SNB)",
-        "type": "rss",
-        "url": "https://www.snb.ch/de/publications/communication/rss.xml",
-    },
-    {
-        "id": "parlament",
-        "name": "Schweizer Parlament",
-        "type": "rss",
-        "url": "https://www.parlament.ch/de/services/news/medienmitteilungen/rss",
-    },
-
-    # ── Major Swiss news outlets ─────────────────────────────────────────────
+    # ── News outlets (confirmed working) ─────────────────────────────────────
     {
         "id": "srf_news",
         "name": "SRF News",
@@ -93,41 +37,10 @@ SOURCES = [
         "url": "https://www.blick.ch/news/rss.xml",
     },
     {
-        "id": "20min",
-        "name": "20 Minuten",
-        "type": "rss",
-        "url": "https://www.20min.ch/rss/rss.tmpl?type=channel&get=1",
-        "fallback_scrape_url": "https://www.20min.ch/rss",
-    },
-    {
-        "id": "watson",
-        "name": "Watson",
-        "type": "rss",
-        "url": "https://www.watson.ch/rss",
-    },
-    {
         "id": "inside_paradeplatz",
         "name": "Inside Paradeplatz",
         "type": "rss",
         "url": "https://insideparadeplatz.ch/feed/",
-    },
-    {
-        "id": "handelszeitung",
-        "name": "Handelszeitung",
-        "type": "rss",
-        "url": "https://www.handelszeitung.ch/rss.xml",
-    },
-    {
-        "id": "cash",
-        "name": "cash (Finanznews)",
-        "type": "rss",
-        "url": "https://www.cash.ch/rss/news",
-    },
-    {
-        "id": "rts_info",
-        "name": "RTS Info (Romandie)",
-        "type": "rss",
-        "url": "https://www.rts.ch/rss/info.xml",
     },
     {
         "id": "letemps",
@@ -135,10 +48,66 @@ SOURCES = [
         "type": "rss",
         "url": "https://www.letemps.ch/rss",
     },
+
+    # ── Official sources via Google News RSS (bypass block) ───────────────────
     {
-        "id": "police_zh",
-        "name": "Kapo Zürich",
+        "id": "bundesrat",
+        "name": "Bundesrat (via Google News)",
         "type": "rss",
-        "url": "https://www.kapo.zh.ch/internet/sicherheitsdirektion/kapo/de/aktuell/medienmitteilungen.rss.xml",
+        "url": "https://news.google.com/rss/search?q=Bundesrat+Schweiz&hl=de&gl=CH&ceid=CH:de",
+    },
+    {
+        "id": "estv_gnews",
+        "name": "ESTV Steuer (via Google News)",
+        "type": "rss",
+        "url": "https://news.google.com/rss/search?q=Steuern+Schweiz+ESTV&hl=de&gl=CH&ceid=CH:de",
+    },
+    {
+        "id": "finma_gnews",
+        "name": "FINMA (via Google News)",
+        "type": "rss",
+        "url": "https://news.google.com/rss/search?q=FINMA+Regulierung&hl=de&gl=CH&ceid=CH:de",
+    },
+    {
+        "id": "snb_gnews",
+        "name": "SNB Nationalbank (via Google News)",
+        "type": "rss",
+        "url": "https://news.google.com/rss/search?q=Nationalbank+SNB+Schweiz&hl=de&gl=CH&ceid=CH:de",
+    },
+    {
+        "id": "parlament_gnews",
+        "name": "Parlament Schweiz (via Google News)",
+        "type": "rss",
+        "url": "https://news.google.com/rss/search?q=Parlament+Schweiz+Abstimmung&hl=de&gl=CH&ceid=CH:de",
+    },
+    {
+        "id": "migration_gnews",
+        "name": "Migration Schweiz (via Google News)",
+        "type": "rss",
+        "url": "https://news.google.com/rss/search?q=Migration+Einwanderung+Schweiz&hl=de&gl=CH&ceid=CH:de",
+    },
+    {
+        "id": "wirtschaft_gnews",
+        "name": "Wirtschaft Schweiz (via Google News)",
+        "type": "rss",
+        "url": "https://news.google.com/rss/search?q=Wirtschaft+Unternehmen+Schweiz&hl=de&gl=CH&ceid=CH:de",
+    },
+    {
+        "id": "kriminalitaet_gnews",
+        "name": "Kriminalität Schweiz (via Google News)",
+        "type": "rss",
+        "url": "https://news.google.com/rss/search?q=Kriminalität+Polizei+Schweiz+Verhaftung&hl=de&gl=CH&ceid=CH:de",
+    },
+    {
+        "id": "immobilien_gnews",
+        "name": "Immobilien Schweiz (via Google News)",
+        "type": "rss",
+        "url": "https://news.google.com/rss/search?q=Immobilien+Wohnungsmarkt+Schweiz&hl=de&gl=CH&ceid=CH:de",
+    },
+    {
+        "id": "startup_gnews",
+        "name": "Startups Schweiz (via Google News)",
+        "type": "rss",
+        "url": "https://news.google.com/rss/search?q=Startup+Gründung+Schweiz&hl=de&gl=CH&ceid=CH:de",
     },
 ]
