@@ -31,10 +31,10 @@ SOURCES = [
         "url": "https://www.tagesanzeiger.ch/rss.html",
     },
     {
-        "id": "blick",
-        "name": "Blick",
+        "id": "blick_gnews",
+        "name": "Blick (via Google News)",
         "type": "rss",
-        "url": "https://www.blick.ch/news/rss.xml",
+        "url": "https://news.google.com/rss/search?q=site:blick.ch&hl=de&gl=CH&ceid=CH:de",
     },
     {
         "id": "inside_paradeplatz",
