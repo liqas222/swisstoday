@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SwissToday Intelligence · Login</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #0d1117;
+    color: #e6edf3;
+    font-family: 'Inter', system-ui, sans-serif;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+  }
+  .login-box {
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 12px;
+    padding: 40px;
+    width: 100%;
+    max-width: 360px;
+    text-align: center;
+  }
+  .logo { font-size: 40px; margin-bottom: 12px; }
+  h1 { font-size: 20px; font-weight: 700; margin-bottom: 4px; }
+  h1 span { color: #58a6ff; }
+  .subtitle { color: #8b949e; font-size: 13px; margin-bottom: 28px; }
+  input[type="password"] {
+    width: 100%;
+    background: #0d1117;
+    border: 1px solid #30363d;
+    color: #e6edf3;
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-size: 14px;
+    outline: none;
+    margin-bottom: 12px;
+    transition: border-color 0.2s;
+  }
+  input[type="password"]:focus { border-color: #1f6feb; }
+  button {
+    width: 100%;
+    background: #1f6feb;
+    color: white;
+    border: none;
+    padding: 10px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  button:hover { background: #388bfd; }
+  .error {
+    background: rgba(248,81,73,0.1);
+    border: 1px solid rgba(248,81,73,0.4);
+    color: #f85149;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 13px;
+    margin-bottom: 12px;
+  }
+</style>
+</head>
+<body>
+<div class="login-box">
+  <div class="logo">🇨🇭</div>
+  <h1>SwissToday <span>Intelligence</span></h1>
+  <p class="subtitle">Swiss News Monitoring Dashboard</p>
+  {% if error %}
+  <div class="error">Falsches Passwort. Bitte nochmals versuchen.</div>
+  {% endif %}
+  <form method="POST">
+    <input type="password" name="password" placeholder="Passwort eingeben" autofocus>
+    <button type="submit">Einloggen</button>
+  </form>
+</div>
+</body>
+</html>

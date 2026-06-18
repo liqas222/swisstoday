@@ -3,7 +3,7 @@ import sqlite3
 import subprocess
 import functools
 from datetime import datetime, timezone
-from flask import Flask, render_template, jsonify, request, Response
+from flask import Flask, render_template, jsonify, request, Response, make_response, redirect
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -17,14 +17,24 @@ DASHBOARD_PASSWORD = os.getenv("DASHBOARD_PASSWORD", "swiss2024")
 def require_auth(f):
     @functools.wraps(f)
     def decorated(*args, **kwargs):
-        auth = request.authorization
-        if not auth or auth.password != DASHBOARD_PASSWORD:
-            return Response(
-                "Authentication required", 401,
-                {"WWW-Authenticate": 'Basic realm="SwissToday"'}
-            )
+        token = request.cookies.get("dash_token")
+        if token != DASHBOARD_PASSWORD:
+            return redirect("/login")
         return f(*args, **kwargs)
     return decorated
+
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    error = False
+    if request.method == "POST":
+        pw = request.form.get("password", "")
+        if pw == DASHBOARD_PASSWORD:
+            resp = make_response(redirect("/"))
+            resp.set_cookie("dash_token", pw, max_age=86400 * 30, httponly=True)
+            return resp
+        error = True
+    return render_template("login.html", error=error)
 
 
 def query_db(sql, params=()):
