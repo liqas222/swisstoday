@@ -72,7 +72,7 @@ def index():
 def api_stats():
     total = query_db("SELECT COUNT(*) as c FROM seen_items")
     high = query_db("SELECT COUNT(*) as c FROM seen_items WHERE relevance='HIGH'")
-    posted = query_db("SELECT COUNT(*) as c FROM seen_items WHERE posted_at IS NOT NULL AND tweet_id != 'skipped_history'")
+    posted = query_db("SELECT COUNT(*) as c FROM seen_items WHERE posted_at IS NOT NULL AND tweet_id NOT IN ('skipped_history', 'dry_run')")
     sources = query_db("SELECT COUNT(DISTINCT source_id) as c FROM seen_items")
     today_runs = query_db("SELECT COUNT(*) as c FROM run_log WHERE date(run_at)=date('now')")
     last_run = query_db("SELECT run_at FROM run_log ORDER BY id DESC LIMIT 1")
