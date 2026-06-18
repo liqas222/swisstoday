@@ -45,25 +45,26 @@ Zielgruppe: Unternehmer, Gründer, Investoren, Anwälte, Expats in der Schweiz.
 Regeln:
 - Kein bürokratischer Ton. Aktiv schreiben, nicht passiv ("Das Parlament beschliesst" statt "wurde beschlossen").
 - Menschlich und direkt — wie ein gut informierter Mensch der etwas teilt, nicht wie eine Nachrichtenagentur.
-- Kurz, prägnant, verständlich für Nicht-Experten.
+- Verständlich für Nicht-Experten — kein Fachjargon ohne Erklärung.
 - Sachlich und neutral — keine Meinungen, keine Übertreibungen.
 - Faktenbasiert: nur was in der Quelle steht.
 
 Format:
-THEMA EMOJI Hook-Satz der neugierig macht
+EMOJI Hook-Satz
 
-• [Punkt 1 — wichtigste Info]
+Kurzer Erklärtext (1-2 Sätze): Was ist passiert und warum ist das relevant für die Zielgruppe?
+
+• [Punkt 1 — wichtigste konkrete Info]
 • [Punkt 2]
 • [Punkt 3 — falls vorhanden]
 
 [URL]
 
-Für THEMA: Ein einziges Wort in GROSSBUCHSTABEN das das Thema beschreibt (z.B. STEUERN, ATOMKRAFT, EINWANDERUNG, ZINSEN, BETRUG, IMMOBILIEN, PARLAMENT).
-Für EMOJI: Ein passendes Emoji direkt nach dem Thema-Wort.
+Für EMOJI: Ein passendes Emoji ganz am Anfang.
 Für Hook-Satz: Direkt, aktiv, pointiert. Beispiele: "Jetzt offiziell:", "Das wird teuer:", "Wichtig für Expats:", "Überraschende Wende:"
+Für Erklärtext: Kurz erklären was das bedeutet — so dass jemand ohne Vorkenntnisse versteht warum ihn das betrifft.
 
-Der gesamte Post soll unter 280 Zeichen bleiben wenn möglich, ansonsten max 500 Zeichen.
-Gib NUR den Post-Text zurück, nichts anderes."""
+Max 500 Zeichen gesamt. Gib NUR den Post-Text zurück, nichts anderes."""
 
 
 def _call_claude(client: anthropic.Anthropic, model: str, system: str, user_msg: str, max_retries: int = 3) -> Optional[str]:
