@@ -7,28 +7,31 @@ import anthropic
 
 logger = logging.getLogger(__name__)
 
-SCORE_SYSTEM = """Du bewertest Schweizer Nachrichten und Behördenmitteilungen für eine Zielgruppe aus Unternehmern, Gründern, Investoren, Anwälten, Treuhändern und Expats.
+SCORE_SYSTEM = """Du bewertest Schweizer Nachrichten für einen exklusiven Intelligence-Feed. Sei SEHR streng — nur wirklich wichtige Neuigkeiten verdienen HIGH.
 
-Relevanz HIGH wenn:
-- Steueränderungen, neue oder geänderte Gesetze und Verordnungen, neue Regulierungen
-- Wirtschafts- und Finanzthemen, Marktbewegungen, Unternehmensgeschäfte
-- Start-up- und unternehmensrelevante Nachrichten
-- Immobilien- und Wohnungsmarkt
-- Arbeitsmarkt, Einwanderung und Aufenthalt
-- Volksabstimmungen und politische Entscheide mit breiter Wirkung
-- Schwere Kriminalität mit gesellschaftlicher Relevanz: Wirtschaftskriminalität, Betrug, Korruption, Geldwäsche, Cyberkriminalität, organisierte Kriminalität, grosse Strafprozesse, Verhaftungen prominenter Personen
-- Sicherheitsrelevante Ereignisse: Terrorismus, schwere Gewaltverbrechen, bedeutende Polizeioperationen
-- Naturkatastrophen und Grossereignisse mit wirtschaftlichen Folgen
+HIGH nur wenn ALLE diese Kriterien erfüllt sind:
+1. Es ist eine NEUE Entwicklung (nicht Analyse/Kommentar/Meinung über etwas Altes)
+2. Es betrifft direkt die Schweiz (nicht nur internationale Nachrichten mit CH-Erwähnung)
+3. Es hat konkrete, messbare Auswirkungen für Unternehmer, Investoren, Anwälte oder Expats
 
-Relevanz LOW wenn:
-- Interne Verwaltungsmitteilungen, Routineankündigungen
-- Ausschreibungen und Beschaffungen
-- Technische oder organisatorische Updates ohne breite Auswirkungen
-- Kleinere lokale Verkehrsunfälle oder Kleinkriminalität ohne gesellschaftliche Relevanz
-- Personalentscheide auf tieferer Ebene
+HIGH-Beispiele (wirklich wichtig):
+- Neues Gesetz/Verordnung verabschiedet mit konkretem Datum
+- Abstimmungsresultat mit direkter Wirkung
+- SNB/FINMA Entscheid mit Marktwirkung
+- Grosse Verhaftung/Strafprozess mit Wirtschaftsbezug
+- Steueränderung konkret beschlossen
+- Wichtige Unternehmenstransaktion (Übernahme, Konkurs, Börsengang)
 
-Antworte NUR mit validem JSON, kein weiterer Text:
-{"relevance": "HIGH" | "LOW", "reason": "kurze Begründung auf Deutsch (max 100 Zeichen)"}"""
+LOW-Beispiele (nicht posten):
+- Debatten, Vorstösse, Motionen die noch nicht beschlossen sind
+- Kommentare und Meinungsartikel
+- Internationale Nachrichten ohne direkte CH-Relevanz
+- Routinemeldungen, Statistiken ohne Neuigkeitswert
+- Wiederholungen bereits bekannter Themen
+- "Könnte", "plant", "diskutiert" — nur beschlossene Fakten zählen
+
+Antworte NUR mit validem JSON:
+{"relevance": "HIGH" | "LOW", "reason": "kurze Begründung auf Deutsch (max 80 Zeichen)"}"""
 
 POST_SYSTEM = """Du erstellst X-Posts (Twitter) auf Deutsch für den Account @SwissIntelNews.
 Zielgruppe: Unternehmer, Gründer, Investoren, Anwälte, Expats in der Schweiz.
