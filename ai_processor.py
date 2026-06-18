@@ -114,6 +114,27 @@ def score_relevance(client: anthropic.Anthropic, model: str, item: dict) -> tupl
         return "LOW", "JSON-Parsing-Fehler"
 
 
+def is_duplicate_topic(client: anthropic.Anthropic, model: str, new_title: str, recent_titles: list[str]) -> bool:
+    """Returns True if the new article covers the same topic as a recently posted one."""
+    if not recent_titles:
+        return False
+    recent_str = "\n".join(f"- {t}" for t in recent_titles[-20:])
+    user_msg = (
+        f"Neuer Artikel: {new_title}\n\n"
+        f"Bereits gepostete Artikel (letzte 6 Stunden):\n{recent_str}\n\n"
+        f"Ist der neue Artikel über dasselbe Thema wie einer der bereits geposteten? "
+        f"Antworte NUR mit JSON: {{\"duplicate\": true|false}}"
+    )
+    raw = _call_claude(client, model, "Du prüfst ob zwei Nachrichtenartikel dasselbe Thema behandeln.", user_msg)
+    if not raw:
+        return False
+    try:
+        data = json.loads(_extract_json(raw))
+        return bool(data.get("duplicate", False))
+    except (json.JSONDecodeError, Exception):
+        return False
+
+
 def generate_post(client: anthropic.Anthropic, model: str, item: dict) -> Optional[str]:
     user_msg = (
         f"Titel: {item['title']}\n\n"

@@ -45,11 +45,20 @@ def run_pipeline(cfg, anthropic_client):
                 database.update_post_text(cfg.db_path, item["id"], post_text)
         time.sleep(0.5)
 
-    # 4. Post all unposted HIGH items
+    # 4. Post all unposted HIGH items (skip duplicate topics)
     unposted = database.get_unposted_high_items(cfg.db_path)
     if unposted:
         logger.info("Posting %d HIGH items", len(unposted))
-        results = publisher.post_batch(cfg, unposted)
+        recently_posted_titles = database.get_recently_posted_titles(cfg.db_path, hours=6)
+        to_post = []
+        for item in unposted:
+            if ai_processor.is_duplicate_topic(anthropic_client, cfg.claude_model, item["title"], recently_posted_titles):
+                logger.info("[SKIP duplicate topic] %s", item["title"][:60])
+                database.update_posted(cfg.db_path, item["id"], "duplicate_topic")
+            else:
+                recently_posted_titles.append(item["title"])
+                to_post.append(item)
+        results = publisher.post_batch(cfg, to_post)
         for item_id, (status, payload) in results.items():
             if status == "ok":
                 database.update_posted(cfg.db_path, item_id, payload)
