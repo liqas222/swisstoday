@@ -24,6 +24,8 @@ HIGH-Beispiele (wirklich wichtig):
 - Steueränderung konkret beschlossen
 - Wichtige Unternehmenstransaktion (Übernahme, Konkurs, Börsengang)
 - Politischer Skandal mit konkreten Folgen
+- Wichtiger Wirtschaftsbericht, Konjunkturbericht oder Studie mit konkreten Zahlen zur Schweiz (z.B. BIP, Arbeitslosigkeit, Inflation)
+- Offizielle Prognose von SNB, SECO, IWF oder ähnlichen Institutionen mit konkreten Zahlen
 
 LOW-Beispiele (IMMER LOW — nie posten):
 - Debatten, Vorstösse, Motionen die noch nicht beschlossen sind
@@ -32,7 +34,6 @@ LOW-Beispiele (IMMER LOW — nie posten):
 - Routinemeldungen, Statistiken, Marktberichte, Studien
 - Immobilienmarkt-Analysen, Preistrends, Prognosen (IMMER LOW)
 - "Könnte", "plant", "diskutiert", "erwartet", "prognostiziert" — nur beschlossene Fakten zählen
-- Wirtschaftsaussichten, Konjunkturberichte
 - Ratgeber-Artikel ("So kaufen Sie...", "Was Sie wissen müssen...")
 
 Antworte NUR mit validem JSON:
