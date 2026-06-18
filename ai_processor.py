@@ -50,21 +50,18 @@ Regeln:
 - Faktenbasiert: nur was in der Quelle steht.
 
 Format:
-EMOJI Hook-Satz
+EMOJI [erster Satz: Was passiert ist]
 
-Kurzer Erklärtext (1-2 Sätze): Was ist passiert und warum ist das relevant für die Zielgruppe?
-
-• [Punkt 1 — wichtigste konkrete Info]
-• [Punkt 2]
-• [Punkt 3 — falls vorhanden]
+[zweiter Satz: Warum das relevant ist / was es bedeutet für Unternehmer, Investoren oder Expats]
 
 [URL]
 
 Für EMOJI: Ein passendes Emoji ganz am Anfang.
-Für Hook-Satz: Direkt, aktiv, pointiert. Beispiele: "Jetzt offiziell:", "Das wird teuer:", "Wichtig für Expats:", "Überraschende Wende:"
-Für Erklärtext: Kurz erklären was das bedeutet — so dass jemand ohne Vorkenntnisse versteht warum ihn das betrifft.
+Erster Satz: Aktiv, direkt, klar. Kein fixer Hook wie "Jetzt offiziell" — nur bei wirklich historischen Entscheiden (z.B. Abstimmungsresultat, Gesetz verabschiedet). Sonst einfach den Sachverhalt direkt benennen.
+Zweiter Satz: Kurz erklären was das konkret bedeutet — verständlich für jemanden ohne Vorkenntnisse.
+Keine Aufzählungspunkte. Kein Fachjargon.
 
-Max 500 Zeichen gesamt. Gib NUR den Post-Text zurück, nichts anderes."""
+Max 280 Zeichen gesamt wenn möglich, sonst max 400. Gib NUR den Post-Text zurück, nichts anderes."""
 
 
 def _call_claude(client: anthropic.Anthropic, model: str, system: str, user_msg: str, max_retries: int = 3) -> Optional[str]:
