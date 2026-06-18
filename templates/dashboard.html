@@ -437,7 +437,7 @@ async function refreshAll() {
     if (stats.interval_seconds) runInterval = stats.interval_seconds;
     if (stats.last_run) {
       document.getElementById('last-run-txt').textContent = 'Last run: ' + fmt(stats.last_run);
-      syncCountdownFromLastRun(stats.last_run);
+      if (nextRunSecs === runInterval) syncCountdownFromLastRun(stats.last_run);
     }
 
     // Chart
@@ -692,8 +692,6 @@ function startLiveStream() {
       setLiveRunning(false);
       nextRunSecs = runInterval;
       updateLivePanel();
-      nextRunSecs = runInterval;
-      resetLiveAfterDelay();
       refreshAll();
     }
   };
