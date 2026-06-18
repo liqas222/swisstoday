@@ -177,44 +177,54 @@ td a:hover { color: var(--blue); }
 /* Footer */
 footer { text-align: center; padding: 16px; color: var(--muted); font-size: 11px; border-top: 1px solid var(--border); margin-top: 4px; display: flex; justify-content: center; gap: 20px; }
 
-/* Live panel (inline, above HIGH items) */
+/* Live panel */
 .live-panel {
   background: var(--card); border: 1px solid var(--border); border-radius: 10px;
-  padding: 18px 20px; display: flex; align-items: center; gap: 24px;
+  padding: 28px 32px; display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center; gap: 0;
+  transition: border-color 0.3s;
 }
-.live-panel.scanning { border-color: rgba(63,185,80,0.4); }
+.live-panel.scanning { border-color: rgba(63,185,80,0.5); background: rgba(63,185,80,0.03); }
 
-.live-dot-wrap { display: flex; align-items: center; gap: 7px; }
-.live-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); flex-shrink: 0; }
+/* left side */
+.lp-left { display: flex; flex-direction: column; align-items: flex-start; gap: 16px; }
+.live-dot-wrap { display: flex; align-items: center; gap: 8px; }
+.live-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--muted); flex-shrink: 0; }
 .live-dot.active { background: var(--green); animation: pulse 1.2s infinite; }
-.live-label { font-size: 11px; font-weight: 700; letter-spacing: 1px; color: var(--muted); text-transform: uppercase; }
+.live-label { font-size: 11px; font-weight: 700; letter-spacing: 1.5px; color: var(--muted); text-transform: uppercase; }
 .live-label.active { color: var(--green); }
+.lp-counts { display: flex; gap: 28px; }
+.lp-count { display: flex; flex-direction: column; gap: 3px; }
+.lp-val { font-size: 32px; font-weight: 700; line-height: 1; transition: color 0.3s; }
+.lp-val.lc-high { color: var(--green); }
+.lp-val.lc-low  { color: var(--muted); }
+.lp-lbl { font-size: 11px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
 
-.live-circle-wrap { position: relative; width: 80px; height: 80px; flex-shrink: 0; }
+/* center circle */
+.lp-center { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 0 40px; }
+.live-circle-wrap { position: relative; width: 130px; height: 130px; }
 .live-circle-wrap svg { position: absolute; top: 0; left: 0; transform: rotate(-90deg); }
-.live-ring-bg { fill: none; stroke: var(--border); stroke-width: 6; }
-.live-ring { fill: none; stroke: var(--border); stroke-width: 6; stroke-linecap: round; transition: stroke-dashoffset 0.4s ease, stroke 0.3s; }
-.live-ring.scanning { stroke: var(--green); }
+.live-ring-bg { fill: none; stroke: var(--border); stroke-width: 7; }
+.live-ring { fill: none; stroke: var(--border); stroke-width: 7; stroke-linecap: round; transition: stroke-dashoffset 0.5s ease, stroke 0.4s; }
+.live-ring.scanning { stroke: var(--green); filter: drop-shadow(0 0 6px rgba(63,185,80,0.5)); }
+@keyframes spin-ping {
+  0% { transform: rotate(-90deg) scale(1); }
+  50% { transform: rotate(-90deg) scale(1.04); }
+  100% { transform: rotate(-90deg) scale(1); }
+}
+.live-ring.scanning { animation: spin-ping 2s ease-in-out infinite; }
 .live-num {
   position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
-  font-size: 22px; font-weight: 700; color: var(--text);
+  font-size: 36px; font-weight: 700; color: var(--text); letter-spacing: -1px;
 }
+.live-sublabel { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; font-weight: 600; }
 
-.live-right { display: flex; flex-direction: column; gap: 10px; flex: 1; }
-.live-top-row { display: flex; align-items: center; gap: 10px; }
-.live-counts { display: flex; gap: 20px; }
-.live-count { display: flex; flex-direction: column; gap: 2px; }
-.lc-val { font-size: 22px; font-weight: 700; line-height: 1; }
-.lc-lbl { font-size: 11px; color: var(--muted); font-weight: 500; text-transform: uppercase; letter-spacing: 0.4px; }
-.lc-high { color: var(--green); }
-.lc-low  { color: var(--muted); }
-
-.live-divider { width: 1px; height: 40px; background: var(--border); }
-
-.live-countdown { display: flex; flex-direction: column; gap: 2px; }
-.lcd-val { font-size: 22px; font-weight: 700; color: var(--yellow); line-height: 1; }
-.lcd-lbl { font-size: 11px; color: var(--muted); font-weight: 500; text-transform: uppercase; letter-spacing: 0.4px; }
-.lcd-bar { height: 3px; background: var(--border); border-radius: 2px; margin-top: 6px; overflow: hidden; }
+/* right side */
+.lp-right { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+.lcd-val { font-size: 32px; font-weight: 700; color: var(--yellow); line-height: 1; font-variant-numeric: tabular-nums; }
+.lcd-lbl { font-size: 11px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+.lcd-bar { width: 140px; height: 4px; background: var(--border); border-radius: 2px; margin-top: 8px; overflow: hidden; }
 .lcd-bar-fill { height: 100%; background: var(--yellow); border-radius: 2px; transition: width 1s linear; }
 
 @media(max-width:768px) {
@@ -259,38 +269,41 @@ footer { text-align: center; padding: 16px; color: var(--muted); font-size: 11px
 
   <!-- Live Panel -->
   <div class="live-panel" id="live-panel">
-    <div style="display:flex;flex-direction:column;align-items:center;gap:8px">
+    <!-- Left: status + counters -->
+    <div class="lp-left">
       <div class="live-dot-wrap">
         <div class="live-dot" id="live-dot"></div>
         <span class="live-label" id="live-label">LIVE</span>
       </div>
+      <div class="lp-counts">
+        <div class="lp-count">
+          <div class="lp-val lc-high" id="live-high">0</div>
+          <div class="lp-lbl">HIGH</div>
+        </div>
+        <div class="lp-count">
+          <div class="lp-val lc-low" id="live-low">0</div>
+          <div class="lp-lbl">LOW</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Center: ring -->
+    <div class="lp-center">
       <div class="live-circle-wrap">
-        <svg viewBox="0 0 80 80" width="80" height="80">
-          <circle class="live-ring-bg" cx="40" cy="40" r="33"/>
-          <circle class="live-ring" id="live-ring" cx="40" cy="40" r="33"
-            stroke-dasharray="207.3" stroke-dashoffset="207.3"/>
+        <svg viewBox="0 0 130 130" width="130" height="130">
+          <circle class="live-ring-bg" cx="65" cy="65" r="56"/>
+          <circle class="live-ring" id="live-ring" cx="65" cy="65" r="56"
+            stroke-dasharray="351.9" stroke-dashoffset="351.9"/>
         </svg>
         <div class="live-num" id="live-num">0</div>
       </div>
+      <div class="live-sublabel" id="live-sublabel">Warte auf Run</div>
     </div>
-    <div class="live-right">
-      <div style="display:flex;align-items:center;gap:20px">
-        <div class="live-counts">
-          <div class="live-count">
-            <div class="lc-val lc-high" id="live-high">0</div>
-            <div class="lc-lbl">HIGH</div>
-          </div>
-          <div class="live-count">
-            <div class="lc-val lc-low" id="live-low">0</div>
-            <div class="lc-lbl">LOW</div>
-          </div>
-        </div>
-        <div class="live-divider"></div>
-        <div class="live-countdown">
-          <div class="lcd-val" id="lcd-val">—</div>
-          <div class="lcd-lbl">Nächster Run</div>
-        </div>
-      </div>
+
+    <!-- Right: countdown -->
+    <div class="lp-right">
+      <div class="lcd-val" id="lcd-val">—</div>
+      <div class="lcd-lbl">Nächster Run</div>
       <div class="lcd-bar"><div class="lcd-bar-fill" id="lcd-fill" style="width:100%"></div></div>
     </div>
   </div>
@@ -551,7 +564,7 @@ async function fetchLog() {
 
 // ── Live panel ───────────────────────────────────────────────────────────
 let liveScanned = 0, liveHigh = 0, liveLow = 0, liveRunning = false, liveResetTimer = null;
-const RING_CIRC = 207.3;
+const RING_CIRC = 351.9;
 
 // Countdown to next run (15 min interval)
 let nextRunSecs = 900, runInterval = 900;
@@ -581,14 +594,14 @@ function syncCountdownFromLastRun(lastRunAt) {
 setInterval(updateCountdown, 1000);
 
 function setLiveActive(on) {
-  liveRunning = on;
   document.getElementById('live-dot').className = 'live-dot' + (on ? ' active' : '');
   document.getElementById('live-label').className = 'live-label' + (on ? ' active' : '');
   document.getElementById('live-ring').className = 'live-ring' + (on ? ' scanning' : '');
+  document.getElementById('live-sublabel').textContent = on ? 'Scannt...' : (liveScanned > 0 ? 'Run abgeschlossen' : 'Warte auf Run');
 }
 
 function updateLiveCircle() {
-  const max = Math.max(liveScanned, 20);
+  const max = Math.max(liveScanned, 30);
   const pct = liveScanned / max;
   const offset = RING_CIRC - pct * RING_CIRC;
   document.getElementById('live-ring').style.strokeDashoffset = offset;
