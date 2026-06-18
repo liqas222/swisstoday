@@ -4,13 +4,7 @@ SOURCES = [
         "id": "bundesrat",
         "name": "Bundesrat / Bundesverwaltung",
         "type": "rss",
-        "url": "https://www.admin.ch/gov/de/start/dokumentation/medienmitteilungen.msg-id-0.rss",
-    },
-    {
-        "id": "parlament",
-        "name": "Schweizer Parlament",
-        "type": "rss",
-        "url": "https://www.parlament.ch/press-releases/Pages/rss.aspx",
+        "url": "https://www.newsd.admin.ch/newsd/message/rss/1",
     },
     {
         "id": "estv",
@@ -37,6 +31,12 @@ SOURCES = [
         "url": "https://www.newsd.admin.ch/newsd/message/rss/443",
     },
     {
+        "id": "fedpol",
+        "name": "fedpol (Bundespolizei)",
+        "type": "rss",
+        "url": "https://www.newsd.admin.ch/newsd/message/rss/247",
+    },
+    {
         "id": "finma",
         "name": "FINMA",
         "type": "rss",
@@ -49,10 +49,10 @@ SOURCES = [
         "url": "https://www.snb.ch/de/publications/communication/rss.xml",
     },
     {
-        "id": "fedpol",
-        "name": "fedpol (Bundespolizei)",
+        "id": "parlament",
+        "name": "Schweizer Parlament",
         "type": "rss",
-        "url": "https://www.newsd.admin.ch/newsd/message/rss/247",
+        "url": "https://www.parlament.ch/de/services/news/medienmitteilungen/rss",
     },
 
     # ── Major Swiss news outlets ─────────────────────────────────────────────
@@ -87,22 +87,23 @@ SOURCES = [
         "url": "https://www.tagesanzeiger.ch/rss.html",
     },
     {
-        "id": "20min",
-        "name": "20 Minuten",
-        "type": "rss",
-        "url": "https://www.20min.ch/rss/rss.tmpl?type=channel&get=1",
-    },
-    {
         "id": "blick",
         "name": "Blick",
         "type": "rss",
         "url": "https://www.blick.ch/news/rss.xml",
     },
     {
+        "id": "20min",
+        "name": "20 Minuten",
+        "type": "rss",
+        "url": "https://www.20min.ch/rss/rss.tmpl?type=channel&get=1",
+        "fallback_scrape_url": "https://www.20min.ch/rss",
+    },
+    {
         "id": "watson",
         "name": "Watson",
         "type": "rss",
-        "url": "https://www.watson.ch/rss/news",
+        "url": "https://www.watson.ch/rss",
     },
     {
         "id": "inside_paradeplatz",
@@ -114,30 +115,30 @@ SOURCES = [
         "id": "handelszeitung",
         "name": "Handelszeitung",
         "type": "rss",
-        "url": "https://www.handelszeitung.ch/feed",
+        "url": "https://www.handelszeitung.ch/rss.xml",
     },
     {
         "id": "cash",
         "name": "cash (Finanznews)",
         "type": "rss",
-        "url": "https://www.cash.ch/rss/news.rss",
+        "url": "https://www.cash.ch/rss/news",
     },
     {
         "id": "rts_info",
         "name": "RTS Info (Romandie)",
         "type": "rss",
-        "url": "https://www.rts.ch/info/rss/rss-info.xml",
+        "url": "https://www.rts.ch/rss/info.xml",
     },
     {
         "id": "letemps",
         "name": "Le Temps (Romandie)",
         "type": "rss",
-        "url": "https://www.letemps.ch/feeds/rss",
+        "url": "https://www.letemps.ch/rss",
     },
     {
         "id": "police_zh",
         "name": "Kapo Zürich",
         "type": "rss",
-        "url": "https://www.zh.ch/de/sicherheitsdirektion/kantonspolizei/aktuell/medienmitteilungen.rss.xml",
+        "url": "https://www.kapo.zh.ch/internet/sicherheitsdirektion/kapo/de/aktuell/medienmitteilungen.rss.xml",
     },
 ]
