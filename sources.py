@@ -1,4 +1,5 @@
 SOURCES = [
+    # ── Official government sources ──────────────────────────────────────────
     {
         "id": "bundesrat",
         "name": "Bundesrat / Bundesverwaltung",
@@ -50,5 +51,133 @@ SOURCES = [
         "name": "Schweizerische Nationalbank (SNB)",
         "type": "rss",
         "url": "https://www.snb.ch/de/ifor/media/id/media_news/rss",
+    },
+
+    # ── Major Swiss news outlets ─────────────────────────────────────────────
+    {
+        "id": "srf_news",
+        "name": "SRF News",
+        "type": "rss",
+        "url": "https://www.srf.ch/news/bnf/rss/1646",
+    },
+    {
+        "id": "srf_wirtschaft",
+        "name": "SRF Wirtschaft",
+        "type": "rss",
+        "url": "https://www.srf.ch/news/bnf/rss/1630",
+    },
+    {
+        "id": "nzz",
+        "name": "Neue Zürcher Zeitung",
+        "type": "rss",
+        "url": "https://www.nzz.ch/recent.rss",
+    },
+    {
+        "id": "nzz_wirtschaft",
+        "name": "NZZ Wirtschaft",
+        "type": "rss",
+        "url": "https://www.nzz.ch/wirtschaft.rss",
+    },
+    {
+        "id": "nzz_schweiz",
+        "name": "NZZ Schweiz",
+        "type": "rss",
+        "url": "https://www.nzz.ch/schweiz.rss",
+    },
+    {
+        "id": "tagesanzeiger",
+        "name": "Tages-Anzeiger",
+        "type": "rss",
+        "url": "https://www.tagesanzeiger.ch/rss.html",
+    },
+    {
+        "id": "20min",
+        "name": "20 Minuten",
+        "type": "rss",
+        "url": "https://www.20min.ch/rss/rss.tmpl?type=channel&get=1",
+    },
+    {
+        "id": "blick",
+        "name": "Blick",
+        "type": "rss",
+        "url": "https://www.blick.ch/news/rss.xml",
+    },
+    {
+        "id": "blick_wirtschaft",
+        "name": "Blick Wirtschaft",
+        "type": "rss",
+        "url": "https://www.blick.ch/news/wirtschaft/rss.xml",
+    },
+    {
+        "id": "watson",
+        "name": "Watson",
+        "type": "rss",
+        "url": "https://www.watson.ch/rss",
+    },
+    {
+        "id": "cash",
+        "name": "cash (Finanznews)",
+        "type": "rss",
+        "url": "https://www.cash.ch/rss/news",
+    },
+    {
+        "id": "handelszeitung",
+        "name": "Handelszeitung",
+        "type": "rss",
+        "url": "https://www.handelszeitung.ch/rss.xml",
+    },
+    {
+        "id": "inside_paradeplatz",
+        "name": "Inside Paradeplatz",
+        "type": "rss",
+        "url": "https://insideparadeplatz.ch/feed/",
+    },
+    {
+        "id": "schweizer_bauer",
+        "name": "Der Schweizer Bauer (Agrar/Wirtschaft)",
+        "type": "rss",
+        "url": "https://www.schweizerbauer.ch/rss",
+    },
+    {
+        "id": "rts_info",
+        "name": "RTS Info (Romandie)",
+        "type": "rss",
+        "url": "https://www.rts.ch/info/rss.xml",
+    },
+    {
+        "id": "letemps",
+        "name": "Le Temps (Romandie)",
+        "type": "rss",
+        "url": "https://www.letemps.ch/rss",
+    },
+    {
+        "id": "awp",
+        "name": "AWP Finanznachrichtendienst",
+        "type": "rss",
+        "url": "https://www.awp.ch/rss/news.xml",
+    },
+    {
+        "id": "police_zh",
+        "name": "Kapo Zürich Medienmitteilungen",
+        "type": "rss",
+        "url": "https://www.kapo.zh.ch/internet/sicherheitsdirektion/kapo/de/aktuell/medienmitteilungen.rss.xml",
+    },
+    {
+        "id": "police_be",
+        "name": "Kapo Bern Medienmitteilungen",
+        "type": "rss",
+        "url": "https://www.police.be.ch/de/start/themen/news/medienmitteilungen.rss.xml",
+    },
+    {
+        "id": "staatsanwaltschaft_zh",
+        "name": "Staatsanwaltschaft Zürich",
+        "type": "rss",
+        "url": "https://www.zh.ch/de/news-uebersicht.rss.xml?organisations=staatsanwaltschaft",
+    },
+    {
+        "id": "fedpol",
+        "name": "fedpol (Bundespolizei)",
+        "type": "rss",
+        "url": "https://www.fedpol.admin.ch/fedpol/de/home/aktuell/medienmitteilungen.rss.xml",
     },
 ]

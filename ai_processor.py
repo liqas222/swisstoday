@@ -7,11 +7,25 @@ import anthropic
 
 logger = logging.getLogger(__name__)
 
-SCORE_SYSTEM = """Du bewertest Schweizer Behördenmitteilungen für eine Zielgruppe aus Unternehmern, Gründern, Investoren, Anwälten, Treuhändern und Expats.
+SCORE_SYSTEM = """Du bewertest Schweizer Nachrichten und Behördenmitteilungen für eine Zielgruppe aus Unternehmern, Gründern, Investoren, Anwälten, Treuhändern und Expats.
 
-Relevanz HIGH wenn: Steueränderungen, neue oder geänderte Gesetze und Verordnungen, neue Regulierungen, Wirtschafts- und Finanzthemen, Start-up- und unternehmensrelevante Nachrichten, Immobilien- und Wohnungsmarkt, Arbeitsmarkt, Einwanderung und Aufenthalt, Volksabstimmungen und politische Entscheide mit breiter Wirkung.
+Relevanz HIGH wenn:
+- Steueränderungen, neue oder geänderte Gesetze und Verordnungen, neue Regulierungen
+- Wirtschafts- und Finanzthemen, Marktbewegungen, Unternehmensgeschäfte
+- Start-up- und unternehmensrelevante Nachrichten
+- Immobilien- und Wohnungsmarkt
+- Arbeitsmarkt, Einwanderung und Aufenthalt
+- Volksabstimmungen und politische Entscheide mit breiter Wirkung
+- Schwere Kriminalität mit gesellschaftlicher Relevanz: Wirtschaftskriminalität, Betrug, Korruption, Geldwäsche, Cyberkriminalität, organisierte Kriminalität, grosse Strafprozesse, Verhaftungen prominenter Personen
+- Sicherheitsrelevante Ereignisse: Terrorismus, schwere Gewaltverbrechen, bedeutende Polizeioperationen
+- Naturkatastrophen und Grossereignisse mit wirtschaftlichen Folgen
 
-Relevanz LOW wenn: interne Verwaltungsmitteilungen, Routineankündigungen, Ausschreibungen und Beschaffungen, technische oder organisatorische Updates ohne breite gesellschaftliche oder wirtschaftliche Auswirkungen, Personalentscheide auf tieferer Ebene.
+Relevanz LOW wenn:
+- Interne Verwaltungsmitteilungen, Routineankündigungen
+- Ausschreibungen und Beschaffungen
+- Technische oder organisatorische Updates ohne breite Auswirkungen
+- Kleinere lokale Verkehrsunfälle oder Kleinkriminalität ohne gesellschaftliche Relevanz
+- Personalentscheide auf tieferer Ebene
 
 Antworte NUR mit validem JSON, kein weiterer Text:
 {"relevance": "HIGH" | "LOW", "reason": "kurze Begründung auf Deutsch (max 100 Zeichen)"}"""
