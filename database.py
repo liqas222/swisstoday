@@ -56,7 +56,15 @@ def _connect(db_path: str):
         conn.close()
 
 
-def is_seen(db_path: str, guid: str, source_id: str, url: str = "") -> bool:
+def _normalize_title(title: str) -> str:
+    import re
+    t = title.lower().strip()
+    t = re.sub(r'\s*[-–|·]\s*\w[\w\s]{0,30}$', '', t)  # strip " - Source Name" suffix
+    t = re.sub(r'\s+', ' ', t)
+    return t.strip()
+
+
+def is_seen(db_path: str, guid: str, source_id: str, url: str = "", title: str = "") -> bool:
     with _connect(db_path) as conn:
         row = conn.execute(
             "SELECT 1 FROM seen_items WHERE guid=? AND source_id=?", (guid, source_id)
@@ -67,7 +75,16 @@ def is_seen(db_path: str, guid: str, source_id: str, url: str = "") -> bool:
             row = conn.execute(
                 "SELECT 1 FROM seen_items WHERE url=?", (url,)
             ).fetchone()
-            return row is not None
+            if row:
+                return True
+        if title:
+            norm = _normalize_title(title)
+            rows = conn.execute(
+                "SELECT title FROM seen_items WHERE fetched_at > datetime('now', '-24 hours')"
+            ).fetchall()
+            for r in rows:
+                if r[0] and _normalize_title(r[0]) == norm:
+                    return True
         return False
 
 
