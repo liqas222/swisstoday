@@ -19,7 +19,8 @@ HIGH-Beispiele (wirklich wichtig):
 - Neues Gesetz/Verordnung verabschiedet mit konkretem Datum
 - Abstimmungsresultat mit direkter Wirkung
 - SNB/FINMA Entscheid mit Marktwirkung (z.B. Zinsänderung)
-- Grosse Verhaftung/Strafprozess mit Wirtschaftsbezug
+- Grosse Verhaftung, Mord, Gewaltverbrechen oder Strafprozess von öffentlichem Interesse
+- Terroranschlag, Anschlagsversuch oder konkrete Bedrohungslage in der Schweiz
 - Steueränderung konkret beschlossen
 - Wichtige Unternehmenstransaktion (Übernahme, Konkurs, Börsengang)
 - Politischer Skandal mit konkreten Folgen
