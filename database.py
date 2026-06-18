@@ -56,12 +56,19 @@ def _connect(db_path: str):
         conn.close()
 
 
-def is_seen(db_path: str, guid: str, source_id: str) -> bool:
+def is_seen(db_path: str, guid: str, source_id: str, url: str = "") -> bool:
     with _connect(db_path) as conn:
         row = conn.execute(
             "SELECT 1 FROM seen_items WHERE guid=? AND source_id=?", (guid, source_id)
         ).fetchone()
-        return row is not None
+        if row:
+            return True
+        if url:
+            row = conn.execute(
+                "SELECT 1 FROM seen_items WHERE url=?", (url,)
+            ).fetchone()
+            return row is not None
+        return False
 
 
 def insert_item(db_path: str, item: dict) -> Optional[int]:

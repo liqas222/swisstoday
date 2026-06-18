@@ -24,7 +24,7 @@ def run_pipeline(cfg, anthropic_client):
     # 2. Filter already-seen, insert new
     new_items = []
     for item in all_items:
-        if not database.is_seen(cfg.db_path, item["guid"], item["source_id"]):
+        if not database.is_seen(cfg.db_path, item["guid"], item["source_id"], item.get("url", "")):
             item_id = database.insert_item(cfg.db_path, item)
             if item_id:
                 item["id"] = item_id
