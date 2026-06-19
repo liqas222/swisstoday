@@ -50,6 +50,10 @@ def run_pipeline(cfg, anthropic_client):
     unposted = database.get_unposted_high_items(cfg.db_path)
     if unposted:
         logger.info("Posting %d HIGH items", len(unposted))
+        # If many items queued, rank by engagement potential first
+        if len(unposted) > 3:
+            logger.info("Ranking %d queued items by engagement potential", len(unposted))
+            unposted = ai_processor.rank_items_by_potential(anthropic_client, cfg.claude_model, unposted)
         recent_items = database.get_recently_posted_items(cfg.db_path, hours=24)
         to_post = []
         for item in unposted:

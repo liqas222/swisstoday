@@ -176,7 +176,40 @@ def is_duplicate_topic(client: anthropic.Anthropic, model: str, new_item: dict, 
         return True  # safe default
 
 
-def generate_post(client: anthropic.Anthropic, model: str, item: dict) -> Optional[str]:
+def rank_items_by_potential(client: anthropic.Anthropic, model: str, items: list[dict]) -> list[dict]:
+    """Rank unposted HIGH items by estimated engagement potential. Returns sorted list."""
+    if len(items) <= 1:
+        return items
+
+    summaries = "\n\n".join(
+        f"ID:{item['id']} | {item.get('title','')[:100]}\nKategorie: {item.get('category','')}\nPost: {(item.get('post_text') or '')[:200]}"
+        for item in items
+    )
+
+    system = (
+        "Du bewertest Schweizer News-Posts nach ihrem Engagement-Potenzial auf X (Twitter). "
+        "Kriterien: Betrifft viele Menschen direkt, konkrete Zahlen/Fakten, emotionale Relevanz, Aktualität. "
+        "Antworte NUR mit JSON: {\"ranking\": [ID1, ID2, ID3, ...]} — beste zuerst."
+    )
+    user_msg = f"Ranke diese Posts nach Engagement-Potenzial (bester zuerst):\n\n{summaries}"
+
+    raw = _call_claude(client, model, system, user_msg)
+    if not raw:
+        return items
+    try:
+        import json as _json
+        data = _json.loads(_extract_json(raw))
+        ranked_ids = [int(x) for x in data.get("ranking", [])]
+        id_map = {item["id"]: item for item in items}
+        ranked = [id_map[i] for i in ranked_ids if i in id_map]
+        # append any items not in ranking (safety fallback)
+        ranked_ids_set = set(ranked_ids)
+        ranked += [item for item in items if item["id"] not in ranked_ids_set]
+        logger.info("Ranked %d items by engagement potential", len(ranked))
+        return ranked
+    except Exception as e:
+        logger.warning("Ranking failed: %s", e)
+        return items
     user_msg = (
         f"Titel: {item['title']}\n\n"
         f"Zusammenfassung: {item.get('summary', '')[:800]}\n\n"
