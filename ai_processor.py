@@ -47,34 +47,31 @@ Antworte NUR mit validem JSON:
 POST_SYSTEM = """Du erstellst X-Posts (Twitter) auf Deutsch für den Account @SwissIntelNews.
 Zielgruppe: Unternehmer, Gründer, Investoren, Anwälte, Expats in der Schweiz.
 
-Regeln:
-- Kein bürokratischer Ton. Aktiv schreiben, nicht passiv.
-- Menschlich und direkt — wie ein gut informierter Freund der etwas erklärt, nicht wie eine Nachrichtenagentur.
-- Verständlich für Nicht-Experten — erkläre Fachbegriffe kurz in einfachen Worten.
-- Sachlich und neutral — keine Meinungen, keine Übertreibungen.
-- Faktenbasiert: nur was in der Quelle steht.
-- Erkläre den Kontext: warum ist das wichtig, wer ist betroffen, was ändert sich konkret?
+Format (EXAKT so):
+EMOJI HEADLINE
 
-Format:
-EMOJI [Erster Satz: Was passiert ist — aktiv, direkt]
+ERKLÄRUNG (2-3 Sätze)
 
-[Zweiter Satz: Was das konkret bedeutet und warum es wichtig ist]
+URL
 
-[Dritter Satz: Wer konkret betroffen ist oder was sich praktisch ändert]
+HEADLINE-Regeln (wichtigste Regel überhaupt):
+- Maximal 6-8 Wörter, knapp und direkt
+- Nur die nackte Kernaussage — kein "Die", kein "wird", kein "hat"
+- Mit konkreter Zahl falls vorhanden
+- Beispiele guter Headlines:
+  🔒 Zürcher Vermögensverwalter verhaftet
+  ⚖️ Selbständige zahlen bis 30% mehr AHV
+  📈 Schweizer BIP wächst 2.1%
+  🏦 SNB senkt Leitzins auf 0%
+  🗳️ Volksinitiative für 13. AHV-Rente angenommen
 
-[Vierter Satz: Eine konkrete Zahl, ein Datum oder ein Fakt der das greifbar macht — falls vorhanden]
+ERKLÄRUNG-Regeln:
+- Menschlich und direkt, kein Nachrichtenagentur-Ton
+- Was bedeutet das konkret? Wer ist betroffen? Was ändert sich?
+- Fachbegriffe kurz erklären
+- Nur Fakten aus der Quelle, keine Meinungen
 
-[URL]
-
-Beispiel guter Post:
-🏦 Die SNB senkt den Leitzins um 0.25 Prozentpunkte auf 0.0%.
-
-Das bedeutet: Hypotheken und Firmenkredite werden günstiger, weil Banken weniger für geliehenes Geld zahlen müssen. Für Sparer sinken die Zinsen auf Konten weiter — wer Geld parkiert, verliert real an Kaufkraft. Der Entscheid tritt per sofort in Kraft und betrifft alle Schweizer Bankkunden direkt.
-
-https://snb.ch/...
-
-Für EMOJI: Ein passendes Emoji ganz am Anfang. Kein "Jetzt offiziell" oder ähnliche Floskeln.
-Ziel: 600-800 Zeichen gesamt. Gib NUR den Post-Text zurück, nichts anderes."""
+Ziel: 400-600 Zeichen gesamt. Gib NUR den Post-Text zurück, nichts anderes."""
 
 
 def _call_claude(client: anthropic.Anthropic, model: str, system: str, user_msg: str, max_retries: int = 3) -> Optional[str]:
