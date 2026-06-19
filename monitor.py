@@ -164,17 +164,21 @@ def _fetch_scrape(source: dict) -> list[dict]:
 
 
 def _fetch_20min() -> list[dict]:
-    """Scrape 20min.ch article links from homepage and section pages."""
-    urls = [
-        "https://www.20min.ch",
+    """Scrape 20min.ch: collect article links, then fetch summary from each article page."""
+    import re
+    section_urls = [
         "https://www.20min.ch/schweiz",
         "https://www.20min.ch/wirtschaft",
+        "https://www.20min.ch",
     ]
-    seen = set()
-    items = []
-    for url in urls:
+    seen_urls = set()
+    candidates = []  # (title, url)
+
+    html_headers = {**HEADERS, "Accept": "text/html,application/xhtml+xml"}
+
+    for url in section_urls:
         try:
-            resp = requests.get(url, headers={**HEADERS, "Accept": "text/html"}, timeout=REQUEST_TIMEOUT)
+            resp = requests.get(url, headers=html_headers, timeout=REQUEST_TIMEOUT)
             resp.raise_for_status()
             soup = BeautifulSoup(resp.text, "html.parser")
             for a in soup.find_all("a", href=True):
@@ -183,31 +187,58 @@ def _fetch_20min() -> list[dict]:
                     href = urljoin("https://www.20min.ch", href)
                 if "20min.ch" not in href:
                     continue
-                # Only story URLs: /story/ or /artikel/ or numeric slug
-                import re
-                if not re.search(r'/(story|artikel|news)/[^/]+', href):
+                if not re.search(r'/(story|artikel)/[^/?#]+', href):
                     continue
-                if href in seen:
+                href = href.split("?")[0].split("#")[0]
+                if href in seen_urls:
                     continue
-                seen.add(href)
+                seen_urls.add(href)
                 title = a.get_text(strip=True)
-                if len(title) < 20:
-                    # try parent element for title
-                    title = a.find_parent().get_text(strip=True)[:200] if a.find_parent() else ""
-                if len(title) < 20:
-                    continue
-                guid = _make_guid("20min", href, title)
-                items.append({
-                    "guid": guid,
-                    "source_id": "20min",
-                    "title": title[:300],
-                    "url": href,
-                    "summary": "",
-                    "published_at": datetime.now(timezone.utc).isoformat(),
-                })
+                if len(title) < 15:
+                    parent = a.find_parent()
+                    if parent:
+                        title = parent.get_text(strip=True)[:200]
+                if len(title) >= 15:
+                    candidates.append((title, href))
         except Exception as exc:
-            logger.warning("[20min] scrape failed for %s: %s", url, exc)
-    logger.info("[20min] scraped %d items", len(items))
+            logger.warning("[20min] section fetch failed %s: %s", url, exc)
+
+    # Fetch article text for top 25 candidates
+    items = []
+    for title, href in candidates[:25]:
+        summary = ""
+        try:
+            r = requests.get(href, headers=html_headers, timeout=REQUEST_TIMEOUT)
+            r.raise_for_status()
+            s = BeautifulSoup(r.text, "html.parser")
+            # grab paragraphs from article body
+            paras = s.select("article p, [class*='article'] p, [class*='body'] p, main p")
+            if paras:
+                summary = " ".join(p.get_text(strip=True) for p in paras[:5])[:800]
+            else:
+                # fallback: meta description
+                meta = s.find("meta", attrs={"name": "description"}) or s.find("meta", property="og:description")
+                if meta:
+                    summary = meta.get("content", "")[:800]
+            # also try og:title if title was weak
+            og_title = s.find("meta", property="og:title")
+            if og_title and og_title.get("content"):
+                title = og_title["content"].strip()
+            time.sleep(0.3)
+        except Exception:
+            pass  # use what we have
+
+        guid = _make_guid("20min", href, title)
+        items.append({
+            "guid": guid,
+            "source_id": "20min",
+            "title": title[:300],
+            "url": href,
+            "summary": summary,
+            "published_at": datetime.now(timezone.utc).isoformat(),
+        })
+
+    logger.info("[20min] scraped %d items with summaries", len(items))
     return items
 
 
