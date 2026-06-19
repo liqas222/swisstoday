@@ -36,6 +36,8 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;font-
 .pill.off{border-color:rgba(239,68,68,.4);background:rgba(239,68,68,.08);color:var(--red)}
 .led{width:7px;height:7px;border-radius:50%;background:currentColor;flex-shrink:0}
 .pill.on .led{box-shadow:0 0 5px currentColor;animation:blink 1.8s infinite}
+.live-dot{width:7px;height:7px;border-radius:50%;background:var(--faint);transition:background .4s,box-shadow .4s;flex-shrink:0}
+.live-dot.on{background:var(--green);box-shadow:0 0 6px var(--green);animation:blink 2s infinite}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
 
 /* ── LAYOUT ── */
@@ -213,6 +215,7 @@ footer{text-align:center;padding:14px;font-size:10px;color:var(--faint);border-t
   </div>
   <div class="hdr-right">
     <span style="font-size:11px;color:var(--faint)" id="hdr-last">—</span>
+    <div style="display:flex;align-items:center;gap:5px;font-size:10px;color:var(--faint)"><span class="live-dot" id="live-dot"></span>Live</div>
     <div class="pill off" id="bot-pill"><span class="led"></span><span id="bot-txt">—</span></div>
   </div>
 </header>
@@ -502,8 +505,8 @@ async function loadStats(){
       cdReady=true;
     }
   }
-  document.getElementById('t-new').textContent=(s.today_new??'—').toLocaleString();
-  document.getElementById('t-posted').textContent=(s.today_posted??'—').toLocaleString();
+  setNum('t-new',(s.today_new??'—').toLocaleString());
+  setNum('t-posted',(s.today_posted??'—').toLocaleString());
 }
 
 // ── Log ────────────────────────────────────────────────────────────────────
@@ -521,14 +524,46 @@ async function loadLog(){
   if(document.getElementById('log-scroll').checked){const b=document.getElementById('log-box');b.scrollTop=b.scrollHeight}
 }
 
-// ── SSE ────────────────────────────────────────────────────────────────────
+// ── SSE (with auto-reconnect) ──────────────────────────────────────────────
+let sseActive=false;
 function startSSE(){
+  if(sseActive)return;
+  sseActive=true;
   const es=new EventSource('/api/stream');
+  es.onopen=()=>setLive(true);
   es.onmessage=e=>{
+    setLive(true);
     if(/Pipeline run started/.test(e.data)){isRunning=true}
-    if(/Run complete/.test(e.data)){isRunning=false;cdSecs=cdInt;setTimeout(refreshAll,2000)}
+    if(/Run complete/.test(e.data)){
+      isRunning=false;cdSecs=cdInt;
+      setTimeout(()=>{loadStats();loadPosted();loadSources();loadMonthChart();loadViews()},2000);
+    }
+    // append to log live
+    const pre=document.getElementById('log-pre');
+    if(pre&&e.data.trim()){
+      const line=document.createElement('span');
+      const d=e.data;
+      let c='ll';
+      if(/ERROR/.test(d))c='le';
+      else if(/WARNING/.test(d))c='lw';
+      else if(/→ HIGH/.test(d))c='lh';
+      else if(/Posted tweet|posting/i.test(d))c='lp';
+      line.className=c;line.textContent=d;
+      pre.appendChild(document.createTextNode('\n'));
+      pre.appendChild(line);
+      if(document.getElementById('log-scroll').checked){
+        const b=document.getElementById('log-box');b.scrollTop=b.scrollHeight;
+      }
+    }
   };
-  es.onerror=()=>{setTimeout(()=>{es.close();startSSE()},5000)};
+  es.onerror=()=>{
+    setLive(false);sseActive=false;es.close();
+    setTimeout(startSSE,4000);
+  };
+}
+function setLive(on){
+  const dot=document.getElementById('live-dot');
+  if(dot)dot.className='live-dot'+(on?' on':'');
 }
 
 // ── Sources toggle ─────────────────────────────────────────────────────────
@@ -601,6 +636,17 @@ async function fetchInsights(){
   btn.disabled=false;btn.textContent='✨ Neu analysieren';
 }
 
+// ── Animated number update ─────────────────────────────────────────────────
+function setNum(id,val){
+  const el=document.getElementById(id);if(!el)return;
+  const prev=el.textContent;
+  const next=String(val??'—');
+  if(prev===next)return;
+  el.style.transition='opacity .15s';
+  el.style.opacity='0';
+  setTimeout(()=>{el.textContent=next;el.style.opacity='1'},150);
+}
+
 // ── Main ───────────────────────────────────────────────────────────────────
 async function refreshAll(){
   try{
@@ -614,8 +660,9 @@ async function refreshAll(){
 document.addEventListener('DOMContentLoaded',()=>{
   refreshAll();
   startSSE();
-  setInterval(refreshAll,60000);
-  setInterval(loadLog,8000);
+  setInterval(loadStats, 20000);   // stats every 20s
+  setInterval(loadSources, 30000); // sources every 30s
+  setInterval(refreshAll, 120000); // full refresh every 2min
 });
 </script>
 </body>
