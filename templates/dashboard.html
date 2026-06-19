@@ -371,19 +371,6 @@ let postedItems=[];
 async function loadPosted(){
   const rows=await api('/api/items/posted?days=30');
   postedItems=rows;
-  document.getElementById('tweet-cnt').textContent=rows.length;
-  const el=document.getElementById('tweet-list');
-  if(!rows.length){el.innerHTML='<div class="empty">Noch keine Tweets gepostet</div>';return}
-  el.innerHTML=rows.map((r,i)=>{
-    const c=srcColor(r.source_id);
-    return`<div class="tweet-row" onclick="openModal(${i})">
-      <div class="tw-top">
-        <span class="src-tag" style="background:${c}22;color:${c};border:1px solid ${c}44">${esc(r.source_id)}</span>
-        <span class="tw-date">${fmt(r.posted_at)}</span>
-      </div>
-      <div class="tw-text">${esc(trunc(r.post_text,320))}</div>
-    </div>`;
-  }).join('');
 }
 
 // ── Sources (today) ────────────────────────────────────────────────────────
