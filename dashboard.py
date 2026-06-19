@@ -251,6 +251,96 @@ def api_views():
     return jsonify(by_cat)
 
 
+@app.route("/api/insights")
+@require_auth
+def api_insights():
+    import anthropic as _anthropic
+    api_key = os.getenv("ANTHROPIC_API_KEY")
+    if not api_key:
+        return jsonify({"tips": [], "error": "No API key"})
+
+    # Gather stats for Claude to analyze
+    by_cat = query_db(
+        "SELECT COALESCE(category,'Sonstiges') as cat, COUNT(*) as tweets, "
+        "COALESCE(SUM(views),0) as views, COALESCE(ROUND(AVG(views)),0) as avg_views "
+        "FROM seen_items WHERE posted_at IS NOT NULL "
+        "AND (tweet_id IS NULL OR tweet_id NOT IN ('skipped_history','dry_run','duplicate_topic')) "
+        "AND posted_at > datetime('now', '-30 days') "
+        "GROUP BY COALESCE(category,'Sonstiges') ORDER BY avg_views DESC"
+    )
+    top_tweets = query_db(
+        "SELECT title, post_text, views, COALESCE(category,'Sonstiges') as category "
+        "FROM seen_items WHERE posted_at IS NOT NULL AND views IS NOT NULL "
+        "AND (tweet_id IS NULL OR tweet_id NOT IN ('skipped_history','dry_run','duplicate_topic')) "
+        "ORDER BY views DESC LIMIT 5"
+    )
+    low_tweets = query_db(
+        "SELECT title, post_text, views, COALESCE(category,'Sonstiges') as category "
+        "FROM seen_items WHERE posted_at IS NOT NULL AND views IS NOT NULL "
+        "AND (tweet_id IS NULL OR tweet_id NOT IN ('skipped_history','dry_run','duplicate_topic')) "
+        "ORDER BY views ASC LIMIT 5"
+    )
+
+    total = sum(r["tweets"] for r in by_cat)
+    if total == 0:
+        return jsonify({"tips": [], "tweet_count": 0})
+
+    has_views = any(r["views"] > 0 for r in by_cat)
+
+    cat_summary = "\n".join(
+        f"- {r['cat']}: {r['tweets']} Tweets, {r['views']} Views total, ∅{r['avg_views']} Views/Tweet"
+        for r in by_cat
+    )
+    top_summary = "\n".join(
+        f"- [{r['category']}] {r['views']} Views: {(r['title'] or '')[:80]}"
+        for r in top_tweets if r.get("views")
+    )
+    low_summary = "\n".join(
+        f"- [{r['category']}] {r['views']} Views: {(r['title'] or '')[:80]}"
+        for r in low_tweets if r.get("views") is not None
+    )
+
+    prompt = f"""Du bist Social-Media-Stratege für den X-Account @SwissIntelNews (Schweizer Nachrichten für Unternehmer, Investoren, Expats).
+
+Analysiere diese Tweet-Performance-Daten und gib 4-5 konkrete, umsetzbare Empfehlungen auf Deutsch, wie der Account mehr Views bekommen kann.
+
+KATEGORIEN (letzte 30 Tage):
+{cat_summary}
+
+TOP 5 TWEETS (meiste Views):
+{top_summary or '(keine Views-Daten verfügbar)'}
+
+SCHWACHE TWEETS (wenigste Views):
+{low_summary or '(keine Views-Daten verfügbar)'}
+
+Regeln für deine Antwort:
+- Direkt und konkret, keine Allgemeinplätze
+- Basiere Empfehlungen auf den tatsächlichen Zahlen
+- Fokus auf: Themen, Stil, Timing, Format
+- Antworte NUR mit JSON: {{"tips": ["Tipp 1", "Tipp 2", "Tipp 3", "Tipp 4"]}}"""
+
+    try:
+        client = _anthropic.Anthropic(api_key=api_key, max_retries=0)
+        resp = client.messages.create(
+            model=os.getenv("CLAUDE_MODEL", "claude-haiku-4-5-20251001"),
+            max_tokens=1024,
+            messages=[{"role": "user", "content": prompt}]
+        )
+        import json as _json
+        raw = resp.content[0].text.strip()
+        if raw.startswith("```"):
+            raw = "\n".join(raw.splitlines()[1:-1])
+        data = _json.loads(raw)
+        return jsonify({
+            "tips": data.get("tips", []),
+            "tweet_count": total,
+            "has_views": has_views,
+            "generated_at": datetime.now(timezone.utc).strftime("%d.%m.%Y %H:%M UTC")
+        })
+    except Exception as e:
+        return jsonify({"tips": [], "error": str(e)})
+
+
 @app.route("/api/health")
 def api_health():
     return jsonify({"ok": True})

@@ -153,6 +153,24 @@ tr:hover td{background:rgba(255,255,255,.015)}
 .mini-bar{height:4px;background:var(--border);border-radius:2px;overflow:hidden}
 .mini-fill{height:100%;border-radius:2px}
 
+/* ── INSIGHTS ── */
+.insights-card{background:var(--card);border:1px solid rgba(168,85,247,.25);border-radius:14px;overflow:hidden}
+.insights-hdr{padding:14px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.insights-hdr h2{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--dim)}
+.ins-btn{
+  padding:6px 14px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;
+  background:rgba(168,85,247,.15);color:var(--purple);border:1px solid rgba(168,85,247,.3);
+  transition:background .15s,border-color .15s;
+}
+.ins-btn:hover{background:rgba(168,85,247,.3);border-color:rgba(168,85,247,.5)}
+.ins-btn:disabled{opacity:.5;cursor:default}
+.ins-tip{
+  padding:12px 16px;border-radius:10px;background:rgba(168,85,247,.06);
+  border:1px solid rgba(168,85,247,.15);
+  font-size:12px;line-height:1.7;color:var(--text);
+}
+.ins-tip strong{color:var(--purple);font-weight:700}
+
 /* ── LOG ── */
 .log-card{background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden}
 .log-hdr{padding:12px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
@@ -239,10 +257,10 @@ footer{text-align:center;padding:14px;font-size:10px;color:var(--faint);border-t
       <div class="chart-wrap"><div class="bar-chart" id="monthChart"></div></div>
       <!-- Category breakdown -->
       <div style="border-top:1px solid var(--border);padding:14px 18px;display:flex;flex-direction:column;gap:6px" id="cat-breakdown"></div>
-      <!-- Source breakdown -->
-      <div style="border-top:1px solid var(--border);padding:14px 18px;display:flex;flex-direction:column;gap:6px" id="src-breakdown"></div>
       <!-- Views per category -->
       <div style="border-top:1px solid var(--border);padding:14px 18px;display:flex;flex-direction:column;gap:6px" id="views-breakdown"></div>
+      <!-- Source breakdown -->
+      <div style="border-top:1px solid var(--border);padding:14px 18px;display:flex;flex-direction:column;gap:6px" id="src-breakdown"></div>
     </div>
   </div>
 
@@ -257,6 +275,20 @@ footer{text-align:center;padding:14px;font-size:10px;color:var(--faint);border-t
         <thead><tr><th>Quelle</th><th>Heute analysiert</th><th>Heute HIGH</th><th>Heute gepostet</th><th>HIGH-Rate</th><th style="width:120px">HIGH-Rate</th></tr></thead>
         <tbody id="src-tbody"></tbody>
       </table>
+    </div>
+  </div>
+
+  <!-- INSIGHTS -->
+  <div class="insights-card" id="insights-card">
+    <div class="insights-hdr">
+      <div style="display:flex;align-items:center;gap:10px">
+        <h2>🧠 Tweet-Optimierung — KI Analyse</h2>
+        <span class="cnt" id="ins-status" style="background:rgba(168,85,247,.12);color:var(--purple);border-color:rgba(168,85,247,.2)">—</span>
+      </div>
+      <button class="ins-btn" id="ins-btn" onclick="fetchInsights()">✨ Analyse starten</button>
+    </div>
+    <div id="ins-body" style="padding:20px 22px;color:var(--faint);font-size:12px">
+      Klicke auf "Analyse starten" um KI-Empfehlungen zu generieren, wie du mehr Views bekommst.
     </div>
   </div>
 
@@ -541,6 +573,33 @@ function openTweetList(){
 function closeTweetList(){document.getElementById('tweet-modal').classList.remove('open')}
 
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeModal();closeTweetList()}});
+
+// ── Insights ───────────────────────────────────────────────────────────────
+async function fetchInsights(){
+  const btn=document.getElementById('ins-btn');
+  const body=document.getElementById('ins-body');
+  const status=document.getElementById('ins-status');
+  btn.disabled=true;btn.textContent='Analysiert...';
+  status.textContent='lädt';
+  body.innerHTML='<div style="color:var(--faint);font-size:12px;padding:4px 0">KI analysiert deine Tweet-Daten...</div>';
+  try{
+    const d=await api('/api/insights');
+    if(d.tips&&d.tips.length){
+      status.textContent=`${d.tips.length} Tipps`;
+      body.innerHTML=`<div style="display:flex;flex-direction:column;gap:10px;padding:4px 0">`+
+        d.tips.map((tip,i)=>`<div class="ins-tip"><strong>${i+1}.</strong> ${esc(tip)}</div>`).join('')+
+        `<div style="font-size:10px;color:var(--faint);margin-top:4px">Basierend auf ${d.tweet_count||0} Tweets · ${d.generated_at||''}</div>`+
+        `</div>`;
+    } else {
+      body.innerHTML='<div style="color:var(--faint);font-size:12px">Zu wenig Daten für eine Analyse. Warte bis mehr Tweets gepostet wurden.</div>';
+      status.textContent='—';
+    }
+  }catch(e){
+    body.innerHTML='<div style="color:var(--red);font-size:12px">Fehler beim Laden der Analyse.</div>';
+    status.textContent='Fehler';
+  }
+  btn.disabled=false;btn.textContent='✨ Neu analysieren';
+}
 
 // ── Main ───────────────────────────────────────────────────────────────────
 async function refreshAll(){
