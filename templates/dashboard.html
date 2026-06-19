@@ -578,7 +578,7 @@ async function loadSources(){
       <td style="color:var(--green)">${r.today_high||0}</td>
       <td style="color:var(--purple)">${r.today_posted||0}</td>
       <td style="color:var(--dim)">${rate}%</td>
-      <td class="bar-cell"><div class="mini-bar"><div class="mini-fill" style="width:${(r.today_high||0)/maxH*100}%;background:${c}"></div></div></td>
+      <td class="bar-cell"><div class="mini-bar"><div class="mini-fill" style="width:${rate}%;background:${c}"></div></div></td>
     </tr>`;
   }).join('')||'<tr><td colspan="6" style="text-align:center;color:var(--faint);padding:20px">Noch keine Daten heute</td></tr>';
 }
