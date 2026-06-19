@@ -220,7 +220,7 @@ footer{text-align:center;padding:14px;font-size:10px;color:var(--faint);border-t
     <!-- Monthly chart -->
     <div class="chart-card">
       <div class="chart-hdr">
-        <h2>📅 Tweets pro Tag — letzte 14 Tage</h2>
+        <h2>📅 Tweets pro Tag — letzte 7 Tage</h2>
         <span style="font-size:11px;color:var(--faint)" id="chart-total">—</span>
       </div>
       <div class="chart-wrap"><div class="bar-chart" id="monthChart"></div></div>
@@ -318,7 +318,7 @@ function initChart(labels,data){
   const max=Math.max(...data,1);
   el.innerHTML=labels.map((lbl,i)=>{
     const px=data[i]>0?Math.max(Math.round(data[i]/max*150),3):0;
-    const showLbl=i%2===0||i===labels.length-1;
+    const showLbl=true;
     return`<div class="bar-col">
       <div class="bar-fill" style="height:${px}px">
         <span class="tooltip">${lbl}: ${data[i]} Tweet${data[i]!==1?'s':''}</span>
@@ -330,11 +330,11 @@ function initChart(labels,data){
 
 async function loadMonthChart(){
   const d=await api('/api/chart');
-  // build last 14 days skeleton
+  // build last 7 days skeleton
   const labels=[],data=[];
   const dayMap={};
   (d.daily||[]).forEach(r=>{dayMap[r.day]=r.count});
-  for(let i=13;i>=0;i--){
+  for(let i=6;i>=0;i--){
     const dt=new Date();dt.setDate(dt.getDate()-i);
     // Swiss date key (UTC+2)
     const swissMs=dt.getTime()+2*3600000;
@@ -351,7 +351,7 @@ async function loadMonthChart(){
   const cats=d.categories||[];
   const maxCat=cats[0]?.count||1;
   const catEl=document.getElementById('cat-breakdown');
-  catEl.innerHTML=`<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--faint);margin-bottom:4px">Tweets pro Kategorie — letzter Monat</div>`+
+  catEl.innerHTML=`<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--faint);margin-bottom:4px">Tweets pro Kategorie — letzte 14 Tage</div>`+
     cats.map(({category:cat,count:cnt})=>{
       const icon=CAT_ICONS[cat]||'📌';
       return`<div style="display:flex;align-items:center;gap:10px">
@@ -367,7 +367,7 @@ async function loadMonthChart(){
   const srcs=d.sources||[];
   const maxSrc=srcs[0]?.count||1;
   const srcEl=document.getElementById('src-breakdown');
-  srcEl.innerHTML=`<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--faint);margin-bottom:4px">Tweets pro Quelle — letzter Monat</div>`+
+  srcEl.innerHTML=`<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--faint);margin-bottom:4px">Tweets pro Quelle — letzte 14 Tage</div>`+
     srcs.map(({source_id:src,count:cnt})=>{
       const c=srcColor(src);
       return`<div style="display:flex;align-items:center;gap:10px">
@@ -383,7 +383,7 @@ async function loadMonthChart(){
 // ── Tweets ─────────────────────────────────────────────────────────────────
 let postedItems=[];
 async function loadPosted(){
-  const rows=await api('/api/items/posted?days=1');
+  const rows=await api('/api/items/today');
   postedItems=rows;
 }
 

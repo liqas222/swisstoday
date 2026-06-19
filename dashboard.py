@@ -140,7 +140,7 @@ def api_chart():
         "SELECT date(posted_at, '+2 hours') as day, COUNT(*) as count "
         "FROM seen_items WHERE posted_at IS NOT NULL "
         "AND (tweet_id IS NULL OR tweet_id NOT IN ('skipped_history','dry_run','duplicate_topic')) "
-        "AND posted_at > datetime('now', '-14 days') "
+        "AND posted_at > datetime('now', '-7 days') "
         "GROUP BY day ORDER BY day"
     )
     cats = query_db(
@@ -158,6 +158,19 @@ def api_chart():
         "GROUP BY source_id ORDER BY count DESC"
     )
     return jsonify({"daily": daily, "categories": cats, "sources": srcs})
+
+
+@app.route("/api/items/today")
+@require_auth
+def api_posted_today():
+    rows = query_db(
+        "SELECT source_id, title, url, post_text, posted_at, tweet_id, category "
+        "FROM seen_items WHERE posted_at IS NOT NULL "
+        "AND (tweet_id IS NULL OR tweet_id NOT IN ('skipped_history','dry_run','duplicate_topic')) "
+        "AND date(posted_at, '+2 hours') = date('now', '+2 hours') "
+        "ORDER BY posted_at DESC"
+    )
+    return jsonify(rows)
 
 
 @app.route("/api/sources/today")
