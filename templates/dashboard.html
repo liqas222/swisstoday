@@ -201,6 +201,17 @@ tr:hover td{background:rgba(255,255,255,.015)}
 .xbtn:hover{background:#111}
 
 footer{text-align:center;padding:14px;font-size:10px;color:var(--faint);border-top:1px solid var(--border);margin-top:4px}
+#global-refresh-btn{
+  position:fixed;bottom:28px;right:28px;z-index:200;
+  background:var(--blue);border:none;color:#fff;
+  border-radius:50px;padding:12px 20px;font-size:13px;font-weight:700;cursor:pointer;
+  display:flex;align-items:center;gap:7px;
+  box-shadow:0 4px 20px rgba(59,130,246,.45);
+  transition:background .15s,transform .1s,box-shadow .15s;
+}
+#global-refresh-btn:hover{background:#2563eb;box-shadow:0 6px 28px rgba(59,130,246,.6);transform:translateY(-1px)}
+#global-refresh-btn:active{transform:translateY(0)}
+#global-refresh-btn:disabled{opacity:.6;cursor:default;transform:none}
 
 @media(max-width:800px){
   .top-row{grid-template-columns:1fr}
@@ -218,13 +229,6 @@ footer{text-align:center;padding:14px;font-size:10px;color:var(--faint);border-t
   <div class="hdr-right">
     <span style="font-size:11px;color:var(--faint)" id="hdr-last">—</span>
     <div style="display:flex;align-items:center;gap:5px;font-size:10px;color:var(--faint)"><span class="live-dot" id="live-dot"></span>Live</div>
-    <button id="global-refresh-btn" onclick="globalRefresh()" title="Alles aktualisieren" style="
-      background:rgba(59,130,246,.12);border:1px solid rgba(59,130,246,.3);color:var(--blue);
-      border-radius:8px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer;
-      display:flex;align-items:center;gap:5px;transition:background .15s;
-    " onmouseover="this.style.background='rgba(59,130,246,.25)'" onmouseout="this.style.background='rgba(59,130,246,.12)'">
-      <span id="global-refresh-icon">↻</span> Aktualisieren
-    </button>
     <div class="pill off" id="bot-pill"><span class="led"></span><span id="bot-txt">—</span></div>
   </div>
 </header>
@@ -357,6 +361,10 @@ footer{text-align:center;padding:14px;font-size:10px;color:var(--faint);border-t
   </div>
 
 </div>
+
+<button id="global-refresh-btn" onclick="globalRefresh()">
+  <span id="global-refresh-icon">↻</span> Aktualisieren
+</button>
 
 <footer id="footer">SwissIntel · <span id="ft">Aktualisiert: —</span></footer>
 
