@@ -134,7 +134,7 @@ def api_chart():
         "FROM seen_items WHERE posted_at IS NOT NULL "
         "AND (tweet_id IS NULL OR tweet_id NOT IN ('skipped_history','dry_run','duplicate_topic')) "
         "AND posted_at > datetime('now', '-30 days') "
-        "GROUP BY category ORDER BY count DESC"
+        "GROUP BY COALESCE(category,'Sonstiges') ORDER BY count DESC"
     )
     srcs = query_db(
         "SELECT source_id, COUNT(*) as count "

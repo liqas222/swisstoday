@@ -78,7 +78,7 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;font-
 .chart-hdr{padding:16px 18px 0;display:flex;align-items:center;justify-content:space-between}
 .chart-hdr h2{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--dim)}
 .chart-wrap{padding:12px 8px 12px}
-.bar-chart{display:flex;align-items:flex-end;gap:3px;height:140px;padding:0 4px}
+.bar-chart{display:flex;align-items:flex-end;gap:3px;height:160px;padding:0 4px}
 .bar-col{display:flex;flex-direction:column;align-items:center;gap:3px;flex:1;min-width:0}
 .bar-fill{width:100%;background:rgba(59,130,246,.6);border-radius:3px 3px 0 0;transition:height .4s ease;min-height:1px;cursor:default;position:relative}
 .bar-fill:hover{background:rgba(59,130,246,.9)}
@@ -294,7 +294,7 @@ function initChart(labels,data){
   const el=document.getElementById('monthChart');
   const max=Math.max(...data,1);
   el.innerHTML=labels.map((lbl,i)=>{
-    const px=data[i]>0?Math.max(Math.round(data[i]/max*130),3):0;
+    const px=data[i]>0?Math.max(Math.round(data[i]/max*150),3):0;
     const showLbl=i%3===0||i===labels.length-1;
     return`<div class="bar-col">
       <div class="bar-fill" style="height:${px}px">
