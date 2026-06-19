@@ -705,9 +705,7 @@ async function syncViews(){
     if(d.ok){
       btn.textContent='✓';
       setTimeout(()=>{btn.textContent='↻';btn.disabled=false},2000);
-      await loadStats();
-      loadMonthChart();
-      loadViews();
+      await refreshAll();
     } else {
       btn.textContent='✗';btn.title=d.error||'Fehler';
       setTimeout(()=>{btn.textContent='↻';btn.disabled=false;btn.title='Views jetzt aktualisieren'},3000);
