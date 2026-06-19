@@ -140,7 +140,7 @@ def api_chart():
         "SELECT date(posted_at, '+2 hours') as day, COUNT(*) as count "
         "FROM seen_items WHERE posted_at IS NOT NULL "
         "AND (tweet_id IS NULL OR tweet_id NOT IN ('skipped_history','dry_run','duplicate_topic')) "
-        "AND posted_at > datetime('now', '-7 days') "
+        "AND posted_at > datetime('now', '-30 days') "
         "GROUP BY day ORDER BY day"
     )
     cats = query_db(

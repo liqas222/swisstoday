@@ -87,16 +87,29 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;font-
   background:var(--card);border:1px solid var(--border);border-radius:12px;
   overflow:hidden;
 }
-.chart-hdr{padding:16px 18px 0;display:flex;align-items:center;justify-content:space-between}
+.chart-hdr{padding:18px 20px 0;display:flex;align-items:center;justify-content:space-between}
 .chart-hdr h2{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--dim)}
-.chart-wrap{padding:12px 8px 12px}
-.bar-chart{display:flex;align-items:flex-end;gap:3px;height:160px;padding:0 4px}
-.bar-col{display:flex;flex-direction:column;align-items:center;gap:3px;flex:1;min-width:0}
-.bar-fill{width:100%;background:rgba(59,130,246,.6);border-radius:3px 3px 0 0;transition:height .4s ease;min-height:1px;cursor:default;position:relative}
-.bar-fill:hover{background:rgba(59,130,246,.9)}
-.bar-fill .tooltip{display:none;position:absolute;bottom:calc(100% + 4px);left:50%;transform:translateX(-50%);background:#1e2d3d;color:#d1dce8;font-size:10px;padding:3px 7px;border-radius:4px;white-space:nowrap;pointer-events:none;z-index:10}
+.chart-wrap{padding:16px 12px 8px}
+.bar-chart{display:flex;align-items:flex-end;gap:4px;height:160px;padding:0}
+.bar-col{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:4px;flex:1;min-width:0}
+.bar-fill{
+  width:100%;
+  background:linear-gradient(180deg,rgba(99,160,255,.95) 0%,rgba(59,130,246,.6) 100%);
+  border-radius:4px 4px 0 0;
+  transition:height .5s cubic-bezier(.4,0,.2,1),background .15s;
+  cursor:default;position:relative;
+}
+.bar-fill.empty{display:none}
+.bar-fill:hover{background:linear-gradient(180deg,rgba(147,197,253,1) 0%,rgba(99,160,255,.9) 100%)}
+.bar-fill .tooltip{
+  display:none;position:absolute;bottom:calc(100% + 6px);left:50%;
+  transform:translateX(-50%);background:#0d1117;color:#d1dce8;
+  font-size:11px;font-weight:600;padding:4px 9px;border-radius:6px;
+  white-space:nowrap;pointer-events:none;z-index:10;
+  border:1px solid var(--border2);box-shadow:0 4px 12px rgba(0,0,0,.4)
+}
 .bar-fill:hover .tooltip{display:block}
-.bar-lbl{font-size:8px;color:var(--faint);text-align:center;white-space:nowrap;overflow:hidden;width:100%}
+.bar-lbl{font-size:9px;color:var(--faint);text-align:center;white-space:nowrap;overflow:hidden;width:100%;line-height:1}
 
 /* ── TWEETS PANEL ── */
 .tweets-card{background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden}
@@ -220,7 +233,7 @@ footer{text-align:center;padding:14px;font-size:10px;color:var(--faint);border-t
     <!-- Monthly chart -->
     <div class="chart-card">
       <div class="chart-hdr">
-        <h2>📅 Tweets pro Tag — letzte 7 Tage</h2>
+        <h2>📅 Tweets pro Tag — letzter Monat</h2>
         <span style="font-size:11px;color:var(--faint)" id="chart-total">—</span>
       </div>
       <div class="chart-wrap"><div class="bar-chart" id="monthChart"></div></div>
@@ -317,11 +330,13 @@ function initChart(labels,data){
   const el=document.getElementById('monthChart');
   const max=Math.max(...data,1);
   el.innerHTML=labels.map((lbl,i)=>{
-    const px=data[i]>0?Math.max(Math.round(data[i]/max*150),3):0;
-    const showLbl=true;
+    const hasData=data[i]>0;
+    const px=hasData?Math.max(Math.round(data[i]/max*150),4):0;
+    // show label only every 5 days or on days with data
+    const showLbl=hasData||(i%5===0)||i===labels.length-1;
     return`<div class="bar-col">
-      <div class="bar-fill" style="height:${px}px">
-        <span class="tooltip">${lbl}: ${data[i]} Tweet${data[i]!==1?'s':''}</span>
+      <div class="bar-fill${hasData?'':' empty'}" style="height:${px}px">
+        ${hasData?`<span class="tooltip">${lbl}: ${data[i]} Tweet${data[i]!==1?'s':''}</span>`:''}
       </div>
       <span class="bar-lbl">${showLbl?lbl:''}</span>
     </div>`;
@@ -330,11 +345,11 @@ function initChart(labels,data){
 
 async function loadMonthChart(){
   const d=await api('/api/chart');
-  // build last 7 days skeleton
+  // build last 30 days skeleton
   const labels=[],data=[];
   const dayMap={};
   (d.daily||[]).forEach(r=>{dayMap[r.day]=r.count});
-  for(let i=6;i>=0;i--){
+  for(let i=29;i>=0;i--){
     const dt=new Date();dt.setDate(dt.getDate()-i);
     // Swiss date key (UTC+2)
     const swissMs=dt.getTime()+2*3600000;
