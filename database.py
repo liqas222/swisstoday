@@ -30,6 +30,7 @@ def init_db(db_path: str) -> None:
                 UNIQUE(guid, source_id)
             );
             CREATE INDEX IF NOT EXISTS idx_category ON seen_items(category);
+            CREATE INDEX IF NOT EXISTS idx_posted ON seen_items(posted_at);
 
 
             CREATE TABLE IF NOT EXISTS run_log (

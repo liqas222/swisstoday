@@ -241,6 +241,8 @@ footer{text-align:center;padding:14px;font-size:10px;color:var(--faint);border-t
       <div style="border-top:1px solid var(--border);padding:14px 18px;display:flex;flex-direction:column;gap:6px" id="cat-breakdown"></div>
       <!-- Source breakdown -->
       <div style="border-top:1px solid var(--border);padding:14px 18px;display:flex;flex-direction:column;gap:6px" id="src-breakdown"></div>
+      <!-- Views per category -->
+      <div style="border-top:1px solid var(--border);padding:14px 18px;display:flex;flex-direction:column;gap:6px" id="views-breakdown"></div>
     </div>
   </div>
 
@@ -395,6 +397,37 @@ async function loadMonthChart(){
     }).join('');
 }
 
+// ── Views per category ────────────────────────────────────────────────────
+async function loadViews(){
+  const rows=await api('/api/views');
+  const el=document.getElementById('views-breakdown');
+  if(!rows||!rows.length){
+    el.innerHTML='<div style="font-size:10px;color:var(--faint)">👁 Views: Noch keine Daten — <code>python sync_views.py</code> ausführen</div>';
+    return;
+  }
+  const CAT_ICONS={'Finanzen':'💰','Steuern':'🧾','Wirtschaft':'📈','Politik':'🏛️','Kriminalität':'🔒','Banken':'🏦','Recht':'⚖️','Einwanderung':'🌍','Gesundheit':'🏥','Energie':'⚡','Sonstiges':'📌'};
+  const maxV=rows[0]?.total_views||1;
+  const totalViews=rows.reduce((s,r)=>s+(r.total_views||0),0);
+  el.innerHTML=
+    `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--faint)">👁 Views pro Kategorie — letzter Monat</div>
+      <div style="font-size:11px;font-weight:700;color:var(--dim)">${totalViews.toLocaleString('de-CH')} total</div>
+    </div>`+
+    rows.map(r=>{
+      const icon=CAT_ICONS[r.category]||'📌';
+      const pct=(r.total_views||0)/maxV*100;
+      const avg=r.avg_views?Math.round(r.avg_views).toLocaleString('de-CH'):'—';
+      return`<div style="display:flex;align-items:center;gap:10px">
+        <span style="font-size:11px;width:130px;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text)">${icon} ${esc(r.category)}</span>
+        <div style="flex:1;height:5px;background:var(--border);border-radius:3px;overflow:hidden">
+          <div style="width:${pct}%;height:100%;background:var(--purple);border-radius:3px;transition:width .5s ease"></div>
+        </div>
+        <span style="font-size:10px;color:var(--dim);width:50px;text-align:right;flex-shrink:0">∅${avg}</span>
+        <span style="font-size:11px;font-weight:700;color:var(--text);width:50px;text-align:right;flex-shrink:0">${(r.total_views||0).toLocaleString('de-CH')}</span>
+      </div>`;
+    }).join('');
+}
+
 // ── Tweets ─────────────────────────────────────────────────────────────────
 let postedItems=[];
 async function loadPosted(){
@@ -514,6 +547,7 @@ async function refreshAll(){
   try{
     await Promise.all([loadStats(),loadPosted(),loadSources(),loadLog()]);
     loadMonthChart();
+    loadViews();
     document.getElementById('ft').textContent='Aktualisiert: '+new Date().toLocaleTimeString('de-CH');
   }catch(e){console.error(e)}
 }

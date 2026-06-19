@@ -43,9 +43,10 @@ def _migrate_db():
     try:
         conn = sqlite3.connect(DB_PATH)
         cols = [r[1] for r in conn.execute("PRAGMA table_info(seen_items)").fetchall()]
-        if "category" not in cols:
-            conn.execute("ALTER TABLE seen_items ADD COLUMN category TEXT")
-            conn.commit()
+        for col, typedef in [("category", "TEXT"), ("views", "INTEGER")]:
+            if col not in cols:
+                conn.execute(f"ALTER TABLE seen_items ADD COLUMN {col} {typedef}")
+        conn.commit()
         conn.close()
     except Exception:
         pass
@@ -231,6 +232,21 @@ def api_log():
         })
     except FileNotFoundError:
         return jsonify({"lines": ["Log file not found"], "timestamp": ""})
+
+
+@app.route("/api/views")
+@require_auth
+def api_views():
+    by_cat = query_db(
+        "SELECT COALESCE(category,'Sonstiges') as category, "
+        "SUM(views) as total_views, COUNT(*) as tweet_count, "
+        "ROUND(AVG(views)) as avg_views "
+        "FROM seen_items WHERE posted_at IS NOT NULL AND views IS NOT NULL "
+        "AND (tweet_id IS NULL OR tweet_id NOT IN ('skipped_history','dry_run','duplicate_topic')) "
+        "AND posted_at > datetime('now', '-30 days') "
+        "GROUP BY COALESCE(category,'Sonstiges') ORDER BY total_views DESC"
+    )
+    return jsonify(by_cat)
 
 
 @app.route("/api/health")
