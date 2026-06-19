@@ -55,6 +55,30 @@ SOURCES = [
         "type": "rss",
         "url": "https://news.google.com/rss/search?q=site:20min.ch+Schweiz&hl=de&gl=CH&ceid=CH:de",
     },
+    {
+        "id": "watson",
+        "name": "Watson",
+        "type": "rss",
+        "url": "https://news.google.com/rss/search?q=site:watson.ch+Schweiz&hl=de&gl=CH&ceid=CH:de",
+    },
+    {
+        "id": "cash",
+        "name": "Cash",
+        "type": "rss",
+        "url": "https://news.google.com/rss/search?q=site:cash.ch&hl=de&gl=CH&ceid=CH:de",
+    },
+    {
+        "id": "handelszeitung",
+        "name": "Handelszeitung",
+        "type": "rss",
+        "url": "https://news.google.com/rss/search?q=site:handelszeitung.ch&hl=de&gl=CH&ceid=CH:de",
+    },
+    {
+        "id": "swissinfo",
+        "name": "Swissinfo",
+        "type": "rss",
+        "url": "https://news.google.com/rss/search?q=site:swissinfo.ch+Schweiz&hl=de&gl=CH&ceid=CH:de",
+    },
 
     # ── Official sources via Google News RSS (bypass block) ───────────────────
     {
