@@ -37,7 +37,9 @@ LOW-Beispiele (IMMER LOW — nie posten):
 - Ratgeber-Artikel ("So kaufen Sie...", "Was Sie wissen müssen...")
 
 Kategorien (wähle die passendste):
-Finanzen, Steuern, Wirtschaft, Politik, Kriminalität, Banken, Recht, Einwanderung, Gesundheit, Energie, Sonstiges
+Finanzen, Steuern, Wirtschaft, Politik, Kriminalität, Recht, Einwanderung, Gesundheit, Energie, Sonstiges
+
+Hinweis: Alles zu Banken, SNB, FINMA, Zinsen, Krediten → Finanzen
 
 Antworte NUR mit validem JSON:
 {"relevance": "HIGH" | "LOW", "reason": "kurze Begründung auf Deutsch (max 80 Zeichen)", "category": "eine der obigen Kategorien"}"""

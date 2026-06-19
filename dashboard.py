@@ -39,13 +39,15 @@ def login():
 
 
 def _migrate_db():
-    """Add columns that may be missing from older DB schemas."""
+    """Add columns and apply category merges."""
     try:
         conn = sqlite3.connect(DB_PATH)
         cols = [r[1] for r in conn.execute("PRAGMA table_info(seen_items)").fetchall()]
         for col, typedef in [("category", "TEXT"), ("views", "INTEGER")]:
             if col not in cols:
                 conn.execute(f"ALTER TABLE seen_items ADD COLUMN {col} {typedef}")
+        # Merge Banken → Finanzen
+        conn.execute("UPDATE seen_items SET category='Finanzen' WHERE category='Banken'")
         conn.commit()
         conn.close()
     except Exception:

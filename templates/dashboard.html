@@ -364,7 +364,7 @@ async function loadMonthChart(){
   initChart(labels,data);
 
   // Category breakdown
-  const CAT_ICONS={'Finanzen':'💰','Steuern':'🧾','Wirtschaft':'📈','Politik':'🏛️','Kriminalität':'🔒','Banken':'🏦','Recht':'⚖️','Einwanderung':'🌍','Gesundheit':'🏥','Energie':'⚡','Sonstiges':'📌'};
+  const CAT_ICONS={'Finanzen':'🏦','Steuern':'🧾','Wirtschaft':'📈','Politik':'🏛️','Kriminalität':'🔒','Recht':'⚖️','Einwanderung':'🌍','Gesundheit':'🏥','Energie':'⚡','Sonstiges':'📌'};
   const cats=d.categories||[];
   const maxCat=cats[0]?.count||1;
   const catEl=document.getElementById('cat-breakdown');
@@ -405,7 +405,7 @@ async function loadViews(){
     el.innerHTML='<div style="font-size:10px;color:var(--faint)">👁 Views: Noch keine Daten — <code>python sync_views.py</code> ausführen</div>';
     return;
   }
-  const CAT_ICONS={'Finanzen':'💰','Steuern':'🧾','Wirtschaft':'📈','Politik':'🏛️','Kriminalität':'🔒','Banken':'🏦','Recht':'⚖️','Einwanderung':'🌍','Gesundheit':'🏥','Energie':'⚡','Sonstiges':'📌'};
+  const CAT_ICONS={'Finanzen':'🏦','Steuern':'🧾','Wirtschaft':'📈','Politik':'🏛️','Kriminalität':'🔒','Recht':'⚖️','Einwanderung':'🌍','Gesundheit':'🏥','Energie':'⚡','Sonstiges':'📌'};
   const maxV=rows[0]?.total_views||1;
   const totalViews=rows.reduce((s,r)=>s+(r.total_views||0),0);
   el.innerHTML=

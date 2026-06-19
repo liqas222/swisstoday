@@ -10,7 +10,7 @@ import anthropic
 from config import load_config
 
 CATEGORIES = ["Finanzen", "Steuern", "Wirtschaft", "Politik", "Kriminalität",
-              "Banken", "Recht", "Einwanderung", "Gesundheit", "Energie", "Sonstiges"]
+              "Recht", "Einwanderung", "Gesundheit", "Energie", "Sonstiges"]
 
 SYSTEM = (
     "Du kategorisierst Schweizer Nachrichten-Tweets. "
