@@ -147,14 +147,14 @@ def api_chart():
         "SELECT COALESCE(category,'Sonstiges') as category, COUNT(*) as count "
         "FROM seen_items WHERE posted_at IS NOT NULL "
         "AND (tweet_id IS NULL OR tweet_id NOT IN ('skipped_history','dry_run','duplicate_topic')) "
-        "AND posted_at > datetime('now', '-14 days') "
+        "AND posted_at > datetime('now', '-30 days') "
         "GROUP BY COALESCE(category,'Sonstiges') ORDER BY count DESC"
     )
     srcs = query_db(
         "SELECT source_id, COUNT(*) as count "
         "FROM seen_items WHERE posted_at IS NOT NULL "
         "AND (tweet_id IS NULL OR tweet_id NOT IN ('skipped_history','dry_run','duplicate_topic')) "
-        "AND posted_at > datetime('now', '-14 days') "
+        "AND posted_at > datetime('now', '-30 days') "
         "GROUP BY source_id ORDER BY count DESC"
     )
     return jsonify({"daily": daily, "categories": cats, "sources": srcs})

@@ -366,7 +366,7 @@ async function loadMonthChart(){
   const cats=d.categories||[];
   const maxCat=cats[0]?.count||1;
   const catEl=document.getElementById('cat-breakdown');
-  catEl.innerHTML=`<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--faint);margin-bottom:4px">Tweets pro Kategorie — letzte 14 Tage</div>`+
+  catEl.innerHTML=`<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--faint);margin-bottom:4px">Tweets pro Kategorie — letzter Monat</div>`+
     cats.map(({category:cat,count:cnt})=>{
       const icon=CAT_ICONS[cat]||'📌';
       return`<div style="display:flex;align-items:center;gap:10px">
@@ -382,7 +382,7 @@ async function loadMonthChart(){
   const srcs=d.sources||[];
   const maxSrc=srcs[0]?.count||1;
   const srcEl=document.getElementById('src-breakdown');
-  srcEl.innerHTML=`<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--faint);margin-bottom:4px">Tweets pro Quelle — letzte 14 Tage</div>`+
+  srcEl.innerHTML=`<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--faint);margin-bottom:4px">Tweets pro Quelle — letzter Monat</div>`+
     srcs.map(({source_id:src,count:cnt})=>{
       const c=srcColor(src);
       return`<div style="display:flex;align-items:center;gap:10px">
