@@ -268,6 +268,12 @@ footer{text-align:center;padding:14px;font-size:10px;color:var(--faint);border-t
         <span style="font-size:11px;color:var(--faint)" id="chart-total">—</span>
       </div>
       <div class="chart-wrap"><div class="bar-chart" id="monthChart"></div></div>
+      <!-- Views per day -->
+      <div style="border-top:1px solid var(--border);padding:14px 20px 0;display:flex;align-items:center;justify-content:space-between">
+        <h2 style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--faint)">👁 Views pro Tag — letzter Monat</h2>
+        <span style="font-size:11px;color:var(--faint)" id="views-chart-total">—</span>
+      </div>
+      <div class="chart-wrap"><div class="bar-chart" id="viewsChart"></div></div>
       <!-- Category breakdown -->
       <div style="border-top:1px solid var(--border);padding:14px 18px;display:flex;flex-direction:column;gap:6px" id="cat-breakdown"></div>
       <!-- Views per category -->
@@ -275,15 +281,6 @@ footer{text-align:center;padding:14px;font-size:10px;color:var(--faint);border-t
       <!-- Source breakdown -->
       <div style="border-top:1px solid var(--border);padding:14px 18px;display:flex;flex-direction:column;gap:6px" id="src-breakdown"></div>
     </div>
-  </div>
-
-  <!-- VIEWS PER DAY CHART -->
-  <div class="chart-card" id="views-day-card">
-    <div class="chart-hdr">
-      <h2>👁 Views pro Tag — letzter Monat</h2>
-      <span style="font-size:11px;color:var(--faint)" id="views-chart-total">—</span>
-    </div>
-    <div class="chart-wrap"><div class="bar-chart" id="viewsChart"></div></div>
   </div>
 
   <!-- SOURCES -->
