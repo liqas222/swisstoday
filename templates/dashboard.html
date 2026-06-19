@@ -284,10 +284,14 @@ setInterval(()=>{
 },1000);
 
 // ── Chart ──────────────────────────────────────────────────────────────────
-Chart.defaults.color='#3a4f63';Chart.defaults.borderColor='#1a2332';
 let chart=null;
+if(typeof Chart!=='undefined'){Chart.defaults.color='#3a4f63';Chart.defaults.borderColor='#1a2332';}
 
 function initChart(labels,data){
+  if(typeof Chart==='undefined'){
+    document.getElementById('monthChart').parentElement.innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:200px;color:var(--faint);font-size:12px">Chart.js konnte nicht geladen werden</div>';
+    return;
+  }
   const ctx=document.getElementById('monthChart').getContext('2d');
   if(chart)chart.destroy();
   chart=new Chart(ctx,{
