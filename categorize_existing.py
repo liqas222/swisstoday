@@ -52,7 +52,9 @@ def main():
 
     rows = conn.execute(
         "SELECT id, title, post_text FROM seen_items "
-        "WHERE posted_at IS NOT NULL AND (category IS NULL OR category = '') "
+        "WHERE posted_at IS NOT NULL "
+        "AND tweet_id NOT IN ('skipped_history','dry_run','duplicate_topic') "
+        "AND (category IS NULL OR category = '') "
         "ORDER BY id"
     ).fetchall()
 
