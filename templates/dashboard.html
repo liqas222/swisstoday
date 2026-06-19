@@ -42,33 +42,45 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;font-
 .main{max-width:1200px;margin:0 auto;padding:24px 28px;display:flex;flex-direction:column;gap:16px}
 
 /* ── TOP STATS ROW ── */
-.top-row{display:grid;grid-template-columns:220px 1fr;gap:16px;align-items:start}
-
-.stats-col{display:flex;flex-direction:column;gap:12px}
+.top-row{display:grid;grid-template-columns:240px 1fr;gap:16px;align-items:start}
+.stats-col{display:flex;flex-direction:column;gap:10px}
 
 /* Countdown */
 .cd-box{
-  background:var(--card);border:1px solid var(--border);border-radius:12px;
-  padding:20px 22px;
+  background:var(--card);border:1px solid var(--border);border-radius:14px;
+  padding:22px 24px 18px;position:relative;overflow:hidden;
 }
-.cd-lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);margin-bottom:10px}
-.cd-num{font-size:52px;font-weight:800;line-height:1;letter-spacing:-2px;color:var(--yellow);font-variant-numeric:tabular-nums}
-.cd-num.running{color:var(--green);animation:glow 1s infinite alternate}
-@keyframes glow{from{text-shadow:0 0 15px rgba(34,197,94,.3)}to{text-shadow:0 0 35px rgba(34,197,94,.5)}}
-.cd-bar-wrap{height:3px;background:var(--border);border-radius:2px;overflow:hidden;margin-top:10px}
-.cd-bar{height:100%;background:var(--yellow);border-radius:2px;transition:width 1s linear}
-.cd-bar.running{background:var(--green)}
-.cd-sub{font-size:10px;color:var(--faint);margin-top:7px}
+.cd-box::before{content:'';position:absolute;top:-40px;right:-40px;width:120px;height:120px;border-radius:50%;background:radial-gradient(circle,rgba(245,158,11,.07) 0%,transparent 70%);pointer-events:none}
+.cd-lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--dim);margin-bottom:12px;display:flex;align-items:center;gap:6px}
+.cd-num{font-size:56px;font-weight:800;line-height:1;letter-spacing:-3px;color:var(--yellow);font-variant-numeric:tabular-nums;font-family:'JetBrains Mono',monospace}
+.cd-num.running{color:var(--green);animation:glow 1.4s ease-in-out infinite alternate}
+.cd-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--yellow);box-shadow:0 0 6px var(--yellow);transition:background .4s,box-shadow .4s}
+.cd-dot.running{background:var(--green);box-shadow:0 0 8px var(--green)}
+@keyframes glow{from{text-shadow:0 0 20px rgba(34,197,94,.2)}to{text-shadow:0 0 40px rgba(34,197,94,.55)}}
+.cd-bar-wrap{height:2px;background:var(--border);border-radius:2px;overflow:hidden;margin-top:14px}
+.cd-bar{height:100%;background:linear-gradient(90deg,var(--yellow),#fbbf24);border-radius:2px;transition:width 1s linear}
+.cd-bar.running{background:linear-gradient(90deg,var(--green),#4ade80)}
+.cd-sub{font-size:10px;color:var(--faint);margin-top:8px;letter-spacing:.3px}
 
 /* Stat cards */
 .scard{
-  background:var(--card);border:1px solid var(--border);border-radius:12px;
-  padding:16px 20px;display:flex;flex-direction:column;gap:3px;
+  background:var(--card);border:1px solid var(--border);border-radius:14px;
+  padding:16px 22px;display:flex;align-items:center;gap:16px;position:relative;overflow:hidden;
+  transition:border-color .2s,background .2s;
 }
-.scard-num{font-size:34px;font-weight:800;letter-spacing:-1.5px;line-height:1}
+.scard-icon{font-size:22px;flex-shrink:0;opacity:.85}
+.scard-body{display:flex;flex-direction:column;gap:2px}
+.scard-num{font-size:32px;font-weight:800;letter-spacing:-1.5px;line-height:1;font-variant-numeric:tabular-nums}
 .scard.blue .scard-num{color:var(--blue)}
+.scard.blue{border-color:rgba(59,130,246,.15)}
 .scard.purple .scard-num{color:var(--purple)}
-.scard-lbl{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--dim);margin-top:2px}
+.scard.purple{border-color:rgba(168,85,247,.15);cursor:pointer}
+.scard.purple:hover{border-color:rgba(168,85,247,.5);background:rgba(168,85,247,.04)}
+.scard-lbl{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.6px;color:var(--dim)}
+.scard-sub{font-size:10px;color:var(--faint);margin-top:1px}
+.scard::after{content:'';position:absolute;top:0;left:0;width:3px;height:100%;border-radius:14px 0 0 14px}
+.scard.blue::after{background:var(--blue)}
+.scard.purple::after{background:var(--purple)}
 
 /* ── CHART ── */
 .chart-card{
@@ -181,21 +193,27 @@ footer{text-align:center;padding:14px;font-size:10px;color:var(--faint);border-t
     <div class="stats-col">
       <!-- Countdown -->
       <div class="cd-box">
-        <div class="cd-lbl">Nächster Run</div>
+        <div class="cd-lbl"><span class="cd-dot" id="cd-dot"></span>Nächster Run</div>
         <div class="cd-num" id="cd-val">—:——</div>
         <div class="cd-bar-wrap"><div class="cd-bar" id="cd-bar" style="width:100%"></div></div>
         <div class="cd-sub" id="cd-sub">Interval: — min</div>
       </div>
       <!-- Heute analysiert -->
       <div class="scard blue">
-        <div class="scard-num" id="t-new">—</div>
-        <div class="scard-lbl">Heute analysiert</div>
+        <div class="scard-icon">🔍</div>
+        <div class="scard-body">
+          <div class="scard-num" id="t-new">—</div>
+          <div class="scard-lbl">Heute analysiert</div>
+        </div>
       </div>
       <!-- Heute Tweets -->
-      <div class="scard purple" onclick="openTweetList()" style="cursor:pointer;transition:border-color .15s" onmouseenter="this.style.borderColor='var(--purple)'" onmouseleave="this.style.borderColor='var(--border)'">
-        <div class="scard-num" id="t-posted">—</div>
-        <div class="scard-lbl">Heute Tweets gepostet</div>
-        <div style="font-size:10px;color:var(--faint);margin-top:4px">↗ Anzeigen</div>
+      <div class="scard purple" onclick="openTweetList()">
+        <div class="scard-icon">𝕏</div>
+        <div class="scard-body">
+          <div class="scard-num" id="t-posted">—</div>
+          <div class="scard-lbl">Heute gepostet</div>
+          <div class="scard-sub">↗ Anzeigen</div>
+        </div>
       </div>
     </div>
 
@@ -280,9 +298,14 @@ async function api(url){const r=await fetch(url);if(!r.ok)throw new Error(r.stat
 // ── Countdown ──────────────────────────────────────────────────────────────
 let cdSecs=0,cdInt=300,cdReady=false,isRunning=false;
 setInterval(()=>{
-  const v=document.getElementById('cd-val'),b=document.getElementById('cd-bar');
-  if(isRunning){v.textContent='Läuft...';v.className='cd-num running';b.className='cd-bar running';b.style.width='100%';return}
+  const v=document.getElementById('cd-val'),b=document.getElementById('cd-bar'),dot=document.getElementById('cd-dot');
+  if(isRunning){
+    v.textContent='Läuft...';v.className='cd-num running';
+    b.className='cd-bar running';b.style.width='100%';
+    if(dot)dot.className='cd-dot running';return;
+  }
   v.className='cd-num';b.className='cd-bar';
+  if(dot)dot.className='cd-dot';
   if(cdSecs>0)cdSecs--;
   const m=Math.floor(cdSecs/60),s=cdSecs%60;
   v.textContent=`${m}:${String(s).padStart(2,'0')}`;
