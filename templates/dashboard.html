@@ -200,7 +200,9 @@ footer{text-align:center;padding:14px;font-size:10px;color:var(--faint);border-t
       </div>
       <div class="chart-wrap"><canvas id="monthChart"></canvas></div>
       <!-- Category breakdown -->
-      <div style="border-top:1px solid var(--border);padding:14px 18px;display:flex;flex-direction:column;gap:8px" id="cat-breakdown"></div>
+      <div style="border-top:1px solid var(--border);padding:14px 18px;display:flex;flex-direction:column;gap:6px" id="cat-breakdown"></div>
+      <!-- Source breakdown -->
+      <div style="border-top:1px solid var(--border);padding:14px 18px;display:flex;flex-direction:column;gap:6px" id="src-breakdown"></div>
     </div>
   </div>
 
@@ -335,20 +337,39 @@ async function loadMonthChart(){
   document.getElementById('chart-total').textContent=total+' Tweets total';
   initChart(labels,data);
 
-  // Category breakdown by source
+  // Category breakdown
+  const CAT_ICONS={'Finanzen':'💰','Steuern':'🧾','Wirtschaft':'📈','Politik':'🏛️','Kriminalität':'🔒','Banken':'🏦','Recht':'⚖️','Einwanderung':'🌍','Gesundheit':'🏥','Energie':'⚡','Sonstiges':'📌'};
+  const byCat={};
+  rows.forEach(r=>{const k=r.category||'Sonstiges';byCat[k]=(byCat[k]||0)+1});
+  const sortedCat=Object.entries(byCat).sort((a,b)=>b[1]-a[1]);
+  const maxCat=sortedCat[0]?.[1]||1;
+  const catEl=document.getElementById('cat-breakdown');
+  catEl.innerHTML=`<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--faint);margin-bottom:4px">Tweets pro Kategorie — letzter Monat</div>`+
+    sortedCat.map(([cat,cnt])=>{
+      const icon=CAT_ICONS[cat]||'📌';
+      const pct=cnt/maxCat*100;
+      return`<div style="display:flex;align-items:center;gap:10px">
+        <span style="font-size:11px;width:130px;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text)">${icon} ${esc(cat)}</span>
+        <div style="flex:1;height:5px;background:var(--border);border-radius:3px;overflow:hidden">
+          <div style="width:${pct}%;height:100%;background:var(--blue);border-radius:3px;transition:width .5s ease"></div>
+        </div>
+        <span style="font-size:11px;font-weight:700;color:var(--text);width:24px;text-align:right;flex-shrink:0">${cnt}</span>
+      </div>`;
+    }).join('');
+
+  // Source breakdown
   const bySrc={};
   rows.forEach(r=>{if(r.source_id)bySrc[r.source_id]=(bySrc[r.source_id]||0)+1});
-  const sorted=Object.entries(bySrc).sort((a,b)=>b[1]-a[1]);
-  const maxVal=sorted[0]?.[1]||1;
-  const el=document.getElementById('cat-breakdown');
-  if(!sorted.length){el.style.display='none';return}
-  el.innerHTML=`<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--faint);margin-bottom:4px">Tweets pro Quelle — letzter Monat</div>`+
-    sorted.map(([src,cnt])=>{
+  const sortedSrc=Object.entries(bySrc).sort((a,b)=>b[1]-a[1]);
+  const maxSrc=sortedSrc[0]?.[1]||1;
+  const srcEl=document.getElementById('src-breakdown');
+  srcEl.innerHTML=`<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--faint);margin-bottom:4px">Tweets pro Quelle — letzter Monat</div>`+
+    sortedSrc.map(([src,cnt])=>{
       const c=srcColor(src);
       return`<div style="display:flex;align-items:center;gap:10px">
-        <span style="font-size:10px;font-weight:700;color:${c};width:110px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex-shrink:0">${esc(src)}</span>
+        <span style="font-size:10px;font-weight:700;color:${c};width:130px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex-shrink:0">${esc(src)}</span>
         <div style="flex:1;height:5px;background:var(--border);border-radius:3px;overflow:hidden">
-          <div style="width:${cnt/maxVal*100}%;height:100%;background:${c};border-radius:3px;transition:width .5s ease"></div>
+          <div style="width:${cnt/maxSrc*100}%;height:100%;background:${c};border-radius:3px;transition:width .5s ease"></div>
         </div>
         <span style="font-size:11px;font-weight:700;color:var(--text);width:24px;text-align:right;flex-shrink:0">${cnt}</span>
       </div>`;

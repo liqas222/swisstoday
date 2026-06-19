@@ -36,8 +36,11 @@ LOW-Beispiele (IMMER LOW — nie posten):
 - "Könnte", "plant", "diskutiert", "erwartet", "prognostiziert" — nur beschlossene Fakten zählen
 - Ratgeber-Artikel ("So kaufen Sie...", "Was Sie wissen müssen...")
 
+Kategorien (wähle die passendste):
+Finanzen, Steuern, Wirtschaft, Politik, Kriminalität, Banken, Recht, Einwanderung, Gesundheit, Energie, Sonstiges
+
 Antworte NUR mit validem JSON:
-{"relevance": "HIGH" | "LOW", "reason": "kurze Begründung auf Deutsch (max 80 Zeichen)"}"""
+{"relevance": "HIGH" | "LOW", "reason": "kurze Begründung auf Deutsch (max 80 Zeichen)", "category": "eine der obigen Kategorien"}"""
 
 POST_SYSTEM = """Du erstellst X-Posts (Twitter) auf Deutsch für den Account @SwissIntelNews.
 Zielgruppe: Unternehmer, Gründer, Investoren, Anwälte, Expats in der Schweiz.
@@ -105,21 +108,21 @@ def _extract_json(raw: str) -> str:
     return raw.strip()
 
 
-def score_relevance(client: anthropic.Anthropic, model: str, item: dict) -> tuple[str, str]:
+def score_relevance(client: anthropic.Anthropic, model: str, item: dict) -> tuple[str, str, str]:
     title = item.get("title", "").strip()
     summary = item.get("summary", "").strip()
     if not title and not summary:
-        return "LOW", "Kein Inhalt verfügbar"
+        return "LOW", "Kein Inhalt verfügbar", "Sonstiges"
     user_msg = f"Titel: {title}\n\nZusammenfassung: {summary[:500]}\n\nQuelle: {item.get('source_id', '')}"
     raw = _call_claude(client, model, SCORE_SYSTEM, user_msg)
     if not raw:
-        return "LOW", "API-Fehler bei Bewertung"
+        return "LOW", "API-Fehler bei Bewertung", "Sonstiges"
     try:
         data = json.loads(_extract_json(raw))
-        return data.get("relevance", "LOW"), data.get("reason", "")
+        return data.get("relevance", "LOW"), data.get("reason", ""), data.get("category", "Sonstiges")
     except json.JSONDecodeError:
         logger.warning("Could not parse relevance JSON: %s", raw[:200])
-        return "LOW", "JSON-Parsing-Fehler"
+        return "LOW", "JSON-Parsing-Fehler", "Sonstiges"
 
 
 def is_duplicate_topic(client: anthropic.Anthropic, model: str, new_title: str, recent_titles: list[str]) -> bool:

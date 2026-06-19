@@ -34,8 +34,8 @@ def run_pipeline(cfg, anthropic_client):
 
     # 3. Score relevance for each new item
     for item in new_items:
-        relevance, reason = ai_processor.score_relevance(anthropic_client, cfg.claude_model, item)
-        database.update_relevance(cfg.db_path, item["id"], relevance, reason)
+        relevance, reason, category = ai_processor.score_relevance(anthropic_client, cfg.claude_model, item)
+        database.update_relevance(cfg.db_path, item["id"], relevance, reason, category)
         item["relevance"] = relevance
         logger.info("[%s] %s → %s (%s)", item["source_id"], item["title"][:60], relevance, reason)
         if relevance == "HIGH":

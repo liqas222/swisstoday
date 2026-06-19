@@ -109,7 +109,7 @@ def api_runs():
 def api_posted():
     days = int(request.args.get("days", 1))
     rows = query_db(
-        "SELECT source_id, title, url, post_text, posted_at, tweet_id "
+        "SELECT source_id, title, url, post_text, posted_at, tweet_id, category "
         "FROM seen_items WHERE posted_at IS NOT NULL "
         "AND tweet_id NOT IN ('skipped_history','dry_run','duplicate_topic') "
         "AND posted_at > datetime('now', ? || ' days') "

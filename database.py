@@ -26,8 +26,11 @@ def init_db(db_path: str) -> None:
                 posted_at TEXT,
                 tweet_id TEXT,
                 error TEXT,
+                category TEXT,
                 UNIQUE(guid, source_id)
             );
+            CREATE INDEX IF NOT EXISTS idx_category ON seen_items(category);
+
 
             CREATE TABLE IF NOT EXISTS run_log (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -101,11 +104,11 @@ def insert_item(db_path: str, item: dict) -> Optional[int]:
             return None
 
 
-def update_relevance(db_path: str, item_id: int, relevance: str, reason: str) -> None:
+def update_relevance(db_path: str, item_id: int, relevance: str, reason: str, category: str = "Sonstiges") -> None:
     with _connect(db_path) as conn:
         conn.execute(
-            "UPDATE seen_items SET relevance=?, relevance_reason=? WHERE id=?",
-            (relevance, reason, item_id),
+            "UPDATE seen_items SET relevance=?, relevance_reason=?, category=? WHERE id=?",
+            (relevance, reason, category, item_id),
         )
 
 
