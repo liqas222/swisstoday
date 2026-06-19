@@ -163,7 +163,59 @@ def _fetch_scrape(source: dict) -> list[dict]:
         return []
 
 
+def _fetch_20min() -> list[dict]:
+    """Scrape 20min.ch article links from homepage and section pages."""
+    urls = [
+        "https://www.20min.ch",
+        "https://www.20min.ch/schweiz",
+        "https://www.20min.ch/wirtschaft",
+    ]
+    seen = set()
+    items = []
+    for url in urls:
+        try:
+            resp = requests.get(url, headers={**HEADERS, "Accept": "text/html"}, timeout=REQUEST_TIMEOUT)
+            resp.raise_for_status()
+            soup = BeautifulSoup(resp.text, "html.parser")
+            for a in soup.find_all("a", href=True):
+                href = a["href"]
+                if not href.startswith("http"):
+                    href = urljoin("https://www.20min.ch", href)
+                if "20min.ch" not in href:
+                    continue
+                # Only story URLs: /story/ or /artikel/ or numeric slug
+                import re
+                if not re.search(r'/(story|artikel|news)/[^/]+', href):
+                    continue
+                if href in seen:
+                    continue
+                seen.add(href)
+                title = a.get_text(strip=True)
+                if len(title) < 20:
+                    # try parent element for title
+                    title = a.find_parent().get_text(strip=True)[:200] if a.find_parent() else ""
+                if len(title) < 20:
+                    continue
+                guid = _make_guid("20min", href, title)
+                items.append({
+                    "guid": guid,
+                    "source_id": "20min",
+                    "title": title[:300],
+                    "url": href,
+                    "summary": "",
+                    "published_at": datetime.now(timezone.utc).isoformat(),
+                })
+        except Exception as exc:
+            logger.warning("[20min] scrape failed for %s: %s", url, exc)
+    logger.info("[20min] scraped %d items", len(items))
+    return items
+
+
 def fetch_source(source: dict) -> list[dict]:
+    if source.get("type") == "scrape":
+        if source["id"] == "20min":
+            return _fetch_20min()
+        return _fetch_scrape(source)
     items = _fetch_rss(source)
     if not items and source.get("fallback_scrape_url"):
         items = _fetch_scrape(source)

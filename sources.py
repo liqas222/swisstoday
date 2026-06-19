@@ -1,6 +1,12 @@
 SOURCES = [
     # ── News outlets (confirmed working) ─────────────────────────────────────
     {
+        "id": "20min",
+        "name": "20 Minuten",
+        "type": "scrape",
+        "url": "https://www.20min.ch",
+    },
+    {
         "id": "srf_news",
         "name": "SRF News",
         "type": "rss",
