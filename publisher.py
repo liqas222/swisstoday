@@ -1,5 +1,6 @@
 import logging
 import time
+from datetime import datetime, timezone, timedelta
 from typing import Optional
 
 import tweepy
@@ -7,6 +8,16 @@ import tweepy
 from config import Config
 
 logger = logging.getLogger(__name__)
+
+SWISS_TZ_OFFSET = timedelta(hours=2)  # CEST (summer); CET is +1
+POSTING_HOUR_START = 6
+POSTING_HOUR_END = 22
+
+
+def _is_posting_allowed() -> bool:
+    """Returns True if current Swiss time is between 06:00 and 22:00."""
+    swiss_now = datetime.now(timezone.utc) + SWISS_TZ_OFFSET
+    return POSTING_HOUR_START <= swiss_now.hour < POSTING_HOUR_END
 
 
 def _build_client(cfg: Config) -> Optional[tweepy.Client]:
@@ -50,6 +61,10 @@ def post_tweet(client: tweepy.Client, text: str, dry_run: bool) -> Optional[str]
 
 def post_batch(cfg: Config, items: list[dict]) -> dict[int, tuple[str, Optional[str]]]:
     """Returns {item_id: ('ok'|'error', tweet_id_or_error_msg)}"""
+    if not _is_posting_allowed():
+        swiss_now = datetime.now(timezone.utc) + SWISS_TZ_OFFSET
+        logger.info("Outside posting window (%02d:00 Swiss time) — skipping %d items", swiss_now.hour, len(items))
+        return {}
     client = _build_client(cfg)
     results = {}
     for item in items:
