@@ -383,6 +383,7 @@ def api_sync_views():
             access_token_secret=x_access_token_secret, wait_on_rate_limit=False,
         )
         id_map = {r[1]: r[0] for r in rows}
+        views_before = conn.execute("SELECT COALESCE(SUM(views),0) FROM seen_items WHERE tweet_id NOT IN ('skipped_history','dry_run','duplicate_topic') AND views IS NOT NULL").fetchone()[0]
         updated = 0
         for i in range(0, len(rows), 100):
             batch = list(id_map.keys())[i:i+100]
@@ -409,8 +410,10 @@ def api_sync_views():
                 return jsonify({"ok": False, "error": str(e)}), 500
             _time.sleep(1)
         conn.commit()
+        views_after = conn.execute("SELECT COALESCE(SUM(views),0) FROM seen_items WHERE tweet_id NOT IN ('skipped_history','dry_run','duplicate_topic') AND views IS NOT NULL").fetchone()[0]
         conn.close()
-        return jsonify({"ok": True, "updated": updated})
+        new_views = max(0, views_after - views_before)
+        return jsonify({"ok": True, "updated": updated, "new_views": new_views})
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)}), 500
 

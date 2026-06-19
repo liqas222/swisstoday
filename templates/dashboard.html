@@ -826,7 +826,8 @@ async function globalRefresh(){
     const d=await r.json();
     await Promise.all([refreshAll(), refreshFollowers()]);
     if(d.ok){
-      showToast(`✓ ${d.updated} Tweets synchronisiert`,'ok');
+      const nv=d.new_views||0;
+      showToast(nv>0?`✓ +${nv.toLocaleString('de-CH')} neue Views`:'✓ Keine neuen Views','ok');
     } else {
       showToast('⚠ Views: '+(d.error||'Fehler'),'err');
     }
