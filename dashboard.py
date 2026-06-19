@@ -415,6 +415,32 @@ def api_sync_views():
         return jsonify({"ok": False, "error": str(e)}), 500
 
 
+@app.route("/api/followers")
+@require_auth
+def api_followers():
+    import tweepy
+    try:
+        client = tweepy.Client(
+            bearer_token=os.getenv("X_BEARER_TOKEN", ""),
+            consumer_key=os.getenv("X_API_KEY", ""),
+            consumer_secret=os.getenv("X_API_SECRET", ""),
+            access_token=os.getenv("X_ACCESS_TOKEN", ""),
+            access_token_secret=os.getenv("X_ACCESS_TOKEN_SECRET", ""),
+            wait_on_rate_limit=False,
+        )
+        me = client.get_me(user_fields=["public_metrics"], user_auth=True)
+        if me.data:
+            m = me.data.public_metrics
+            return jsonify({
+                "followers": m.get("followers_count", 0),
+                "following": m.get("following_count", 0),
+                "tweets": m.get("tweet_count", 0),
+            })
+        return jsonify({"followers": None})
+    except Exception as e:
+        return jsonify({"followers": None, "error": str(e)})
+
+
 @app.route("/api/health")
 def api_health():
     return jsonify({"ok": True})

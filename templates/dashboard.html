@@ -250,6 +250,35 @@ footer{text-align:center;padding:14px;font-size:10px;color:var(--faint);border-t
           <div class="scard-sub">↗ Anzeigen</div>
         </div>
       </div>
+      <!-- Follower + Ziel -->
+      <div class="scard" style="border-color:rgba(34,197,94,.15);flex-direction:column;align-items:stretch;gap:10px;padding:16px 22px">
+        <div style="display:flex;align-items:center;gap:12px">
+          <div style="font-size:22px;flex-shrink:0">👥</div>
+          <div style="flex:1">
+            <div style="display:flex;align-items:baseline;gap:8px">
+              <div class="scard-num" id="f-count" style="color:var(--green)">—</div>
+              <div style="font-size:10px;color:var(--faint)" id="f-delta"></div>
+            </div>
+            <div class="scard-lbl">Follower</div>
+          </div>
+          <button onclick="refreshFollowers()" id="f-btn" title="Aktualisieren" style="background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.25);color:var(--green);border-radius:7px;padding:5px 9px;font-size:13px;cursor:pointer;flex-shrink:0" onmouseover="this.style.background='rgba(34,197,94,.22)'" onmouseout="this.style.background='rgba(34,197,94,.1)'">↻</button>
+        </div>
+        <!-- Goal -->
+        <div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px">
+            <span style="font-size:10px;color:var(--faint);font-weight:600;text-transform:uppercase;letter-spacing:.5px">Ziel</span>
+            <span id="f-goal-display" onclick="editGoal()" style="font-size:11px;font-weight:700;color:var(--green);cursor:pointer;border-bottom:1px dashed rgba(34,197,94,.4)" title="Klicken zum Ändern">—</span>
+          </div>
+          <div style="height:5px;background:var(--border);border-radius:3px;overflow:hidden">
+            <div id="f-goal-bar" style="height:100%;background:linear-gradient(90deg,var(--green),#4ade80);border-radius:3px;width:0%;transition:width .6s ease"></div>
+          </div>
+          <div style="display:flex;justify-content:space-between;margin-top:4px">
+            <span style="font-size:10px;color:var(--faint)" id="f-pct">0%</span>
+            <span style="font-size:10px;color:var(--faint)" id="f-remaining">— verbleibend</span>
+          </div>
+        </div>
+      </div>
+
       <!-- Heute Views -->
       <div class="scard" style="border-color:rgba(6,182,212,.15);position:relative">
         <div class="scard-icon">👁</div>
@@ -694,6 +723,42 @@ function setNum(id,val){
   setTimeout(()=>{el.textContent=next;el.style.opacity='1'},150);
 }
 
+// ── Followers + Goal ───────────────────────────────────────────────────────
+let followerGoal = parseInt(localStorage.getItem('followerGoal')||'1000');
+let currentFollowers = 0;
+
+function updateGoalUI(){
+  const pct = followerGoal>0 ? Math.min(100,Math.round(currentFollowers/followerGoal*100)) : 0;
+  const remaining = Math.max(0, followerGoal - currentFollowers);
+  document.getElementById('f-goal-display').textContent = followerGoal.toLocaleString('de-CH');
+  document.getElementById('f-goal-bar').style.width = pct+'%';
+  document.getElementById('f-pct').textContent = pct+'%';
+  document.getElementById('f-remaining').textContent = remaining>0 ? remaining.toLocaleString('de-CH')+' verbleibend' : '🎉 Ziel erreicht!';
+}
+
+function editGoal(){
+  const val = prompt('Follower-Ziel setzen:', followerGoal);
+  if(val===null) return;
+  const n = parseInt(val.replace(/[^0-9]/g,''));
+  if(n>0){ followerGoal=n; localStorage.setItem('followerGoal',n); updateGoalUI(); }
+}
+
+async function refreshFollowers(){
+  const btn=document.getElementById('f-btn');
+  if(btn){btn.textContent='⏳';btn.disabled=true;}
+  try{
+    const d=await api('/api/followers');
+    if(d.followers!=null){
+      currentFollowers=d.followers;
+      setNum('f-count', d.followers.toLocaleString('de-CH'));
+      updateGoalUI();
+    } else {
+      document.getElementById('f-count').textContent='—';
+    }
+  }catch(e){}
+  if(btn){btn.textContent='↻';btn.disabled=false;}
+}
+
 // ── Sync Views ─────────────────────────────────────────────────────────────
 async function syncViews(){
   const btn=document.getElementById('sync-btn');
@@ -728,7 +793,10 @@ async function refreshAll(){
 
 document.addEventListener('DOMContentLoaded',()=>{
   refreshAll();
+  refreshFollowers();
+  updateGoalUI();
   startSSE();
+  setInterval(refreshFollowers, 300000); // every 5min
   setInterval(loadStats, 20000);   // stats every 20s
   setInterval(loadSources, 30000); // sources every 30s
   setInterval(refreshAll, 120000); // full refresh every 2min
