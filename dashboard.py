@@ -199,6 +199,18 @@ def api_sources_today():
     return jsonify(rows)
 
 
+@app.route("/api/items/queue")
+@require_auth
+def api_queue():
+    rows = query_db(
+        "SELECT id, source_id, title, url, post_text, category, fetched_at "
+        "FROM seen_items WHERE relevance='HIGH' AND posted_at IS NULL "
+        "AND error IS NULL AND post_text IS NOT NULL "
+        "ORDER BY id ASC"
+    )
+    return jsonify(rows)
+
+
 @app.route("/api/items/high")
 @require_auth
 def api_high():
