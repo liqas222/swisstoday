@@ -826,7 +826,7 @@ async function globalRefresh(){
     const d=await r.json();
     await Promise.all([refreshAll(), refreshFollowers()]);
     if(d.ok){
-      showToast(`✓ ${d.updated} Views aktualisiert`,'ok');
+      showToast(`✓ ${d.updated} Tweets synchronisiert`,'ok');
     } else {
       showToast('⚠ Views: '+(d.error||'Fehler'),'err');
     }
