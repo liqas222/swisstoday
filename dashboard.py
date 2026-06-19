@@ -95,6 +95,7 @@ def api_stats():
     today_new = query_db("SELECT COUNT(*) as c FROM seen_items WHERE date(fetched_at, '+2 hours')=date('now', '+2 hours')")
     today_high = query_db("SELECT COUNT(*) as c FROM seen_items WHERE relevance='HIGH' AND date(fetched_at, '+2 hours')=date('now', '+2 hours')")
     today_posted = query_db("SELECT COUNT(*) as c FROM seen_items WHERE posted_at IS NOT NULL AND tweet_id NOT IN ('skipped_history','dry_run','duplicate_topic') AND date(posted_at, '+2 hours')=date('now', '+2 hours')")
+    today_views = query_db("SELECT COALESCE(SUM(views),0) as c FROM seen_items WHERE posted_at IS NOT NULL AND tweet_id NOT IN ('skipped_history','dry_run','duplicate_topic') AND views IS NOT NULL AND date(posted_at, '+2 hours')=date('now', '+2 hours')")
     last_run = query_db("SELECT run_at FROM run_log ORDER BY id DESC LIMIT 1")
     bot = get_bot_status()
     return jsonify({
@@ -104,6 +105,7 @@ def api_stats():
         "today_new": today_new[0]["c"] if today_new else 0,
         "today_high": today_high[0]["c"] if today_high else 0,
         "today_posted": today_posted[0]["c"] if today_posted else 0,
+        "today_views": today_views[0]["c"] if today_views else 0,
         "last_run": last_run[0]["run_at"] if last_run else None,
         "bot_running": bot["running"],
         "bot_pid": bot["pid"],
@@ -160,7 +162,14 @@ def api_chart():
         "AND posted_at > datetime('now', '-30 days') "
         "GROUP BY source_id ORDER BY count DESC"
     )
-    return jsonify({"daily": daily, "categories": cats, "sources": srcs})
+    daily_views = query_db(
+        "SELECT date(posted_at, '+2 hours') as day, COALESCE(SUM(views),0) as views "
+        "FROM seen_items WHERE posted_at IS NOT NULL AND views IS NOT NULL "
+        "AND (tweet_id IS NULL OR tweet_id NOT IN ('skipped_history','dry_run','duplicate_topic')) "
+        "AND posted_at > datetime('now', '-30 days') "
+        "GROUP BY day ORDER BY day"
+    )
+    return jsonify({"daily": daily, "categories": cats, "sources": srcs, "daily_views": daily_views})
 
 
 @app.route("/api/items/today")
