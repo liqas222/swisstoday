@@ -111,12 +111,39 @@ def api_posted():
     rows = query_db(
         "SELECT source_id, title, url, post_text, posted_at, tweet_id, category "
         "FROM seen_items WHERE posted_at IS NOT NULL "
-        "AND tweet_id NOT IN ('skipped_history','dry_run','duplicate_topic') "
+        "AND (tweet_id IS NULL OR tweet_id NOT IN ('skipped_history','dry_run','duplicate_topic')) "
         "AND posted_at > datetime('now', ? || ' days') "
         "ORDER BY posted_at DESC",
         (f"-{days}",)
     )
     return jsonify(rows)
+
+
+@app.route("/api/chart")
+@require_auth
+def api_chart():
+    daily = query_db(
+        "SELECT date(posted_at, '+2 hours') as day, COUNT(*) as count "
+        "FROM seen_items WHERE posted_at IS NOT NULL "
+        "AND (tweet_id IS NULL OR tweet_id NOT IN ('skipped_history','dry_run','duplicate_topic')) "
+        "AND posted_at > datetime('now', '-30 days') "
+        "GROUP BY day ORDER BY day"
+    )
+    cats = query_db(
+        "SELECT COALESCE(category,'Sonstiges') as category, COUNT(*) as count "
+        "FROM seen_items WHERE posted_at IS NOT NULL "
+        "AND (tweet_id IS NULL OR tweet_id NOT IN ('skipped_history','dry_run','duplicate_topic')) "
+        "AND posted_at > datetime('now', '-30 days') "
+        "GROUP BY category ORDER BY count DESC"
+    )
+    srcs = query_db(
+        "SELECT source_id, COUNT(*) as count "
+        "FROM seen_items WHERE posted_at IS NOT NULL "
+        "AND (tweet_id IS NULL OR tweet_id NOT IN ('skipped_history','dry_run','duplicate_topic')) "
+        "AND posted_at > datetime('now', '-30 days') "
+        "GROUP BY source_id ORDER BY count DESC"
+    )
+    return jsonify({"daily": daily, "categories": cats, "sources": srcs})
 
 
 @app.route("/api/sources/today")
