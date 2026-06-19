@@ -69,11 +69,11 @@ ERKLÄRUNG-Regeln:
 - 4-5 Sätze, menschlich und direkt, kein Nachrichtenagentur-Ton
 - Satz 1: Was ist passiert? (konkretes Ereignis/Entscheid)
 - Satz 2: Warum ist das wichtig? (Hintergrund, Bedeutung)
-- Satz 3: Wer ist betroffen? (Zielgruppe benennen)
-- Satz 4: Was ändert sich konkret? (Zahlen, Daten, Fristen falls vorhanden)
-- Satz 5 (optional): Was sollte man jetzt wissen oder beachten?
+- Satz 3: Was ändert sich konkret? (Zahlen, Daten, Fristen falls vorhanden)
+- Satz 4-5: Weitere relevante Details oder Kontext
 - Fachbegriffe kurz erklären
 - Nur Fakten aus der Quelle, keine Meinungen
+- NIEMALS erwähnen für wen es relevant ist ("relevant für...", "betrifft Unternehmer...", etc.)
 
 HASHTAGS:
 - Immer am Ende: #Schweiz
