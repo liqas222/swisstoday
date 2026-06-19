@@ -350,6 +350,71 @@ Regeln für deine Antwort:
         return jsonify({"tips": [], "error": str(e)})
 
 
+@app.route("/api/sync-views", methods=["POST"])
+@require_auth
+def api_sync_views():
+    import tweepy
+    import time as _time
+    x_api_key = os.getenv("X_API_KEY", "")
+    x_api_secret = os.getenv("X_API_SECRET", "")
+    x_access_token = os.getenv("X_ACCESS_TOKEN", "")
+    x_access_token_secret = os.getenv("X_ACCESS_TOKEN_SECRET", "")
+    x_bearer_token = os.getenv("X_BEARER_TOKEN", "")
+    if not x_bearer_token:
+        return jsonify({"ok": False, "error": "X API nicht konfiguriert"}), 400
+    try:
+        conn = __import__("sqlite3").connect(DB_PATH)
+        cols = [r[1] for r in conn.execute("PRAGMA table_info(seen_items)").fetchall()]
+        if "views" not in cols:
+            conn.execute("ALTER TABLE seen_items ADD COLUMN views INTEGER")
+            conn.commit()
+        rows = conn.execute(
+            "SELECT id, tweet_id FROM seen_items "
+            "WHERE posted_at IS NOT NULL "
+            "AND tweet_id NOT IN ('skipped_history','dry_run','duplicate_topic') "
+            "AND tweet_id IS NOT NULL ORDER BY posted_at DESC LIMIT 500"
+        ).fetchall()
+        if not rows:
+            conn.close()
+            return jsonify({"ok": True, "updated": 0})
+        client = tweepy.Client(
+            bearer_token=x_bearer_token, consumer_key=x_api_key,
+            consumer_secret=x_api_secret, access_token=x_access_token,
+            access_token_secret=x_access_token_secret, wait_on_rate_limit=False,
+        )
+        id_map = {r[1]: r[0] for r in rows}
+        updated = 0
+        for i in range(0, len(rows), 100):
+            batch = list(id_map.keys())[i:i+100]
+            try:
+                resp = client.get_tweets(ids=batch,
+                    tweet_fields=["public_metrics","non_public_metrics","organic_metrics"],
+                    user_auth=True)
+                if resp.data:
+                    for tweet in resp.data:
+                        views = None
+                        if tweet.non_public_metrics:
+                            views = tweet.non_public_metrics.get("impression_count")
+                        if views is None and tweet.organic_metrics:
+                            views = tweet.organic_metrics.get("impression_count")
+                        if views is None and tweet.public_metrics:
+                            views = tweet.public_metrics.get("impression_count")
+                        if views is not None:
+                            db_id = id_map.get(str(tweet.id))
+                            if db_id:
+                                conn.execute("UPDATE seen_items SET views=? WHERE id=?", (views, db_id))
+                                updated += 1
+            except Exception as e:
+                conn.close()
+                return jsonify({"ok": False, "error": str(e)}), 500
+            _time.sleep(1)
+        conn.commit()
+        conn.close()
+        return jsonify({"ok": True, "updated": updated})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
 @app.route("/api/health")
 def api_health():
     return jsonify({"ok": True})
