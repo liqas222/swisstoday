@@ -200,6 +200,17 @@ tr:hover td{background:rgba(255,255,255,.015)}
 .xbtn{display:inline-flex;align-items:center;gap:5px;background:#000;color:#fff;border:1px solid #333;border-radius:7px;padding:6px 12px;font-size:12px;font-weight:700;text-decoration:none;transition:background .12s}
 .xbtn:hover{background:#111}
 
+.toast{
+  position:fixed;bottom:80px;right:28px;z-index:300;
+  background:var(--card);border:1px solid var(--border2);border-radius:10px;
+  padding:10px 16px;font-size:12px;font-weight:600;color:var(--text);
+  box-shadow:0 4px 20px rgba(0,0,0,.5);
+  opacity:0;transform:translateY(8px);transition:opacity .2s,transform .2s;
+  pointer-events:none;max-width:280px;
+}
+.toast.show{opacity:1;transform:translateY(0)}
+.toast.ok{border-color:rgba(34,197,94,.4);color:var(--green)}
+.toast.err{border-color:rgba(239,68,68,.4);color:var(--red)}
 footer{text-align:center;padding:14px;font-size:10px;color:var(--faint);border-top:1px solid var(--border);margin-top:4px}
 #global-refresh-btn{
   position:fixed;bottom:28px;right:28px;z-index:200;
@@ -362,6 +373,7 @@ footer{text-align:center;padding:14px;font-size:10px;color:var(--faint);border-t
 
 </div>
 
+<div class="toast" id="toast"></div>
 <button id="global-refresh-btn" onclick="globalRefresh()">
   <span id="global-refresh-icon">↻</span> Aktualisieren
 </button>
@@ -791,16 +803,36 @@ async function syncViews(){
   }
 }
 
+// ── Toast ──────────────────────────────────────────────────────────────────
+let toastTimer;
+function showToast(msg, type=''){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.className='toast show'+(type?' '+type:'');
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>t.className='toast',3500);
+}
+
 // ── Global Refresh ─────────────────────────────────────────────────────────
 async function globalRefresh(){
   const btn=document.getElementById('global-refresh-btn');
   const icon=document.getElementById('global-refresh-icon');
   if(btn.disabled)return;
-  btn.disabled=true;icon.style.display='inline-block';
+  btn.disabled=true;
   icon.style.animation='spin .8s linear infinite';
+  showToast('Aktualisiert...');
   try{
-    await Promise.all([refreshAll(), refreshFollowers(), syncViews()]);
-  }catch(e){}
+    // sync views first, get result
+    const r=await fetch('/api/sync-views',{method:'POST'});
+    const d=await r.json();
+    await Promise.all([refreshAll(), refreshFollowers()]);
+    if(d.ok){
+      showToast(`✓ ${d.updated} Views aktualisiert`,'ok');
+    } else {
+      showToast('⚠ Views: '+(d.error||'Fehler'),'err');
+    }
+  }catch(e){
+    showToast('⚠ Fehler: '+e.message,'err');
+  }
   icon.style.animation='';
   btn.disabled=false;
 }
