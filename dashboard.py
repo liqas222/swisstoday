@@ -73,17 +73,20 @@ def index():
 def api_stats():
     total = query_db("SELECT COUNT(*) as c FROM seen_items")
     high = query_db("SELECT COUNT(*) as c FROM seen_items WHERE relevance='HIGH'")
-    posted = query_db("SELECT COUNT(*) as c FROM seen_items WHERE posted_at IS NOT NULL AND tweet_id NOT IN ('skipped_history', 'dry_run')")
-    sources = query_db("SELECT COUNT(DISTINCT source_id) as c FROM seen_items")
-    today_runs = query_db("SELECT COUNT(*) as c FROM run_log WHERE date(run_at)=date('now')")
+    posted = query_db("SELECT COUNT(*) as c FROM seen_items WHERE posted_at IS NOT NULL AND tweet_id NOT IN ('skipped_history', 'dry_run', 'duplicate_topic')")
+    # Today stats using Swiss time offset (+2h)
+    today_new = query_db("SELECT COUNT(*) as c FROM seen_items WHERE date(fetched_at, '+2 hours')=date('now', '+2 hours')")
+    today_high = query_db("SELECT COUNT(*) as c FROM seen_items WHERE relevance='HIGH' AND date(fetched_at, '+2 hours')=date('now', '+2 hours')")
+    today_posted = query_db("SELECT COUNT(*) as c FROM seen_items WHERE posted_at IS NOT NULL AND tweet_id NOT IN ('skipped_history','dry_run','duplicate_topic') AND date(posted_at, '+2 hours')=date('now', '+2 hours')")
     last_run = query_db("SELECT run_at FROM run_log ORDER BY id DESC LIMIT 1")
     bot = get_bot_status()
     return jsonify({
         "total": total[0]["c"] if total else 0,
         "high": high[0]["c"] if high else 0,
         "posted": posted[0]["c"] if posted else 0,
-        "sources": sources[0]["c"] if sources else 0,
-        "today_runs": today_runs[0]["c"] if today_runs else 0,
+        "today_new": today_new[0]["c"] if today_new else 0,
+        "today_high": today_high[0]["c"] if today_high else 0,
+        "today_posted": today_posted[0]["c"] if today_posted else 0,
         "last_run": last_run[0]["run_at"] if last_run else None,
         "bot_running": bot["running"],
         "bot_pid": bot["pid"],
@@ -101,12 +104,23 @@ def api_runs():
     return jsonify(list(reversed(rows)))
 
 
+@app.route("/api/items/posted")
+@require_auth
+def api_posted():
+    rows = query_db(
+        "SELECT source_id, title, url, post_text, posted_at, tweet_id, fetched_at "
+        "FROM seen_items WHERE posted_at IS NOT NULL AND tweet_id NOT IN ('skipped_history','dry_run','duplicate_topic') "
+        "ORDER BY posted_at DESC LIMIT 20"
+    )
+    return jsonify(rows)
+
+
 @app.route("/api/items/high")
 @require_auth
 def api_high():
     rows = query_db(
         "SELECT source_id, title, url, relevance_reason, post_text, posted_at, tweet_id, fetched_at "
-        "FROM seen_items WHERE relevance='HIGH' ORDER BY id DESC LIMIT 100"
+        "FROM seen_items WHERE relevance='HIGH' ORDER BY id DESC LIMIT 50"
     )
     return jsonify(rows)
 

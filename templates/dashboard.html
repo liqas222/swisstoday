@@ -3,715 +3,522 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SwissToday Intelligence</title>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<title>SwissIntel Dashboard</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 :root {
-  --bg: #0d1117; --card: #161b22; --card2: #1c2128;
-  --border: #30363d; --text: #e6edf3; --muted: #8b949e;
-  --green: #3fb950; --red: #f85149; --yellow: #d29922;
-  --blue: #58a6ff; --purple: #bc8cff; --accent: #1f6feb;
+  --bg: #0a0e13; --card: #111720; --card2: #161d28;
+  --border: #1e2d3d; --border2: #243040;
+  --text: #cdd9e5; --muted: #627183; --dim: #3d4f61;
+  --green: #2ea043; --green2: #3fb950; --red: #da3633;
+  --yellow: #bb8009; --yellow2: #d29922;
+  --blue: #1f6feb; --blue2: #58a6ff;
+  --accent: #0d419d;
 }
-* { box-sizing: border-box; margin: 0; padding: 0; }
-body { background: var(--bg); color: var(--text); font-family: 'Inter', system-ui, sans-serif; font-size: 14px; min-height: 100vh; }
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;font-size:13px;min-height:100vh}
 
-/* Header */
-.header {
-  background: var(--card); border-bottom: 1px solid var(--border);
-  padding: 14px 24px; display: flex; align-items: center;
-  justify-content: space-between; position: sticky; top: 0; z-index: 50;
+/* ── Header ── */
+.hdr{
+  background:var(--card);border-bottom:1px solid var(--border);
+  padding:0 24px;height:52px;display:flex;align-items:center;
+  justify-content:space-between;position:sticky;top:0;z-index:100;
+  gap:16px;
 }
-.header-left { display: flex; align-items: center; gap: 10px; }
-.header-left h1 { font-size: 18px; font-weight: 700; }
-.header-left h1 span { color: var(--blue); }
-.header-left p { color: var(--muted); font-size: 11px; margin-top: 1px; }
-.header-right { display: flex; align-items: center; gap: 14px; font-size: 12px; color: var(--muted); }
-.status-pill {
-  display: flex; align-items: center; gap: 6px;
-  padding: 5px 10px; border-radius: 20px; font-size: 12px; font-weight: 500;
-  background: var(--card2); border: 1px solid var(--border);
-}
-.dot { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); }
-.running .dot { background: var(--green); animation: pulse 2s infinite; }
-.running { border-color: rgba(63,185,80,0.4) !important; color: var(--green); }
-.stopped .dot { background: var(--red); }
-.stopped { border-color: rgba(248,81,73,0.4) !important; color: var(--red); }
-@keyframes pulse {
-  0%,100% { box-shadow: 0 0 0 0 rgba(63,185,80,0.4); }
-  50% { box-shadow: 0 0 0 4px rgba(63,185,80,0); }
-}
+.hdr-brand{display:flex;align-items:center;gap:10px;flex-shrink:0}
+.hdr-brand h1{font-size:15px;font-weight:700;letter-spacing:-0.3px}
+.hdr-brand h1 span{color:var(--blue2)}
+.hdr-center{display:flex;align-items:center;gap:20px;font-size:12px;color:var(--muted)}
+.hdr-right{display:flex;align-items:center;gap:10px;flex-shrink:0}
 
-/* Layout */
-main { max-width: 1200px; margin: 0 auto; padding: 20px; display: flex; flex-direction: column; gap: 16px; }
+.pill{
+  display:flex;align-items:center;gap:6px;padding:4px 10px;
+  border-radius:20px;font-size:11px;font-weight:600;
+  border:1px solid var(--border2);background:var(--card2);
+  white-space:nowrap;
+}
+.pill.on{border-color:rgba(46,160,67,.4);color:var(--green2)}
+.pill.off{border-color:rgba(218,54,51,.4);color:var(--red)}
+.dot{width:6px;height:6px;border-radius:50%;background:currentColor}
+.pill.on .dot{animation:blink 1.8s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
 
-/* Stats */
-.stats { display: grid; grid-template-columns: repeat(5,1fr); gap: 12px; }
-.stat {
-  background: var(--card); border: 1px solid var(--border); border-radius: 10px;
-  padding: 16px; display: flex; flex-direction: column; gap: 3px;
-}
-.stat-num { font-size: 26px; font-weight: 700; letter-spacing: -1px; }
-.stat-lbl { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.4px; font-weight: 500; }
-.stat.c-green .stat-num { color: var(--green); }
-.stat.c-blue .stat-num { color: var(--blue); }
-.stat.c-purple .stat-num { color: var(--purple); }
-.stat.c-yellow .stat-num { color: var(--yellow); }
+/* ── Layout ── */
+main{max-width:1280px;margin:0 auto;padding:20px;display:flex;flex-direction:column;gap:16px}
 
-/* Card */
-.card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 18px; }
-.card-title { font-size: 14px; font-weight: 600; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
-.badge { background: var(--card2); border: 1px solid var(--border); color: var(--muted); padding: 2px 7px; border-radius: 10px; font-size: 11px; font-weight: 500; }
-.badge-green { background: rgba(63,185,80,0.1); border-color: rgba(63,185,80,0.3); color: var(--green); }
+/* ── Today bar ── */
+.today-bar{
+  display:grid;grid-template-columns:repeat(3,1fr);gap:12px;
+}
+.tcard{
+  background:var(--card);border:1px solid var(--border);border-radius:10px;
+  padding:18px 20px;display:flex;flex-direction:column;gap:4px;
+  position:relative;overflow:hidden;
+}
+.tcard::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  background:var(--accent-color,var(--border));
+}
+.tcard.c-blue::before{background:var(--blue2)}
+.tcard.c-green::before{background:var(--green2)}
+.tcard.c-purple::before{background:#bc8cff}
+.t-num{font-size:36px;font-weight:700;line-height:1;letter-spacing:-1.5px}
+.tcard.c-blue .t-num{color:var(--blue2)}
+.tcard.c-green .t-num{color:var(--green2)}
+.tcard.c-purple .t-num{color:#bc8cff}
+.t-lbl{font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-top:2px}
+.t-sub{font-size:11px;color:var(--dim);margin-top:6px}
 
-/* Run chart */
-.chart-wrap { height: 200px; position: relative; }
+/* ── Two-col ── */
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px}
 
-/* HIGH items panel */
-.high-panel-header {
-  display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;
+/* ── Card ── */
+.card{background:var(--card);border:1px solid var(--border);border-radius:10px}
+.card-hdr{
+  padding:14px 16px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
 }
-.high-search {
-  background: var(--card2); border: 1px solid var(--border); color: var(--text);
-  padding: 5px 10px; border-radius: 6px; font-size: 12px; width: 180px; outline: none;
+.card-hdr h2{font-size:13px;font-weight:600;display:flex;align-items:center;gap:8px}
+.badge{
+  display:inline-flex;align-items:center;padding:1px 7px;border-radius:10px;
+  font-size:10px;font-weight:600;background:var(--card2);
+  border:1px solid var(--border2);color:var(--muted);
 }
-.high-search:focus { border-color: var(--accent); }
+.badge.live{background:rgba(46,160,67,.1);border-color:rgba(46,160,67,.3);color:var(--green2)}
+.card-body{padding:12px}
 
-.item-list { display: flex; flex-direction: column; gap: 8px; }
-.item-card {
-  background: var(--card2); border: 1px solid var(--border); border-radius: 8px;
-  padding: 12px 14px; cursor: pointer; transition: border-color 0.15s, background 0.15s;
-  display: flex; align-items: center; gap: 12px;
+/* ── Posted tweets ── */
+.tweet-list{display:flex;flex-direction:column;gap:1px}
+.tweet-item{
+  padding:12px 14px;border-bottom:1px solid var(--border);
+  cursor:pointer;transition:background .12s;
 }
-.item-card:hover { border-color: var(--accent); background: rgba(31,111,235,0.05); }
-.item-card.posted { border-left: 3px solid var(--green); }
-.item-card.pending { border-left: 3px solid var(--yellow); }
-.item-card.duplicate { border-left: 3px solid var(--muted); opacity: 0.6; }
-.item-status.duplicate { color: var(--muted); }
-.item-source {
-  font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 4px;
-  white-space: nowrap; flex-shrink: 0;
+.tweet-item:last-child{border-bottom:none}
+.tweet-item:hover{background:rgba(31,111,235,.06)}
+.ti-top{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.src-tag{
+  font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;
+  white-space:nowrap;flex-shrink:0;
 }
-.item-title { flex: 1; font-size: 13px; font-weight: 500; color: var(--text); }
-.item-meta { font-size: 11px; color: var(--muted); white-space: nowrap; flex-shrink: 0; }
-.item-status { font-size: 11px; font-weight: 600; white-space: nowrap; flex-shrink: 0; }
-.item-status.posted { color: var(--green); }
-.item-status.pending { color: var(--yellow); }
-.empty { text-align: center; padding: 30px; color: var(--muted); font-size: 13px; }
+.ti-time{font-size:10px;color:var(--dim);margin-left:auto;white-space:nowrap}
+.ti-text{font-size:12px;color:var(--text);line-height:1.55;white-space:pre-wrap;word-break:break-word}
+.ti-link{font-size:11px;color:var(--blue2);text-decoration:none;margin-top:4px;display:inline-block}
+.ti-link:hover{text-decoration:underline}
+.empty-state{padding:32px;text-align:center;color:var(--dim);font-size:12px}
 
-/* Modal */
-.modal-overlay {
-  display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7);
-  z-index: 200; align-items: center; justify-content: center; padding: 20px;
+/* ── HIGH pending ── */
+.hi-list{display:flex;flex-direction:column;gap:1px}
+.hi-item{
+  padding:11px 14px;border-bottom:1px solid var(--border);
+  cursor:pointer;transition:background .12s;display:flex;align-items:flex-start;gap:10px;
 }
-.modal-overlay.open { display: flex; }
-.modal {
-  background: var(--card); border: 1px solid var(--border); border-radius: 12px;
-  width: 100%; max-width: 600px; max-height: 85vh; overflow-y: auto;
-  padding: 24px; position: relative;
-}
-.modal-close {
-  position: absolute; top: 16px; right: 16px; background: none; border: none;
-  color: var(--muted); font-size: 20px; cursor: pointer; line-height: 1;
-}
-.modal-close:hover { color: var(--text); }
-.modal h3 { font-size: 16px; font-weight: 600; margin-bottom: 16px; padding-right: 30px; line-height: 1.4; }
-.modal-section { margin-bottom: 14px; }
-.modal-label { font-size: 11px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 5px; }
-.modal-value { font-size: 13px; color: var(--text); line-height: 1.5; }
-.modal-post {
-  background: var(--card2); border: 1px solid var(--border); border-radius: 8px;
-  padding: 12px; font-size: 13px; line-height: 1.6; white-space: pre-wrap;
-  font-family: 'Inter', sans-serif;
-}
-.modal-link { color: var(--blue); text-decoration: none; font-size: 12px; }
-.modal-link:hover { text-decoration: underline; }
-.modal-row { display: flex; gap: 12px; flex-wrap: wrap; }
-.modal-chip {
-  background: var(--card2); border: 1px solid var(--border); border-radius: 6px;
-  padding: 4px 10px; font-size: 12px; color: var(--muted);
-}
-.modal-chip span { color: var(--text); font-weight: 500; }
-.tweet-btn {
-  display: inline-flex; align-items: center; gap: 6px;
-  background: #1da1f2; color: white; border: none; border-radius: 6px;
-  padding: 7px 14px; font-size: 13px; font-weight: 600; cursor: pointer;
-  text-decoration: none; margin-top: 4px;
-}
-.tweet-btn:hover { background: #1a91da; }
+.hi-item:last-child{border-bottom:none}
+.hi-item:hover{background:rgba(31,111,235,.06)}
+.hi-item.is-posted{border-left:2px solid var(--green)}
+.hi-item.is-dup{opacity:.45}
+.hi-body{flex:1;min-width:0}
+.hi-title{font-size:12px;font-weight:500;line-height:1.4;color:var(--text);
+  overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.hi-meta{font-size:10px;color:var(--dim);margin-top:3px}
+.hi-status{font-size:10px;font-weight:700;white-space:nowrap;flex-shrink:0;margin-top:2px}
+.hi-status.posted{color:var(--green2)}
+.hi-status.pending{color:var(--yellow2)}
+.hi-status.dup{color:var(--dim)}
 
-/* Log */
-.log-box {
-  background: #010409; border: 1px solid var(--border); border-radius: 6px;
-  height: 280px; overflow-y: auto; padding: 10px;
+/* ── Countdown strip ── */
+.cd-strip{
+  background:var(--card);border:1px solid var(--border);border-radius:10px;
+  padding:14px 20px;display:flex;align-items:center;gap:20px;
 }
-.log-box pre { font-family: 'JetBrains Mono', monospace; font-size: 11px; white-space: pre-wrap; word-break: break-all; }
-.li { color: #8b949e; } .lw { color: var(--yellow); } .le { color: var(--red); }
-.lh { color: var(--green); font-weight: 600; } .lp { color: var(--blue); }
-.log-controls { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
-.log-controls label { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--muted); cursor: pointer; }
-.log-ts { font-size: 11px; color: var(--muted); }
+.cd-label{font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.5px;white-space:nowrap}
+.cd-val{font-size:22px;font-weight:700;color:var(--yellow2);font-variant-numeric:tabular-nums;min-width:52px}
+.cd-bar-wrap{flex:1;height:4px;background:var(--border2);border-radius:2px;overflow:hidden}
+.cd-bar{height:100%;background:var(--yellow2);border-radius:2px;transition:width 1s linear}
+.cd-sep{width:1px;height:24px;background:var(--border2);flex-shrink:0}
+.cd-info{font-size:11px;color:var(--muted)}
 
-/* Collapsible */
-details.card { padding: 0; overflow: hidden; }
-details.card > summary {
-  padding: 18px; cursor: pointer; list-style: none;
-  display: flex; align-items: center; justify-content: space-between;
+/* ── Log ── */
+.log-wrap{background:#060b10;border:1px solid var(--border);border-radius:8px;height:220px;overflow-y:auto;padding:10px 12px}
+.log-wrap pre{font-family:'JetBrains Mono',monospace;font-size:10.5px;white-space:pre-wrap;word-break:break-all;line-height:1.6}
+.ll{color:var(--muted)}.lw{color:var(--yellow2)}.le{color:var(--red)}.lh{color:var(--green2);font-weight:600}.lp{color:var(--blue2)}
+.log-controls{display:flex;align-items:center;justify-content:space-between;padding:0 0 8px}
+.log-controls label{display:flex;align-items:center;gap:5px;color:var(--muted);font-size:11px;cursor:pointer}
+
+/* ── Alltime strip ── */
+.alltime{
+  display:flex;gap:0;background:var(--card);border:1px solid var(--border);border-radius:10px;overflow:hidden;
 }
-details.card > summary::-webkit-details-marker { display: none; }
-details.card > summary .card-title { margin-bottom: 0; }
-.toggle { color: var(--muted); font-size: 12px; }
-details.card[open] .toggle::before { content: '▲ '; }
-details.card:not([open]) .toggle::before { content: '▼ '; }
-details.card > .inner { padding: 0 18px 18px; }
+.at-item{flex:1;padding:12px 16px;border-right:1px solid var(--border);display:flex;flex-direction:column;gap:2px}
+.at-item:last-child{border-right:none}
+.at-num{font-size:18px;font-weight:700;color:var(--text)}
+.at-lbl{font-size:10px;color:var(--dim);font-weight:600;text-transform:uppercase;letter-spacing:.4px}
 
-/* Table (low items) */
-table { width: 100%; border-collapse: collapse; }
-th { text-align: left; padding: 7px 10px; color: var(--muted); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid var(--border); }
-td { padding: 9px 10px; border-bottom: 1px solid rgba(48,54,61,0.4); font-size: 12px; vertical-align: top; }
-tr:last-child td { border-bottom: none; }
-tr:hover td { background: rgba(255,255,255,0.02); }
-td a { color: var(--text); text-decoration: none; }
-td a:hover { color: var(--blue); }
-.src-badge { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; white-space: nowrap; }
-.td-muted { color: var(--muted); font-size: 11px; }
+/* ── Modal ── */
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:300;align-items:center;justify-content:center;padding:20px}
+.modal-bg.open{display:flex}
+.modal{background:var(--card);border:1px solid var(--border2);border-radius:12px;width:100%;max-width:580px;max-height:88vh;overflow-y:auto;padding:22px;position:relative}
+.modal-x{position:absolute;top:14px;right:14px;background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;line-height:1;padding:4px 6px;border-radius:4px}
+.modal-x:hover{background:var(--card2);color:var(--text)}
+.modal h3{font-size:15px;font-weight:600;line-height:1.4;padding-right:28px;margin-bottom:14px}
+.ml{font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px}
+.mv{font-size:12px;color:var(--text);line-height:1.55;margin-bottom:14px}
+.mpost{background:var(--card2);border:1px solid var(--border2);border-radius:7px;padding:12px;font-size:12px;line-height:1.65;white-space:pre-wrap;margin-bottom:14px}
+.mrow{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.mlink{color:var(--blue2);text-decoration:none;font-size:12px}
+.mlink:hover{text-decoration:underline}
+.xbtn{display:inline-flex;align-items:center;gap:5px;background:#000;color:#fff;border:none;border-radius:6px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer;text-decoration:none}
+.xbtn:hover{background:#222}
 
-/* Footer */
-footer { text-align: center; padding: 16px; color: var(--muted); font-size: 11px; border-top: 1px solid var(--border); margin-top: 4px; display: flex; justify-content: center; gap: 20px; }
+details.card{padding:0}
+details.card>summary{padding:14px 16px;cursor:pointer;list-style:none;display:flex;align-items:center;justify-content:space-between}
+details.card>summary::-webkit-details-marker{display:none}
+details.card>summary h2{margin-bottom:0}
+.tog{font-size:11px;color:var(--muted)}
+details.card[open] .tog::before{content:'▲ '}
+details.card:not([open]) .tog::before{content:'▼ '}
+details.card>.inner{padding:0 12px 12px}
+table{width:100%;border-collapse:collapse}
+th{text-align:left;padding:6px 10px;color:var(--muted);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--border)}
+td{padding:8px 10px;border-bottom:1px solid rgba(30,45,61,.5);font-size:11px;vertical-align:top}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(255,255,255,.015)}
+td a{color:var(--text);text-decoration:none}
+td a:hover{color:var(--blue2)}
 
-/* Live panel */
-.live-panel {
-  background: var(--card); border: 1px solid var(--border); border-radius: 10px;
-  padding: 28px 32px; display: grid;
-  grid-template-columns: 1fr auto 1fr;
-  align-items: center; gap: 0;
-  transition: border-color 0.3s;
-}
-.live-panel.scanning { border-color: rgba(63,185,80,0.5); background: rgba(63,185,80,0.03); }
-
-/* left side */
-.lp-left { display: flex; flex-direction: column; align-items: flex-start; gap: 16px; }
-.live-dot-wrap { display: flex; align-items: center; gap: 8px; }
-.live-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--muted); flex-shrink: 0; }
-.live-dot.active { background: var(--green); animation: pulse 1.2s infinite; }
-.live-label { font-size: 11px; font-weight: 700; letter-spacing: 1.5px; color: var(--muted); text-transform: uppercase; }
-.live-label.active { color: var(--green); }
-.lp-counts { display: flex; gap: 28px; }
-.lp-count { display: flex; flex-direction: column; gap: 3px; }
-.lp-val { font-size: 32px; font-weight: 700; line-height: 1; transition: color 0.3s; }
-.lp-val.lc-high { color: var(--green); }
-.lp-val.lc-low  { color: var(--muted); }
-.lp-lbl { font-size: 11px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
-
-/* center circle */
-.lp-center { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 0 40px; }
-.live-circle-wrap { position: relative; width: 130px; height: 130px; }
-.live-circle-wrap svg { position: absolute; top: 0; left: 0; transform: rotate(-90deg); }
-.live-ring-bg { fill: none; stroke: var(--border); stroke-width: 7; }
-.live-ring { fill: none; stroke: var(--border); stroke-width: 7; stroke-linecap: round; transition: stroke-dashoffset 0.5s ease, stroke 0.4s; transform-origin: 65px 65px; }
-.live-ring.scanning { stroke: var(--green); filter: drop-shadow(0 0 8px rgba(63,185,80,0.6)); }
-@keyframes ring-pulse { 0%,100% { opacity:1; } 50% { opacity:0.6; } }
-.live-ring.scanning { animation: ring-pulse 1.2s ease-in-out infinite; }
-.live-num {
-  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
-  font-size: 36px; font-weight: 700; color: var(--text); letter-spacing: -1px;
-}
-.live-sublabel { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; font-weight: 600; }
-
-/* right side */
-.lp-right { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
-.lcd-val { font-size: 32px; font-weight: 700; color: var(--yellow); line-height: 1; font-variant-numeric: tabular-nums; }
-.lcd-lbl { font-size: 11px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
-.lcd-bar { width: 140px; height: 4px; background: var(--border); border-radius: 2px; margin-top: 8px; overflow: hidden; }
-.lcd-bar-fill { height: 100%; background: var(--yellow); border-radius: 2px; transition: width 1s linear; }
-
-@media(max-width:768px) {
-  .stats { grid-template-columns: repeat(2,1fr); }
-  .header { flex-direction: column; gap: 10px; align-items: flex-start; }
-  main { padding: 12px; }
-}
+footer{text-align:center;padding:14px;color:var(--dim);font-size:10px;border-top:1px solid var(--border);margin-top:4px}
+@media(max-width:768px){.two-col{grid-template-columns:1fr}.today-bar{grid-template-columns:repeat(2,1fr)}.hdr-center{display:none}}
 </style>
 </head>
 <body>
 
-<header class="header">
-  <div class="header-left">
-    <span style="font-size:24px">🇨🇭</span>
-    <div>
-      <h1>SwissToday <span>Intelligence</span></h1>
-      <p>Swiss News Monitoring · Automated X Publisher</p>
-    </div>
+<header class="hdr">
+  <div class="hdr-brand">
+    <span style="font-size:20px">🇨🇭</span>
+    <h1>Swiss<span>Intel</span></h1>
   </div>
-  <div class="header-right">
-    <div id="bot-status" class="status-pill"><span class="dot"></span><span id="status-txt">Checking...</span></div>
-    <span id="last-run-txt">Last run: —</span>
+  <div class="hdr-center">
+    <span id="hdr-lastrun">Last run: —</span>
+    <span id="hdr-nextrun">Nächster Run: —</span>
+  </div>
+  <div class="hdr-right">
+    <div id="bot-pill" class="pill off"><span class="dot"></span><span id="pill-txt">Checking...</span></div>
   </div>
 </header>
 
 <main>
 
-  <!-- Stats -->
-  <div class="stats">
-    <div class="stat"><div class="stat-num" id="s-total">—</div><div class="stat-lbl">Analysiert</div></div>
-    <div class="stat c-green"><div class="stat-num" id="s-high">—</div><div class="stat-lbl">HIGH Relevanz</div></div>
-    <div class="stat c-blue"><div class="stat-num" id="s-posted">—</div><div class="stat-lbl">Tweets gepostet</div></div>
-    <div class="stat c-purple"><div class="stat-num" id="s-sources">—</div><div class="stat-lbl">Quellen</div></div>
-    <div class="stat c-yellow"><div class="stat-num" id="s-runs">—</div><div class="stat-lbl">Runs heute</div></div>
+  <!-- Countdown strip -->
+  <div class="cd-strip">
+    <span class="cd-label">Nächster Run</span>
+    <span class="cd-val" id="cd-val">—</span>
+    <div class="cd-bar-wrap"><div class="cd-bar" id="cd-bar" style="width:100%"></div></div>
+    <div class="cd-sep"></div>
+    <span class="cd-info" id="cd-info">Interval: — min</span>
   </div>
 
-  <!-- Run history chart -->
-  <div class="card">
-    <div class="card-title">Run History <span class="badge">Letzte 20 Runs</span></div>
-    <div class="chart-wrap"><canvas id="runChart"></canvas></div>
+  <!-- Today stats -->
+  <div class="today-bar">
+    <div class="tcard c-blue">
+      <div class="t-num" id="t-new">—</div>
+      <div class="t-lbl">Heute neu analysiert</div>
+      <div class="t-sub" id="t-new-sub">von insgesamt — Artikeln</div>
+    </div>
+    <div class="tcard c-green">
+      <div class="t-num" id="t-high">—</div>
+      <div class="t-lbl">Heute HIGH Relevanz</div>
+      <div class="t-sub" id="t-high-sub">— % der heutigen Artikel</div>
+    </div>
+    <div class="tcard c-purple">
+      <div class="t-num" id="t-posted">—</div>
+      <div class="t-lbl">Heute gepostet auf X</div>
+      <div class="t-sub" id="t-posted-sub">von — HIGH Items</div>
+    </div>
   </div>
 
-  <!-- Live Panel -->
-  <div class="live-panel" id="live-panel">
-    <!-- Left: status + counters -->
-    <div class="lp-left">
-      <div class="live-dot-wrap">
-        <div class="live-dot" id="live-dot"></div>
-        <span class="live-label" id="live-label">LIVE</span>
+  <!-- Main two columns -->
+  <div class="two-col">
+
+    <!-- Recent tweets -->
+    <div class="card">
+      <div class="card-hdr">
+        <h2>🐦 Letzte Tweets <span id="posted-badge" class="badge live">0</span></h2>
       </div>
-      <div class="lp-counts">
-        <div class="lp-count">
-          <div class="lp-val lc-high" id="live-high">0</div>
-          <div class="lp-lbl">HIGH</div>
-        </div>
-        <div class="lp-count">
-          <div class="lp-val lc-low" id="live-low">0</div>
-          <div class="lp-lbl">LOW</div>
-        </div>
+      <div id="tweet-list" class="tweet-list">
+        <div class="empty-state">⏳ Lädt...</div>
       </div>
     </div>
 
-    <!-- Center: ring -->
-    <div class="lp-center">
-      <div class="live-circle-wrap">
-        <svg viewBox="0 0 130 130" width="130" height="130">
-          <circle class="live-ring-bg" cx="65" cy="65" r="56"/>
-          <circle class="live-ring" id="live-ring" cx="65" cy="65" r="56"
-            stroke-dasharray="351.9" stroke-dashoffset="351.9"/>
-        </svg>
-        <div class="live-num" id="live-num">0</div>
+    <!-- HIGH items -->
+    <div class="card">
+      <div class="card-hdr">
+        <h2>🔥 HIGH Relevanz <span id="high-badge" class="badge">0</span></h2>
+        <input type="text" id="hi-search" placeholder="Suchen…"
+          style="background:var(--card2);border:1px solid var(--border2);color:var(--text);padding:4px 9px;border-radius:5px;font-size:11px;outline:none;width:140px">
       </div>
-      <div class="live-sublabel" id="live-sublabel">Warte auf Run</div>
+      <div id="hi-list" class="hi-list">
+        <div class="empty-state">⏳ Lädt...</div>
+      </div>
     </div>
 
-    <!-- Right: countdown -->
-    <div class="lp-right">
-      <div class="lcd-val" id="lcd-val">—</div>
-      <div class="lcd-lbl">Nächster Run</div>
-      <div class="lcd-bar"><div class="lcd-bar-fill" id="lcd-fill" style="width:100%"></div></div>
-    </div>
   </div>
 
-  <!-- HIGH items -->
-  <div class="card">
-    <div class="high-panel-header">
-      <div class="card-title" style="margin-bottom:0">HIGH Relevanz <span id="high-count" class="badge badge-green">0</span></div>
-      <input type="text" id="high-search" class="high-search" placeholder="Suchen...">
-    </div>
-    <div id="high-list" class="item-list">
-      <div class="empty">⏳ Lädt...</div>
-    </div>
+  <!-- All-time row -->
+  <div class="alltime">
+    <div class="at-item"><div class="at-num" id="at-total">—</div><div class="at-lbl">Gesamt analysiert</div></div>
+    <div class="at-item"><div class="at-num" id="at-high">—</div><div class="at-lbl">Gesamt HIGH</div></div>
+    <div class="at-item"><div class="at-num" id="at-posted">—</div><div class="at-lbl">Gesamt Tweets</div></div>
   </div>
 
-  <!-- LOW items collapsible -->
+  <!-- Sources -->
   <details class="card">
     <summary>
-      <div class="card-title">LOW Relevanz <span id="low-count" class="badge">0</span></div>
-      <span class="toggle">Anzeigen</span>
+      <h2 class="card-hdr" style="border:none;padding:0">📡 Quellen <span id="src-badge" class="badge">0</span></h2>
+      <span class="tog">Details</span>
     </summary>
     <div class="inner">
       <table>
-        <thead><tr><th>Quelle</th><th>Titel</th><th>Grund</th><th>Zeit</th></tr></thead>
-        <tbody id="low-tbody"><tr><td colspan="4"><div class="empty">⏳ Lädt...</div></td></tr></tbody>
+        <thead><tr><th>Quelle</th><th>Gesamt</th><th>HIGH</th><th>Gepostet</th><th>HIGH-Rate</th></tr></thead>
+        <tbody id="src-tbody"></tbody>
       </table>
     </div>
   </details>
 
   <!-- Log -->
   <div class="card">
-    <div class="log-controls">
-      <div class="card-title" style="margin-bottom:0">Live Log</div>
-      <div style="display:flex;align-items:center;gap:14px">
-        <label><input type="checkbox" id="log-scroll" checked> Auto-scroll</label>
-        <span class="log-ts" id="log-ts">—</span>
-      </div>
+    <div class="card-hdr">
+      <h2>📋 Live Log</h2>
+      <label style="display:flex;align-items:center;gap:5px;color:var(--muted);font-size:11px;cursor:pointer">
+        <input type="checkbox" id="log-scroll" checked> Auto-scroll
+      </label>
     </div>
-    <div class="log-box" id="log-box"><pre id="log-pre">Lädt...</pre></div>
+    <div class="card-body">
+      <div class="log-wrap" id="log-box"><pre id="log-pre">Lädt...</pre></div>
+    </div>
   </div>
 
 </main>
 
-<footer>
-  <span id="footer-refresh">—</span>
-  <span id="footer-next">Nächste Aktualisierung in 60s</span>
-</footer>
+<footer id="footer">Aktualisiert: —</footer>
 
 <!-- Modal -->
-<div class="modal-overlay" id="modal" onclick="closeModal(event)">
-  <div class="modal" id="modal-inner">
-    <button class="modal-close" onclick="closeModal()">✕</button>
+<div class="modal-bg" id="modal" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <button class="modal-x" onclick="closeModal()">✕</button>
     <h3 id="m-title">—</h3>
-    <div class="modal-row" style="margin-bottom:14px">
-      <div class="modal-chip">Quelle: <span id="m-source">—</span></div>
-      <div class="modal-chip">Fetched: <span id="m-time">—</span></div>
-      <div class="modal-chip" id="m-status-chip">Status: <span id="m-status">—</span></div>
-    </div>
-    <div class="modal-section">
-      <div class="modal-label">AI Begründung</div>
-      <div class="modal-value" id="m-reason">—</div>
-    </div>
-    <div class="modal-section">
-      <div class="modal-label">Post-Text</div>
-      <div class="modal-post" id="m-post">—</div>
-    </div>
-    <div class="modal-section" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-      <a id="m-article-link" class="modal-link" href="#" target="_blank">🔗 Artikel öffnen</a>
-      <a id="m-tweet-link" class="tweet-btn" href="#" target="_blank" style="display:none">🐦 Tweet ansehen</a>
+    <div class="ml">Quelle &amp; Zeit</div>
+    <div class="mv"><span id="m-source">—</span> · <span id="m-time">—</span></div>
+    <div class="ml">AI Begründung</div>
+    <div class="mv" id="m-reason">—</div>
+    <div class="ml">Post-Text</div>
+    <div class="mpost" id="m-post">—</div>
+    <div class="mrow">
+      <a id="m-art" class="mlink" href="#" target="_blank">🔗 Artikel</a>
+      <a id="m-tweet" class="xbtn" href="#" target="_blank" style="display:none">𝕏 Tweet ansehen</a>
     </div>
   </div>
 </div>
 
 <script>
-const PALETTE = ['#58a6ff','#3fb950','#bc8cff','#f0883e','#d29922','#79c0ff','#56d364','#d2a8ff','#ffa657','#e3b341'];
-function srcColor(id) {
-  let h = 0; for (let c of id) h += c.charCodeAt(0);
-  return PALETTE[h % PALETTE.length];
+const PAL=['#58a6ff','#3fb950','#bc8cff','#f0883e','#d29922','#79c0ff','#56d364','#a5d6ff','#ffa657','#e3b341'];
+function srcColor(id){let h=0;for(let c of(id||''))h+=c.charCodeAt(0);return PAL[h%PAL.length]}
+function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+function fmt(dt){
+  if(!dt)return'—';
+  const d=new Date(dt.endsWith('Z')?dt:dt+'Z');
+  return d.toLocaleString('de-CH',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
 }
-function esc(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-function fmt(dt) {
-  if (!dt) return '—';
-  const d = new Date(dt.endsWith('Z') ? dt : dt + 'Z');
-  return d.toLocaleString('de-CH', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' });
+function trunc(s,n){return s&&s.length>n?s.slice(0,n)+'…':(s||'—')}
+async function api(url){const r=await fetch(url);if(!r.ok)throw new Error(r.status);return r.json()}
+
+// ── Countdown ──────────────────────────────────────────────────────────────
+let cdSecs=0, cdInterval=300, cdInitDone=false;
+
+function cdTick(){
+  if(cdSecs>0)cdSecs--;
+  const m=Math.floor(cdSecs/60), s=cdSecs%60;
+  document.getElementById('cd-val').textContent=`${m}:${String(s).padStart(2,'0')}`;
+  document.getElementById('cd-bar').style.width=(cdSecs/cdInterval*100)+'%';
+  document.getElementById('hdr-nextrun').textContent='Nächster Run: '+`${m}:${String(s).padStart(2,'0')}`;
 }
-function trunc(s,n) { return s && s.length > n ? s.slice(0,n)+'…' : (s||'—'); }
+setInterval(cdTick,1000);
 
-Chart.defaults.color = '#8b949e';
-Chart.defaults.borderColor = '#30363d';
-let runChart = null;
-
-function initChart() {
-  runChart = new Chart(document.getElementById('runChart').getContext('2d'), {
-    type: 'bar',
-    data: { labels: [], datasets: [
-      { label: 'Fetched', data: [], backgroundColor: 'rgba(31,111,235,0.3)', borderColor: '#1f6feb', borderWidth: 1 },
-      { label: 'HIGH',    data: [], backgroundColor: 'rgba(63,185,80,0.3)',  borderColor: '#3fb950', borderWidth: 1 },
-      { label: 'Posted',  data: [], backgroundColor: 'rgba(188,140,255,0.3)',borderColor: '#bc8cff', borderWidth: 1 },
-    ]},
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { labels: { color: '#8b949e', boxWidth: 10, font: { size: 11 } } } },
-      scales: {
-        x: { ticks: { color: '#8b949e', maxRotation: 45, font: { size: 10 } }, grid: { color: '#1c2128' } },
-        y: { ticks: { color: '#8b949e', font: { size: 10 } }, grid: { color: '#1c2128' } }
-      }
-    }
-  });
+function cdSyncFromLastRun(lastRunAt){
+  if(!lastRunAt)return;
+  const last=new Date(lastRunAt.endsWith('Z')?lastRunAt:lastRunAt+'Z');
+  const elapsed=Math.floor((Date.now()-last.getTime())/1000);
+  cdSecs=Math.max(0,cdInterval-elapsed);
 }
 
-async function fetchJSON(url) {
-  const r = await fetch(url); if (!r.ok) throw new Error(r.status); return r.json();
-}
+// ── Data loading ───────────────────────────────────────────────────────────
+let allHigh=[];
 
-let allHighItems = [];
-
-async function refreshAll() {
-  try {
-    const [stats, runs, high, low] = await Promise.all([
-      fetchJSON('/api/stats'), fetchJSON('/api/runs'),
-      fetchJSON('/api/items/high'), fetchJSON('/api/items/low'),
-    ]);
-
-    // Stats
-    document.getElementById('s-total').textContent   = stats.total.toLocaleString();
-    document.getElementById('s-high').textContent    = stats.high.toLocaleString();
-    document.getElementById('s-posted').textContent  = stats.posted.toLocaleString();
-    document.getElementById('s-sources').textContent = stats.sources.toLocaleString();
-    document.getElementById('s-runs').textContent    = stats.today_runs.toLocaleString();
-    const badge = document.getElementById('bot-status');
-    badge.className = 'status-pill ' + (stats.bot_running ? 'running' : 'stopped');
-    document.getElementById('status-txt').textContent = stats.bot_running ? `Running (PID ${stats.bot_pid})` : 'Stopped';
-    if (stats.interval_seconds) runInterval = stats.interval_seconds;
-    if (stats.last_run) {
-      document.getElementById('last-run-txt').textContent = 'Last run: ' + fmt(stats.last_run);
-      if (nextRunSecs === runInterval) syncCountdownFromLastRun(stats.last_run);
-    }
-
-    // Chart
-    runChart.data.labels = runs.map(r => fmt(r.run_at));
-    runChart.data.datasets[0].data = runs.map(r => r.fetched||0);
-    runChart.data.datasets[1].data = runs.map(r => r.high_relevance||0);
-    runChart.data.datasets[2].data = runs.map(r => r.posted||0);
-    runChart.update('none');
-
-    // Live panel today totals
-    const todayRuns = runs.filter(r => {
-      const d = new Date(r.run_at.endsWith('Z') ? r.run_at : r.run_at + 'Z');
-      return d.toDateString() === new Date().toDateString();
-    });
-    syncTodayFromRuns(todayRuns);
-
-    // HIGH items
-    allHighItems = high;
-    renderHighItems(high);
-
-    // LOW items
-    document.getElementById('low-count').textContent = low.length;
-    const lowTbody = document.getElementById('low-tbody');
-    if (!low.length) { lowTbody.innerHTML = '<tr><td colspan="4"><div class="empty">Keine Items</div></td></tr>'; }
-    else lowTbody.innerHTML = low.map(i => {
-      const c = srcColor(i.source_id);
-      return `<tr>
-        <td><span class="src-badge" style="background:${c}22;color:${c};border:1px solid ${c}44">${esc(i.source_id)}</span></td>
-        <td><a href="${esc(i.url||'#')}" target="_blank">${esc(trunc(i.title,80))}</a></td>
-        <td class="td-muted">${esc(trunc(i.relevance_reason,80))}</td>
-        <td class="td-muted">${fmt(i.fetched_at)}</td>
-      </tr>`;
-    }).join('');
-
-    document.getElementById('footer-refresh').textContent = 'Aktualisiert: ' + new Date().toLocaleTimeString('de-CH');
-  } catch(e) { console.error(e); }
-}
-
-const SHOW_FIRST = 5;
-
-function makeCard(i, idx) {
-  const c = srcColor(i.source_id);
-  const isDuplicate = i.tweet_id === 'duplicate_topic';
-  const isPosted = i.tweet_id && !['skipped_history','dry_run','pending','duplicate_topic'].includes(i.tweet_id) && i.posted_at;
-  const statusCls = isPosted ? 'posted' : isDuplicate ? 'duplicate' : 'pending';
-  const statusTxt = isPosted ? '✓ Gepostet' : isDuplicate ? '⛔ Duplikat' : '🔍 Zur Prüfung';
-  return `<div class="item-card ${statusCls}" onclick="openModal(${idx})">
-    <span class="item-source" style="background:${c}22;color:${c};border:1px solid ${c}44">${esc(i.source_id)}</span>
-    <span class="item-title">${esc(trunc(i.title,90))}</span>
-    <span class="item-meta">${fmt(i.fetched_at)}</span>
-    <span class="item-status ${statusCls}">${statusTxt}</span>
-  </div>`;
-}
-
-function renderHighItems(items) {
-  document.getElementById('high-count').textContent = items.length;
-  const list = document.getElementById('high-list');
-  if (!items.length) { list.innerHTML = '<div class="empty">Noch keine HIGH-Artikel</div>'; return; }
-  const top = items.slice(0, SHOW_FIRST);
-  const rest = items.slice(SHOW_FIRST);
-  let html = top.map((i,idx) => makeCard(i, idx)).join('');
-  if (rest.length) {
-    html += `<details style="margin-top:4px">
-      <summary style="cursor:pointer;padding:8px 4px;color:var(--muted);font-size:12px;list-style:none;user-select:none">
-        ▼ ${rest.length} ältere Artikel anzeigen
-      </summary>
-      <div style="display:flex;flex-direction:column;gap:8px;margin-top:8px">
-        ${rest.map((i,idx) => makeCard(i, SHOW_FIRST + idx)).join('')}
-      </div>
-    </details>`;
+async function loadStats(){
+  const s=await api('/api/stats');
+  // bot pill
+  const pill=document.getElementById('bot-pill');
+  pill.className='pill '+(s.bot_running?'on':'off');
+  document.getElementById('pill-txt').textContent=s.bot_running?`Bot läuft · PID ${s.bot_pid}`:'Bot gestoppt';
+  // last run
+  if(s.last_run)document.getElementById('hdr-lastrun').textContent='Last run: '+fmt(s.last_run);
+  // interval
+  if(s.interval_seconds){
+    cdInterval=s.interval_seconds;
+    document.getElementById('cd-info').textContent='Interval: '+(cdInterval/60)+' min';
   }
-  list.innerHTML = html;
+  // sync countdown only on first load
+  if(!cdInitDone&&s.last_run){cdSyncFromLastRun(s.last_run);cdInitDone=true;}
+  // today stats
+  document.getElementById('t-new').textContent=(s.today_new??'—').toLocaleString();
+  document.getElementById('t-high').textContent=(s.today_high??'—').toLocaleString();
+  document.getElementById('t-posted').textContent=(s.today_posted??'—').toLocaleString();
+  const pct=s.today_new>0?Math.round(s.today_high/s.today_new*100):0;
+  document.getElementById('t-new-sub').textContent='von insgesamt '+s.total.toLocaleString()+' Artikeln';
+  document.getElementById('t-high-sub').textContent=pct+'% der heutigen Artikel';
+  document.getElementById('t-posted-sub').textContent='von '+s.today_high+' HIGH Items heute';
+  // alltime
+  document.getElementById('at-total').textContent=s.total.toLocaleString();
+  document.getElementById('at-high').textContent=s.high.toLocaleString();
+  document.getElementById('at-posted').textContent=s.posted.toLocaleString();
 }
 
-document.getElementById('high-search').addEventListener('input', function() {
-  const q = this.value.toLowerCase();
-  const filtered = q ? allHighItems.filter(i =>
-    (i.title||'').toLowerCase().includes(q) ||
-    (i.source_id||'').toLowerCase().includes(q) ||
-    (i.relevance_reason||'').toLowerCase().includes(q)
-  ) : allHighItems;
-  renderHighItems(filtered);
+async function loadPosted(){
+  const rows=await api('/api/items/posted');
+  document.getElementById('posted-badge').textContent=rows.length;
+  const el=document.getElementById('tweet-list');
+  if(!rows.length){el.innerHTML='<div class="empty-state">Noch keine Tweets heute</div>';return;}
+  el.innerHTML=rows.map(r=>{
+    const c=srcColor(r.source_id);
+    return `<div class="tweet-item" onclick="openTweet(${JSON.stringify(r).replace(/"/g,'&quot;')})">
+      <div class="ti-top">
+        <span class="src-tag" style="background:${c}22;color:${c};border:1px solid ${c}44">${esc(r.source_id)}</span>
+        <span class="ti-time">${fmt(r.posted_at)}</span>
+      </div>
+      <div class="ti-text">${esc(trunc(r.post_text,280))}</div>
+    </div>`;
+  }).join('');
+}
+
+async function loadHigh(){
+  const rows=await api('/api/items/high');
+  allHigh=rows;
+  renderHigh(rows);
+}
+
+function renderHigh(items){
+  document.getElementById('high-badge').textContent=items.length;
+  const el=document.getElementById('hi-list');
+  if(!items.length){el.innerHTML='<div class="empty-state">Keine HIGH-Artikel</div>';return;}
+  el.innerHTML=items.slice(0,40).map((i,idx)=>{
+    const c=srcColor(i.source_id);
+    const isDup=i.tweet_id==='duplicate_topic';
+    const isPosted=i.tweet_id&&!['skipped_history','dry_run','duplicate_topic'].includes(i.tweet_id)&&i.posted_at;
+    const cls=isPosted?'is-posted':isDup?'is-dup':'';
+    const stcls=isPosted?'posted':isDup?'dup':'pending';
+    const sttxt=isPosted?'✓ Gepostet':isDup?'⛔ Duplikat':'🔍 Pending';
+    return `<div class="hi-item ${cls}" onclick="openHigh(${idx})">
+      <span class="src-tag" style="background:${c}22;color:${c};border:1px solid ${c}44;font-size:9px;padding:2px 5px;border-radius:3px;flex-shrink:0">${esc(i.source_id)}</span>
+      <div class="hi-body">
+        <div class="hi-title">${esc(i.title)}</div>
+        <div class="hi-meta">${fmt(i.fetched_at)} · ${esc(trunc(i.relevance_reason,60))}</div>
+      </div>
+      <span class="hi-status ${stcls}">${sttxt}</span>
+    </div>`;
+  }).join('');
+}
+
+document.getElementById('hi-search').addEventListener('input',function(){
+  const q=this.value.toLowerCase();
+  renderHigh(q?allHigh.filter(i=>(i.title||'').toLowerCase().includes(q)||(i.source_id||'').toLowerCase().includes(q)):allHigh);
 });
 
-function openModal(idx) {
-  const i = allHighItems[idx];
-  if (!i) return;
-  document.getElementById('m-title').textContent = i.title || '—';
-  document.getElementById('m-source').textContent = i.source_id || '—';
-  document.getElementById('m-time').textContent = fmt(i.fetched_at);
-  document.getElementById('m-reason').textContent = i.relevance_reason || '—';
-  document.getElementById('m-post').textContent = i.post_text || '(kein Post-Text)';
-  const articleLink = document.getElementById('m-article-link');
-  articleLink.href = i.url || '#';
-  const isPosted = i.tweet_id && !['skipped_history','dry_run'].includes(i.tweet_id) && i.posted_at;
-  document.getElementById('m-status').textContent = isPosted ? 'Gepostet' : isDuplicate ? 'Duplikat (nicht gepostet)' : 'Zur Prüfung';
-  document.getElementById('m-status-chip').style.borderColor = isPosted ? 'rgba(63,185,80,0.3)' : 'rgba(210,153,34,0.3)';
-  const tweetBtn = document.getElementById('m-tweet-link');
-  if (isPosted) {
-    tweetBtn.href = `https://x.com/i/web/status/${i.tweet_id}`;
-    tweetBtn.style.display = 'inline-flex';
-  } else { tweetBtn.style.display = 'none'; }
+async function loadSources(){
+  const rows=await api('/api/sources');
+  document.getElementById('src-badge').textContent=rows.length;
+  document.getElementById('src-tbody').innerHTML=rows.map(r=>{
+    const c=srcColor(r.source_id);
+    const rate=r.total>0?Math.round(r.high_count/r.total*100):0;
+    return `<tr>
+      <td><span class="src-tag" style="background:${c}22;color:${c};border:1px solid ${c}44">${esc(r.source_id)}</span></td>
+      <td>${r.total}</td>
+      <td style="color:var(--green2)">${r.high_count}</td>
+      <td style="color:#bc8cff">${r.posted_count}</td>
+      <td style="color:${rate>20?'var(--yellow2)':'var(--dim)'}">${rate}%</td>
+    </tr>`;
+  }).join('');
+}
+
+async function loadLog(){
+  const data=await api('/api/log');
+  const pre=document.getElementById('log-pre');
+  pre.innerHTML=data.lines.map(line=>{
+    let cls='ll';
+    if(/ERROR/.test(line))cls='le';
+    else if(/WARNING/.test(line))cls='lw';
+    else if(/→ HIGH/.test(line))cls='lh';
+    else if(/Posted tweet|posting/.test(line))cls='lp';
+    return`<span class="${cls}">${esc(line)}</span>`;
+  }).join('\n');
+  if(document.getElementById('log-scroll').checked){
+    const b=document.getElementById('log-box');b.scrollTop=b.scrollHeight;
+  }
+}
+
+// ── Modals ─────────────────────────────────────────────────────────────────
+function openHigh(idx){
+  const i=allHigh[idx];if(!i)return;
+  document.getElementById('m-title').textContent=i.title||'—';
+  document.getElementById('m-source').textContent=i.source_id||'—';
+  document.getElementById('m-time').textContent=fmt(i.fetched_at);
+  document.getElementById('m-reason').textContent=i.relevance_reason||'—';
+  document.getElementById('m-post').textContent=i.post_text||'(kein Post-Text)';
+  document.getElementById('m-art').href=i.url||'#';
+  const isPosted=i.tweet_id&&!['skipped_history','dry_run','duplicate_topic'].includes(i.tweet_id)&&i.posted_at;
+  const btn=document.getElementById('m-tweet');
+  if(isPosted){btn.href=`https://x.com/i/web/status/${i.tweet_id}`;btn.style.display='inline-flex';}
+  else btn.style.display='none';
   document.getElementById('modal').classList.add('open');
 }
 
-function closeModal(e) {
-  if (!e || e.target === document.getElementById('modal') || e.currentTarget === document.querySelector('.modal-close')) {
-    document.getElementById('modal').classList.remove('open');
-  }
-}
-document.addEventListener('keydown', e => { if (e.key === 'Escape') document.getElementById('modal').classList.remove('open'); });
-
-async function fetchLog() {
-  try {
-    const data = await fetchJSON('/api/log');
-    const pre = document.getElementById('log-pre');
-    pre.innerHTML = data.lines.map(line => {
-      let cls = 'li';
-      if (/ERROR/.test(line)) cls = 'le';
-      else if (/WARNING/.test(line)) cls = 'lw';
-      else if (/→ HIGH/.test(line)) cls = 'lh';
-      else if (/Posted tweet/.test(line)) cls = 'lp';
-      return `<span class="${cls}">${esc(line)}</span>`;
-    }).join('\n');
-    document.getElementById('log-ts').textContent = new Date().toLocaleTimeString('de-CH');
-    if (document.getElementById('log-scroll').checked) {
-      const b = document.getElementById('log-box'); b.scrollTop = b.scrollHeight;
-    }
-  } catch(e) {}
+function openTweet(r){
+  document.getElementById('m-title').textContent=r.title||'Tweet';
+  document.getElementById('m-source').textContent=r.source_id||'—';
+  document.getElementById('m-time').textContent=fmt(r.posted_at);
+  document.getElementById('m-reason').textContent='—';
+  document.getElementById('m-post').textContent=r.post_text||'—';
+  document.getElementById('m-art').href=r.url||'#';
+  const btn=document.getElementById('m-tweet');
+  if(r.tweet_id){btn.href=`https://x.com/i/web/status/${r.tweet_id}`;btn.style.display='inline-flex';}
+  else btn.style.display='none';
+  document.getElementById('modal').classList.add('open');
 }
 
-// ── Live panel ───────────────────────────────────────────────────────────
-const RING_CIRC = 351.9;
-let liveRunning = false;
-// today totals (always visible)
-let todayScanned = 0, todayHigh = 0, todayLow = 0;
-// current run delta
-let runScanned = 0, runHigh = 0, runLow = 0;
+function closeModal(){document.getElementById('modal').classList.remove('open')}
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal()});
 
-// idle rotation angle
-let idleAngle = 0;
-let idleAnim = null;
-
-function startIdleAnim() {
-  if (idleAnim) return;
-  idleAnim = setInterval(() => {
-    idleAngle = (idleAngle + 0.5) % 360;
-    const svg = document.querySelector('#live-ring');
-    if (svg) svg.style.transform = `rotate(${idleAngle - 90}deg)`;
-  }, 30);
-}
-function stopIdleAnim() {
-  clearInterval(idleAnim); idleAnim = null;
-  const svg = document.querySelector('#live-ring');
-  if (svg) svg.style.transform = '';
-}
-
-function updateLivePanel() {
-  const ring = document.getElementById('live-ring');
-  const num  = document.getElementById('live-num');
-  const sub  = document.getElementById('live-sublabel');
-
-  if (liveRunning) {
-    // show current run progress
-    const max = Math.max(runScanned, 30);
-    const offset = RING_CIRC - (runScanned / max) * RING_CIRC;
-    ring.style.strokeDashoffset = offset;
-    num.textContent = runScanned;
-    sub.textContent = 'Scannt...';
-  } else {
-    // show today's total, ring filled proportionally to high/total
-    const max = Math.max(todayScanned, 1);
-    const pct = Math.min(todayHigh / max, 1);
-    ring.style.strokeDashoffset = RING_CIRC - pct * RING_CIRC;
-    num.textContent = todayScanned;
-    sub.textContent = todayScanned > 0 ? 'Heute gescannt' : 'Warte auf Run';
-  }
-
-  document.getElementById('live-high').textContent = liveRunning ? runHigh : todayHigh;
-  document.getElementById('live-low').textContent  = liveRunning ? runLow  : todayLow;
-}
-
-function setLiveRunning(on) {
-  liveRunning = on;
-  const panel = document.getElementById('live-panel');
-  const dot   = document.getElementById('live-dot');
-  const label = document.getElementById('live-label');
-  const ring  = document.getElementById('live-ring');
-  dot.className   = 'live-dot'   + (on ? ' active' : '');
-  label.className = 'live-label' + (on ? ' active' : '');
-  ring.className  = 'live-ring'  + (on ? ' scanning' : '');
-  panel.classList.toggle('scanning', on);
-  if (on) { stopIdleAnim(); }
-  else    { startIdleAnim(); }
-}
-
-function syncTodayFromStats(stats) {
-  // sum today's runs for total scanned/high/low
-  // we use stats.today_runs as a proxy; actual totals come from runs API
-}
-
-function syncTodayFromRuns(runs) {
-  todayScanned = runs.reduce((a, r) => a + (r.fetched||0), 0);
-  todayHigh    = runs.reduce((a, r) => a + (r.high_relevance||0), 0);
-  todayLow     = runs.reduce((a, r) => a + ((r.fetched||0) - (r.high_relevance||0)), 0);
-  if (!liveRunning) updateLivePanel();
-}
-
-// Countdown
-let nextRunSecs = 300, runInterval = 300;
-
-function updateCountdown() {
-  if (liveRunning) {
-    document.getElementById('lcd-val').textContent = 'Läuft...';
-    document.getElementById('lcd-fill').style.width = '100%';
-    return;
-  }
-  if (nextRunSecs > 0) nextRunSecs--;
-  const m = Math.floor(nextRunSecs / 60);
-  const s = nextRunSecs % 60;
-  document.getElementById('lcd-val').textContent = `${m}:${String(s).padStart(2,'0')}`;
-  document.getElementById('lcd-fill').style.width = (nextRunSecs / runInterval * 100) + '%';
-}
-
-function syncCountdownFromLastRun(lastRunAt) {
-  if (!lastRunAt) return;
-  const last = new Date(lastRunAt.endsWith('Z') ? lastRunAt : lastRunAt + 'Z');
-  const elapsed = Math.floor((Date.now() - last.getTime()) / 1000);
-  nextRunSecs = Math.max(0, runInterval - (elapsed % runInterval));
-}
-
-setInterval(updateCountdown, 1000);
-
-function startLiveStream() {
-  const es = new EventSource('/api/stream');
-  es.onmessage = e => {
-    const line = e.data;
-    if (!line) return;
-    if (/Pipeline run started/.test(line)) {
-      runScanned = 0; runHigh = 0; runLow = 0;
-      setLiveRunning(true);
-      updateLivePanel();
-    }
-    if (/→ HIGH|→ LOW/.test(line)) {
-      runScanned++;
-      if (/→ HIGH/.test(line)) { runHigh++; todayHigh++; }
-      else { runLow++; todayLow++; }
-      todayScanned++;
-      updateLivePanel();
-    }
-    if (/Run complete/.test(line)) {
-      setLiveRunning(false);
-      nextRunSecs = runInterval;
-      updateLivePanel();
-      refreshAll();
-    }
+// ── SSE ────────────────────────────────────────────────────────────────────
+function startSSE(){
+  const es=new EventSource('/api/stream');
+  es.onmessage=e=>{
+    const line=e.data;
+    if(/Pipeline run started/.test(line)){cdSecs=cdInterval;}
+    if(/Run complete/.test(line)){cdSecs=cdInterval;setTimeout(refreshAll,2000);}
   };
-  es.onerror = () => { setTimeout(startLiveStream, 5000); es.close(); };
+  es.onerror=()=>{setTimeout(startSSE,5000);es.close()};
 }
 
-let countdown = 60;
-setInterval(() => {
-  countdown = countdown <= 1 ? 60 : countdown - 1;
-  document.getElementById('footer-next').textContent = `Nächste Aktualisierung in ${countdown}s`;
-}, 1000);
+// ── Refresh ────────────────────────────────────────────────────────────────
+async function refreshAll(){
+  try{
+    await Promise.all([loadStats(),loadPosted(),loadHigh(),loadSources(),loadLog()]);
+    document.getElementById('footer').textContent='Aktualisiert: '+new Date().toLocaleTimeString('de-CH');
+  }catch(err){console.error(err)}
+}
 
-document.addEventListener('DOMContentLoaded', () => {
-  initChart();
+document.addEventListener('DOMContentLoaded',()=>{
   refreshAll();
-  fetchLog();
-  startLiveStream();
-  startIdleAnim();
-  setInterval(refreshAll, 60000);
-  setInterval(fetchLog, 10000);
+  startSSE();
+  setInterval(refreshAll,60000);
+  setInterval(loadLog,10000);
 });
 </script>
 </body>
