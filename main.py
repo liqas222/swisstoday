@@ -2,6 +2,7 @@ import logging
 import time
 
 import anthropic
+import tweepy
 from apscheduler.schedulers.blocking import BlockingScheduler
 
 import ai_processor
@@ -71,6 +72,75 @@ def run_pipeline(cfg, anthropic_client):
     logger.info("=== Run complete: %s ===", stats)
 
 
+def sync_views(cfg):
+    """Fetch impression counts from X API and store in DB."""
+    try:
+        import sqlite3
+        conn = sqlite3.connect(cfg.db_path)
+        cols = [r[1] for r in conn.execute("PRAGMA table_info(seen_items)").fetchall()]
+        if "views" not in cols:
+            conn.execute("ALTER TABLE seen_items ADD COLUMN views INTEGER")
+            conn.commit()
+
+        rows = conn.execute(
+            "SELECT id, tweet_id FROM seen_items "
+            "WHERE posted_at IS NOT NULL "
+            "AND tweet_id NOT IN ('skipped_history','dry_run','duplicate_topic') "
+            "AND tweet_id IS NOT NULL "
+            "ORDER BY posted_at DESC LIMIT 500"
+        ).fetchall()
+
+        if not rows:
+            conn.close()
+            return
+
+        client = tweepy.Client(
+            bearer_token=cfg.x_bearer_token,
+            consumer_key=cfg.x_api_key,
+            consumer_secret=cfg.x_api_secret,
+            access_token=cfg.x_access_token,
+            access_token_secret=cfg.x_access_token_secret,
+            wait_on_rate_limit=False,
+        )
+
+        id_map = {r[1]: r[0] for r in rows}
+        updated = 0
+        for i in range(0, len(rows), 100):
+            batch = list(id_map.keys())[i:i+100]
+            try:
+                resp = client.get_tweets(
+                    ids=batch,
+                    tweet_fields=["public_metrics", "non_public_metrics", "organic_metrics"],
+                    user_auth=True,
+                )
+                if resp.data:
+                    for tweet in resp.data:
+                        views = None
+                        if tweet.non_public_metrics:
+                            views = tweet.non_public_metrics.get("impression_count")
+                        if views is None and tweet.organic_metrics:
+                            views = tweet.organic_metrics.get("impression_count")
+                        if views is None and tweet.public_metrics:
+                            views = tweet.public_metrics.get("impression_count")
+                        if views is not None:
+                            db_id = id_map.get(str(tweet.id))
+                            if db_id:
+                                conn.execute("UPDATE seen_items SET views=? WHERE id=?", (views, db_id))
+                                updated += 1
+            except tweepy.TooManyRequests:
+                logger.warning("Views sync: rate limit hit, skipping rest")
+                break
+            except tweepy.TweepyException as e:
+                logger.error("Views sync error: %s", e)
+            time.sleep(1)
+
+        conn.commit()
+        conn.close()
+        logger.info("Views sync: updated %d/%d tweets", updated, len(rows))
+    except Exception as e:
+        logger.error("Views sync failed: %s", e)
+
+
 def main():
     cfg = load_config()
     logging.basicConfig(
@@ -84,6 +154,7 @@ def main():
 
     # Run once immediately on startup
     run_pipeline(cfg, anthropic_client)
+    sync_views(cfg)
 
     scheduler = BlockingScheduler()
     scheduler.add_job(
@@ -91,6 +162,14 @@ def main():
         "interval",
         minutes=cfg.check_interval_minutes,
         args=[cfg, anthropic_client],
+        max_instances=1,
+        coalesce=True,
+    )
+    scheduler.add_job(
+        sync_views,
+        "interval",
+        hours=6,
+        args=[cfg],
         max_instances=1,
         coalesce=True,
     )
