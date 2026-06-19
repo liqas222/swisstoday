@@ -119,15 +119,16 @@ def update_post_text(db_path: str, item_id: int, post_text: str) -> None:
         )
 
 
-def get_recently_posted_titles(db_path: str, hours: int = 6) -> list[str]:
+def get_recently_posted_items(db_path: str, hours: int = 24) -> list[dict]:
     with _connect(db_path) as conn:
         rows = conn.execute(
-            """SELECT title FROM seen_items
-               WHERE posted_at IS NOT NULL AND tweet_id NOT IN ('skipped_history', 'dry_run')
+            """SELECT title, post_text, url FROM seen_items
+               WHERE posted_at IS NOT NULL
+               AND tweet_id NOT IN ('skipped_history', 'dry_run', 'duplicate_topic')
                AND posted_at > datetime('now', ? || ' hours')""",
             (f"-{hours}",),
         ).fetchall()
-        return [r[0] for r in rows if r[0]]
+        return [dict(r) for r in rows if r[0]]
 
 
 def get_unposted_high_items(db_path: str) -> list[dict]:

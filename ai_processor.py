@@ -125,25 +125,44 @@ def score_relevance(client: anthropic.Anthropic, model: str, item: dict) -> tupl
         return "LOW", "JSON-Parsing-Fehler", "Sonstiges"
 
 
-def is_duplicate_topic(client: anthropic.Anthropic, model: str, new_title: str, recent_titles: list[str]) -> bool:
-    """Returns True if the new article covers the same topic as a recently posted one."""
-    if not recent_titles:
+def is_duplicate_topic(client: anthropic.Anthropic, model: str, new_item: dict, recent_items: list[dict]) -> bool:
+    """Returns True if the new article covers the same topic as a recently posted one.
+    Errs on the side of caution — returns True (skip) on API failure."""
+    if not recent_items:
         return False
-    recent_str = "\n".join(f"- {t}" for t in recent_titles[-20:])
-    user_msg = (
-        f"Neuer Artikel: {new_title}\n\n"
-        f"Bereits gepostete Artikel (letzte 6 Stunden):\n{recent_str}\n\n"
-        f"Ist der neue Artikel über dasselbe Thema wie einer der bereits geposteten? "
-        f"Antworte NUR mit JSON: {{\"duplicate\": true|false}}"
+
+    new_title = new_item.get("title", "")
+    new_text = (new_item.get("post_text") or new_item.get("summary") or "")[:300]
+
+    recent_str = "\n".join(
+        f"- Titel: {r['title']}\n  Post: {(r.get('post_text') or '')[:150]}"
+        for r in recent_items[-30:]
     )
-    raw = _call_claude(client, model, "Du prüfst ob zwei Nachrichtenartikel dasselbe Thema behandeln.", user_msg)
+
+    system = (
+        "Du prüfst ob ein neuer Artikel bereits durch einen anderen Artikel abgedeckt wurde. "
+        "Sei STRENG: Wenn dasselbe Ereignis, dieselbe Entscheidung oder dieselbe Person bereits "
+        "gepostet wurde — auch wenn der Winkel leicht anders ist — ist es ein Duplikat. "
+        "Im Zweifel: duplicate=true. Antworte NUR mit JSON: {\"duplicate\": true|false, \"reason\": \"...\"}"
+    )
+    user_msg = (
+        f"NEUER ARTIKEL:\nTitel: {new_title}\nPost: {new_text}\n\n"
+        f"BEREITS GEPOSTET (letzte 24h):\n{recent_str}\n\n"
+        f"Ist der neue Artikel ein Duplikat?"
+    )
+
+    raw = _call_claude(client, model, system, user_msg)
     if not raw:
-        return False
+        logger.warning("Duplicate check API failure — skipping item to be safe: %s", new_title[:60])
+        return True  # safe default: skip rather than post duplicate
     try:
         data = json.loads(_extract_json(raw))
-        return bool(data.get("duplicate", False))
+        is_dup = bool(data.get("duplicate", False))
+        if is_dup:
+            logger.info("[DUPLICATE] %s — reason: %s", new_title[:60], data.get("reason", ""))
+        return is_dup
     except (json.JSONDecodeError, Exception):
-        return False
+        return True  # safe default
 
 
 def generate_post(client: anthropic.Anthropic, model: str, item: dict) -> Optional[str]:
