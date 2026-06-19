@@ -38,6 +38,19 @@ def login():
     return render_template("login.html", error=error)
 
 
+def _migrate_db():
+    """Add columns that may be missing from older DB schemas."""
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cols = [r[1] for r in conn.execute("PRAGMA table_info(seen_items)").fetchall()]
+        if "category" not in cols:
+            conn.execute("ALTER TABLE seen_items ADD COLUMN category TEXT")
+            conn.commit()
+        conn.close()
+    except Exception:
+        pass
+
+
 def query_db(sql, params=()):
     try:
         conn = sqlite3.connect(f"file:{DB_PATH}?mode=ro", uri=True)
@@ -46,7 +59,8 @@ def query_db(sql, params=()):
         rows = [dict(r) for r in cur.fetchall()]
         conn.close()
         return rows
-    except Exception:
+    except Exception as e:
+        app.logger.error("query_db error: %s | sql: %s", e, sql[:120])
         return []
 
 
@@ -234,4 +248,5 @@ def api_stream():
 
 
 if __name__ == "__main__":
+    _migrate_db()
     app.run(host="0.0.0.0", port=8080, debug=False, threaded=True)
