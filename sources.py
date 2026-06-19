@@ -53,13 +53,7 @@ SOURCES = [
         "id": "20min",
         "name": "20 Minuten",
         "type": "rss",
-        "url": "https://www.20min.ch/rss/rss.tmpl?type=channel&get=1",
-    },
-    {
-        "id": "20min_wirtschaft",
-        "name": "20 Minuten Wirtschaft",
-        "type": "rss",
-        "url": "https://www.20min.ch/rss/rss.tmpl?type=channel&get=9",
+        "url": "https://news.google.com/rss/search?q=site:20min.ch+Schweiz&hl=de&gl=CH&ceid=CH:de",
     },
 
     # ── Official sources via Google News RSS (bypass block) ───────────────────
