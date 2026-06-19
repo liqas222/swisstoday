@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 SWISS_TZ = ZoneInfo("Europe/Zurich")
 POSTING_HOUR_START = 6
 POSTING_HOUR_END = 22
-MAX_POSTS_PER_RUN = 3
+MAX_POSTS_PER_RUN = 1
 
 
 def _swiss_now() -> datetime:
