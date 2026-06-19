@@ -1,6 +1,7 @@
 import logging
 import time
-from datetime import datetime, timezone, timedelta
+from datetime import datetime
+from zoneinfo import ZoneInfo
 from typing import Optional
 
 import tweepy
@@ -9,15 +10,18 @@ from config import Config
 
 logger = logging.getLogger(__name__)
 
-SWISS_TZ_OFFSET = timedelta(hours=2)  # CEST (summer); CET is +1
+SWISS_TZ = ZoneInfo("Europe/Zurich")
 POSTING_HOUR_START = 6
 POSTING_HOUR_END = 22
+MAX_POSTS_PER_RUN = 3
+
+
+def _swiss_now() -> datetime:
+    return datetime.now(SWISS_TZ)
 
 
 def _is_posting_allowed() -> bool:
-    """Returns True if current Swiss time is between 06:00 and 22:00."""
-    swiss_now = datetime.now(timezone.utc) + SWISS_TZ_OFFSET
-    return POSTING_HOUR_START <= swiss_now.hour < POSTING_HOUR_END
+    return POSTING_HOUR_START <= _swiss_now().hour < POSTING_HOUR_END
 
 
 def _build_client(cfg: Config) -> Optional[tweepy.Client]:
@@ -62,17 +66,21 @@ def post_tweet(client: tweepy.Client, text: str, dry_run: bool) -> Optional[str]
 def post_batch(cfg: Config, items: list[dict]) -> dict[int, tuple[str, Optional[str]]]:
     """Returns {item_id: ('ok'|'error', tweet_id_or_error_msg)}"""
     if not _is_posting_allowed():
-        swiss_now = datetime.now(timezone.utc) + SWISS_TZ_OFFSET
-        logger.info("Outside posting window (%02d:00 Swiss time) — skipping %d items", swiss_now.hour, len(items))
+        logger.info("Outside posting window (%02d:00 Swiss time) — skipping %d items", _swiss_now().hour, len(items))
         return {}
     client = _build_client(cfg)
     results = {}
+    posted_this_run = 0
     for item in items:
+        if posted_this_run >= MAX_POSTS_PER_RUN:
+            logger.info("Max posts per run (%d) reached — remaining items queued for next run", MAX_POSTS_PER_RUN)
+            break
         item_id = item["id"]
         text = item["post_text"]
         try:
             tweet_id = post_tweet(client, text, cfg.dry_run)
             results[item_id] = ("ok", tweet_id)
+            posted_this_run += 1
         except Exception as exc:
             results[item_id] = ("error", str(exc))
         time.sleep(2)
