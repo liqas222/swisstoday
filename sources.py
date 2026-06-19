@@ -50,12 +50,6 @@ SOURCES = [
     },
 
     {
-        "id": "20min",
-        "name": "20 Minuten",
-        "type": "rss",
-        "url": "https://news.google.com/rss/search?q=site:20min.ch+Schweiz&hl=de&gl=CH&ceid=CH:de",
-    },
-    {
         "id": "watson",
         "name": "Watson",
         "type": "rss",
