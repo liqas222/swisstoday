@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SwissIntel · Dashboard</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 <style>
 :root{
   --bg:#080c10;--surface:#0d1117;--card:#111820;--card-hover:#141e2a;
@@ -78,7 +77,14 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;font-
 }
 .chart-hdr{padding:16px 18px 0;display:flex;align-items:center;justify-content:space-between}
 .chart-hdr h2{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--dim)}
-.chart-wrap{padding:12px 8px 12px;height:200px;position:relative}
+.chart-wrap{padding:12px 8px 12px}
+.bar-chart{display:flex;align-items:flex-end;gap:3px;height:140px;padding:0 4px}
+.bar-col{display:flex;flex-direction:column;align-items:center;gap:3px;flex:1;min-width:0}
+.bar-fill{width:100%;background:rgba(59,130,246,.6);border-radius:3px 3px 0 0;transition:height .4s ease;min-height:1px;cursor:default;position:relative}
+.bar-fill:hover{background:rgba(59,130,246,.9)}
+.bar-fill .tooltip{display:none;position:absolute;bottom:calc(100% + 4px);left:50%;transform:translateX(-50%);background:#1e2d3d;color:#d1dce8;font-size:10px;padding:3px 7px;border-radius:4px;white-space:nowrap;pointer-events:none;z-index:10}
+.bar-fill:hover .tooltip{display:block}
+.bar-lbl{font-size:8px;color:var(--faint);text-align:center;white-space:nowrap;overflow:hidden;width:100%}
 
 /* ── TWEETS PANEL ── */
 .tweets-card{background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden}
@@ -199,7 +205,7 @@ footer{text-align:center;padding:14px;font-size:10px;color:var(--faint);border-t
         <h2>📅 Tweets pro Tag — letzter Monat</h2>
         <span style="font-size:11px;color:var(--faint)" id="chart-total">—</span>
       </div>
-      <div class="chart-wrap"><canvas id="monthChart"></canvas></div>
+      <div class="chart-wrap"><div class="bar-chart" id="monthChart"></div></div>
       <!-- Category breakdown -->
       <div style="border-top:1px solid var(--border);padding:14px 18px;display:flex;flex-direction:column;gap:6px" id="cat-breakdown"></div>
       <!-- Source breakdown -->
@@ -283,39 +289,20 @@ setInterval(()=>{
   b.style.width=Math.max(0,cdSecs/cdInt*100)+'%';
 },1000);
 
-// ── Chart ──────────────────────────────────────────────────────────────────
-let chart=null;
-if(typeof Chart!=='undefined'){Chart.defaults.color='#3a4f63';Chart.defaults.borderColor='#1a2332';}
-
+// ── Chart (pure CSS bars) ──────────────────────────────────────────────────
 function initChart(labels,data){
-  if(typeof Chart==='undefined'){
-    document.getElementById('monthChart').parentElement.innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:200px;color:var(--faint);font-size:12px">Chart.js konnte nicht geladen werden</div>';
-    return;
-  }
-  const ctx=document.getElementById('monthChart').getContext('2d');
-  if(chart)chart.destroy();
-  chart=new Chart(ctx,{
-    type:'bar',
-    data:{
-      labels,
-      datasets:[{
-        data,
-        backgroundColor:'rgba(59,130,246,.25)',
-        borderColor:'rgba(59,130,246,.8)',
-        borderWidth:1,
-        borderRadius:3,
-        hoverBackgroundColor:'rgba(59,130,246,.45)',
-      }]
-    },
-    options:{
-      responsive:true,maintainAspectRatio:false,
-      plugins:{legend:{display:false},tooltip:{callbacks:{title:i=>'📅 '+i[0].label,label:i=>`${i.raw} Tweet${i.raw!==1?'s':''}`}}},
-      scales:{
-        x:{ticks:{font:{size:9},maxRotation:45},grid:{color:'rgba(26,35,50,.5)'}},
-        y:{ticks:{font:{size:9},stepSize:1},grid:{color:'rgba(26,35,50,.5)'},beginAtZero:true}
-      }
-    }
-  });
+  const el=document.getElementById('monthChart');
+  const max=Math.max(...data,1);
+  el.innerHTML=labels.map((lbl,i)=>{
+    const pct=data[i]/max*100;
+    const showLbl=i%3===0||i===labels.length-1;
+    return`<div class="bar-col">
+      <div class="bar-fill" style="height:${Math.max(pct,data[i]>0?2:0)}%">
+        <span class="tooltip">${lbl}: ${data[i]} Tweet${data[i]!==1?'s':''}</span>
+      </div>
+      <span class="bar-lbl">${showLbl?lbl:''}</span>
+    </div>`;
+  }).join('');
 }
 
 async function loadMonthChart(){
