@@ -75,6 +75,14 @@ ERKLÄRUNG-Regeln:
 - Fachbegriffe kurz erklären
 - Nur Fakten aus der Quelle, keine Meinungen
 
+HASHTAGS:
+- Immer am Ende: #Schweiz
+- Nur wenn 100% thematisch passend, max. 1 weiterer:
+  #SNB (nur SNB-Entscheide), #FINMA (nur FINMA-Entscheide), #Steuern (nur konkrete Steueränderungen),
+  #AHV (nur AHV-Entscheide), #Abstimmung (nur Volksabstimmungen), #Immobilien (nur Immobilienmarkt),
+  #Einwanderung (nur Migrationsentscheide), #Kriminalität (nur Strafrecht/Verhaftungen)
+- Kein #Wirtschaft, #Politik, #News oder andere generische Tags
+
 Ziel: 700-1000 Zeichen gesamt. Gib NUR den Post-Text zurück, nichts anderes."""
 
 
