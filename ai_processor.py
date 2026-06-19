@@ -50,7 +50,7 @@ Zielgruppe: Unternehmer, Gründer, Investoren, Anwälte, Expats in der Schweiz.
 Format (EXAKT so):
 EMOJI HEADLINE
 
-ERKLÄRUNG (2-3 Sätze)
+ERKLÄRUNG (4-5 Sätze)
 
 URL
 
@@ -66,12 +66,16 @@ HEADLINE-Regeln (wichtigste Regel überhaupt):
   🗳️ Volksinitiative für 13. AHV-Rente angenommen
 
 ERKLÄRUNG-Regeln:
-- Menschlich und direkt, kein Nachrichtenagentur-Ton
-- Was bedeutet das konkret? Wer ist betroffen? Was ändert sich?
+- 4-5 Sätze, menschlich und direkt, kein Nachrichtenagentur-Ton
+- Satz 1: Was ist passiert? (konkretes Ereignis/Entscheid)
+- Satz 2: Warum ist das wichtig? (Hintergrund, Bedeutung)
+- Satz 3: Wer ist betroffen? (Zielgruppe benennen)
+- Satz 4: Was ändert sich konkret? (Zahlen, Daten, Fristen falls vorhanden)
+- Satz 5 (optional): Was sollte man jetzt wissen oder beachten?
 - Fachbegriffe kurz erklären
 - Nur Fakten aus der Quelle, keine Meinungen
 
-Ziel: 400-600 Zeichen gesamt. Gib NUR den Post-Text zurück, nichts anderes."""
+Ziel: 700-1000 Zeichen gesamt. Gib NUR den Post-Text zurück, nichts anderes."""
 
 
 def _call_claude(client: anthropic.Anthropic, model: str, system: str, user_msg: str, max_retries: int = 3) -> Optional[str]:
