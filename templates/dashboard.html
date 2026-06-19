@@ -5,767 +5,450 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SwissIntel · Dashboard</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
 :root{
-  --bg:#080c10;
-  --surface:#0d1117;
-  --card:#111820;
-  --card-hover:#141e2a;
-  --border:#1a2332;
-  --border-bright:#243040;
-  --text:#d1dce8;
-  --text-dim:#6b7f94;
-  --text-faint:#3a4f63;
-  --green:#22c55e;
-  --green-dim:rgba(34,197,94,.12);
-  --blue:#3b82f6;
-  --blue-dim:rgba(59,130,246,.12);
-  --purple:#a855f7;
-  --purple-dim:rgba(168,85,247,.12);
-  --yellow:#f59e0b;
-  --yellow-dim:rgba(245,158,11,.12);
-  --red:#ef4444;
-  --red-dim:rgba(239,68,68,.12);
+  --bg:#080c10;--surface:#0d1117;--card:#111820;--card-hover:#141e2a;
+  --border:#1a2332;--border2:#243040;
+  --text:#d1dce8;--dim:#6b7f94;--faint:#3a4f63;
+  --green:#22c55e;--blue:#3b82f6;--purple:#a855f7;--yellow:#f59e0b;--red:#ef4444;
 }
 *{box-sizing:border-box;margin:0;padding:0}
-html{scroll-behavior:smooth}
 body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;font-size:13px;line-height:1.5;min-height:100vh}
-
-/* Scrollbar */
 ::-webkit-scrollbar{width:4px;height:4px}
 ::-webkit-scrollbar-track{background:transparent}
-::-webkit-scrollbar-thumb{background:var(--border-bright);border-radius:2px}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
 
-/* ── HEADER ─────────────────────────────────────────────────────────── */
+/* ── HEADER ── */
 .hdr{
-  position:sticky;top:0;z-index:200;
+  position:sticky;top:0;z-index:100;
   background:rgba(8,12,16,.92);backdrop-filter:blur(12px);
   border-bottom:1px solid var(--border);
-  height:56px;padding:0 28px;
-  display:flex;align-items:center;gap:24px;
+  height:54px;padding:0 28px;
+  display:flex;align-items:center;justify-content:space-between;gap:20px;
 }
-.brand{display:flex;align-items:center;gap:10px;text-decoration:none;flex-shrink:0}
-.brand-flag{font-size:22px;line-height:1}
-.brand-name{font-size:16px;font-weight:800;letter-spacing:-.5px;color:var(--text)}
-.brand-name em{color:var(--blue);font-style:normal}
-.hdr-mid{flex:1;display:flex;align-items:center;gap:24px;justify-content:center}
-.hdr-stat{display:flex;flex-direction:column;align-items:center;gap:1px}
-.hdr-stat-val{font-size:13px;font-weight:700;color:var(--text)}
-.hdr-stat-lbl{font-size:9px;font-weight:600;color:var(--text-dim);text-transform:uppercase;letter-spacing:.6px}
-.hdr-sep{width:1px;height:28px;background:var(--border)}
-.hdr-right{display:flex;align-items:center;gap:10px;flex-shrink:0}
-
-.status-badge{
-  display:flex;align-items:center;gap:7px;
-  padding:6px 12px;border-radius:8px;font-size:11px;font-weight:600;
-  border:1px solid var(--border-bright);background:var(--card);
-  cursor:default;
-}
-.status-badge.on{border-color:rgba(34,197,94,.35);background:var(--green-dim);color:var(--green)}
-.status-badge.off{border-color:rgba(239,68,68,.35);background:var(--red-dim);color:var(--red)}
+.brand{display:flex;align-items:center;gap:10px}
+.brand span{font-size:20px}
+.brand h1{font-size:15px;font-weight:800;letter-spacing:-.4px}
+.brand h1 em{color:var(--blue);font-style:normal}
+.hdr-right{display:flex;align-items:center;gap:10px}
+.pill{display:flex;align-items:center;gap:6px;padding:5px 12px;border-radius:8px;font-size:11px;font-weight:600;border:1px solid var(--border2);background:var(--card)}
+.pill.on{border-color:rgba(34,197,94,.4);background:rgba(34,197,94,.08);color:var(--green)}
+.pill.off{border-color:rgba(239,68,68,.4);background:rgba(239,68,68,.08);color:var(--red)}
 .led{width:7px;height:7px;border-radius:50%;background:currentColor;flex-shrink:0}
-.on .led{box-shadow:0 0 6px currentColor;animation:led-pulse 2s infinite}
-@keyframes led-pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.pill.on .led{box-shadow:0 0 5px currentColor;animation:blink 1.8s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
 
-/* ── LAYOUT ─────────────────────────────────────────────────────────── */
-.main{max-width:1400px;margin:0 auto;padding:24px 28px;display:flex;flex-direction:column;gap:20px}
+/* ── LAYOUT ── */
+.main{max-width:1200px;margin:0 auto;padding:24px 28px;display:flex;flex-direction:column;gap:16px}
 
-/* ── HERO ROW (countdown + today stats) ─────────────────────────────── */
-.hero{display:grid;grid-template-columns:340px 1fr;gap:16px}
+/* ── TOP STATS ROW ── */
+.top-row{display:grid;grid-template-columns:220px 1fr;gap:16px;align-items:start}
 
-.cd-card{
-  background:var(--card);border:1px solid var(--border);border-radius:14px;
-  padding:28px 28px 24px;display:flex;flex-direction:column;gap:16px;
-  position:relative;overflow:hidden;
+.stats-col{display:flex;flex-direction:column;gap:12px}
+
+/* Countdown */
+.cd-box{
+  background:var(--card);border:1px solid var(--border);border-radius:12px;
+  padding:20px 22px;
 }
-.cd-card::after{
-  content:'';position:absolute;bottom:-40px;right:-40px;
-  width:160px;height:160px;border-radius:50%;
-  background:radial-gradient(circle,rgba(245,158,11,.07) 0%,transparent 70%);
-  pointer-events:none;
-}
-.cd-top{display:flex;align-items:center;gap:8px}
-.cd-icon{font-size:18px}
-.cd-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--text-dim)}
-.cd-display{
-  font-size:64px;font-weight:800;line-height:1;letter-spacing:-3px;
-  color:var(--yellow);font-variant-numeric:tabular-nums;
-}
-.cd-display.running{color:var(--green);animation:cd-glow 1s infinite alternate}
-@keyframes cd-glow{from{text-shadow:0 0 20px rgba(34,197,94,.3)}to{text-shadow:0 0 40px rgba(34,197,94,.6)}}
-.cd-bar-wrap{height:3px;background:var(--border);border-radius:2px;overflow:hidden}
+.cd-lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);margin-bottom:10px}
+.cd-num{font-size:52px;font-weight:800;line-height:1;letter-spacing:-2px;color:var(--yellow);font-variant-numeric:tabular-nums}
+.cd-num.running{color:var(--green);animation:glow 1s infinite alternate}
+@keyframes glow{from{text-shadow:0 0 15px rgba(34,197,94,.3)}to{text-shadow:0 0 35px rgba(34,197,94,.5)}}
+.cd-bar-wrap{height:3px;background:var(--border);border-radius:2px;overflow:hidden;margin-top:10px}
 .cd-bar{height:100%;background:var(--yellow);border-radius:2px;transition:width 1s linear}
 .cd-bar.running{background:var(--green)}
-.cd-foot{font-size:11px;color:var(--text-dim)}
-.cd-foot span{color:var(--text);font-weight:600}
+.cd-sub{font-size:10px;color:var(--faint);margin-top:7px}
 
-.today-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
-.tstat{
-  background:var(--card);border:1px solid var(--border);border-radius:14px;
-  padding:22px 20px;display:flex;flex-direction:column;gap:8px;
-  transition:border-color .2s,background .2s;cursor:default;
-  position:relative;overflow:hidden;
+/* Stat cards */
+.scard{
+  background:var(--card);border:1px solid var(--border);border-radius:12px;
+  padding:16px 20px;display:flex;flex-direction:column;gap:3px;
 }
-.tstat:hover{border-color:var(--border-bright);background:var(--card-hover)}
-.tstat-icon{font-size:22px;line-height:1}
-.tstat-num{
-  font-size:42px;font-weight:800;line-height:1;letter-spacing:-2px;
-  transition:color .3s;
-}
-.tstat.blue .tstat-num{color:var(--blue)}
-.tstat.green .tstat-num{color:var(--green)}
-.tstat.purple .tstat-num{color:var(--purple)}
-.tstat-lbl{font-size:11px;font-weight:600;color:var(--text-dim);text-transform:uppercase;letter-spacing:.5px}
-.tstat-sub{font-size:10px;color:var(--text-faint);margin-top:2px}
-.tstat-glow{
-  position:absolute;bottom:-20px;right:-20px;width:100px;height:100px;
-  border-radius:50%;pointer-events:none;
-}
-.tstat.blue .tstat-glow{background:radial-gradient(circle,rgba(59,130,246,.08) 0%,transparent 70%)}
-.tstat.green .tstat-glow{background:radial-gradient(circle,rgba(34,197,94,.08) 0%,transparent 70%)}
-.tstat.purple .tstat-glow{background:radial-gradient(circle,rgba(168,85,247,.08) 0%,transparent 70%)}
+.scard-num{font-size:34px;font-weight:800;letter-spacing:-1.5px;line-height:1}
+.scard.blue .scard-num{color:var(--blue)}
+.scard.purple .scard-num{color:var(--purple)}
+.scard-lbl{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--dim);margin-top:2px}
 
-/* ── LIVE ACTIVITY TICKER ────────────────────────────────────────────── */
-.ticker-card{
-  background:var(--card);border:1px solid var(--border);border-radius:14px;
+/* ── CHART ── */
+.chart-card{
+  background:var(--card);border:1px solid var(--border);border-radius:12px;
   overflow:hidden;
 }
-.ticker-hdr{
+.chart-hdr{padding:16px 18px 0;display:flex;align-items:center;justify-content:space-between}
+.chart-hdr h2{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--dim)}
+.chart-wrap{padding:12px 8px 12px;height:200px;position:relative}
+
+/* ── TWEETS PANEL ── */
+.tweets-card{background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.panel-hdr{
   padding:14px 18px;border-bottom:1px solid var(--border);
   display:flex;align-items:center;justify-content:space-between;
 }
-.ticker-hdr h2{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text-dim);display:flex;align-items:center;gap:8px}
-.live-dot{width:8px;height:8px;border-radius:50%;background:var(--green);flex-shrink:0;box-shadow:0 0 6px var(--green);animation:led-pulse 1.5s infinite}
-.ticker-body{height:52px;overflow:hidden;position:relative}
-.ticker-empty{display:flex;align-items:center;justify-content:center;height:100%;font-size:11px;color:var(--text-faint)}
-.ticker-item{
-  padding:0 18px;height:52px;display:flex;align-items:center;gap:10px;
-  border-bottom:1px solid var(--border);font-size:12px;
-  animation:slide-in .3s ease;
-}
-@keyframes slide-in{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:none}}
-.ticker-time{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-faint);flex-shrink:0}
-.ticker-tag{font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;flex-shrink:0}
-.ticker-tag.high{background:var(--green-dim);color:var(--green);border:1px solid rgba(34,197,94,.2)}
-.ticker-tag.low{background:rgba(107,127,148,.08);color:var(--text-dim);border:1px solid var(--border)}
-.ticker-tag.posted{background:var(--blue-dim);color:var(--blue);border:1px solid rgba(59,130,246,.2)}
-.ticker-tag.run{background:var(--purple-dim);color:var(--purple);border:1px solid rgba(168,85,247,.2)}
-.ticker-text{flex:1;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;color:var(--text)}
+.panel-hdr h2{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--dim);display:flex;align-items:center;gap:8px}
+.cnt{min-width:20px;height:18px;padding:0 6px;border-radius:9px;font-size:10px;font-weight:700;background:rgba(34,197,94,.12);color:var(--green);border:1px solid rgba(34,197,94,.2);display:inline-flex;align-items:center;justify-content:center}
 
-/* ── MAIN PANELS ─────────────────────────────────────────────────────── */
-.panels{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-
-.panel{background:var(--card);border:1px solid var(--border);border-radius:14px;display:flex;flex-direction:column;max-height:520px}
-.panel-hdr{
-  padding:14px 18px;border-bottom:1px solid var(--border);
-  display:flex;align-items:center;justify-content:space-between;flex-shrink:0;
-}
-.panel-hdr h2{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text-dim);display:flex;align-items:center;gap:8px}
-.cnt{
-  display:inline-flex;align-items:center;justify-content:center;
-  min-width:22px;height:18px;padding:0 6px;border-radius:9px;
-  font-size:10px;font-weight:700;
-  background:var(--border);color:var(--text-dim);
-}
-.cnt.live{background:var(--green-dim);color:var(--green);border:1px solid rgba(34,197,94,.2)}
-.panel-search{
-  background:var(--bg);border:1px solid var(--border);color:var(--text);
-  padding:5px 10px;border-radius:7px;font-size:11px;outline:none;width:130px;
-  transition:border-color .15s;
-}
-.panel-search:focus{border-color:var(--blue)}
-.panel-body{flex:1;overflow-y:auto;min-height:0}
-
-/* Tweets */
+.tweet-list{max-height:480px;overflow-y:auto}
 .tweet-row{
   padding:14px 18px;border-bottom:1px solid var(--border);
-  cursor:pointer;transition:background .12s;display:flex;flex-direction:column;gap:8px;
+  cursor:pointer;transition:background .12s;
 }
 .tweet-row:last-child{border-bottom:none}
 .tweet-row:hover{background:var(--card-hover)}
-.tweet-top{display:flex;align-items:center;gap:8px}
-.src{font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;white-space:nowrap}
-.tweet-time{font-size:10px;color:var(--text-faint);margin-left:auto;white-space:nowrap;font-family:'JetBrains Mono',monospace}
-.tweet-text{font-size:12px;color:var(--text);line-height:1.6;white-space:pre-wrap;word-break:break-word}
-.tweet-link{font-size:10px;color:var(--blue);text-decoration:none;display:inline-flex;align-items:center;gap:3px}
-.tweet-link:hover{text-decoration:underline}
+.tw-top{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.src-tag{font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;white-space:nowrap}
+.tw-date{font-size:11px;color:var(--dim);margin-left:auto;font-family:'JetBrains Mono',monospace;white-space:nowrap}
+.tw-text{font-size:12px;color:var(--text);line-height:1.65;white-space:pre-wrap;word-break:break-word}
+.empty{padding:40px;text-align:center;color:var(--faint);font-size:12px}
 
-/* HIGH items */
-.hi-row{
-  padding:12px 18px;border-bottom:1px solid var(--border);
-  cursor:pointer;transition:background .12s;display:flex;align-items:flex-start;gap:10px;
+/* ── SOURCES ── */
+.src-card{background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.src-toggle-hdr{
+  padding:14px 18px;display:flex;align-items:center;justify-content:space-between;
+  cursor:pointer;transition:background .12s;user-select:none;
 }
-.hi-row:last-child{border-bottom:none}
-.hi-row:hover{background:var(--card-hover)}
-.hi-row.posted{border-left:2px solid var(--green)}
-.hi-row.dup{opacity:.4}
-.hi-body{flex:1;min-width:0}
-.hi-title{font-size:12px;font-weight:500;line-height:1.45;color:var(--text);overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
-.hi-meta{font-size:10px;color:var(--text-faint);margin-top:4px}
-.hi-badge{font-size:10px;font-weight:700;white-space:nowrap;padding:2px 6px;border-radius:4px;flex-shrink:0;margin-top:2px}
-.hi-badge.posted{background:var(--green-dim);color:var(--green)}
-.hi-badge.pending{background:var(--yellow-dim);color:var(--yellow)}
-.hi-badge.dup{background:rgba(107,127,148,.08);color:var(--text-faint)}
+.src-toggle-hdr:hover{background:var(--card-hover)}
+.src-toggle-hdr h2{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--dim);display:flex;align-items:center;gap:8px}
+.tog{font-size:10px;color:var(--faint)}
+.src-body{display:none;border-top:1px solid var(--border)}
+.src-body.open{display:block}
+table{width:100%;border-collapse:collapse}
+th{text-align:left;padding:8px 18px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--faint);border-bottom:1px solid var(--border)}
+td{padding:9px 18px;border-bottom:1px solid rgba(26,35,50,.6);font-size:11px;vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(255,255,255,.015)}
+.bar-cell{width:120px}
+.mini-bar{height:4px;background:var(--border);border-radius:2px;overflow:hidden}
+.mini-fill{height:100%;border-radius:2px}
 
-/* ── SOURCES ─────────────────────────────────────────────────────────── */
-.sources-card{background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden}
-.sources-hdr{
-  padding:14px 18px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;
-  transition:background .12s;user-select:none;
-}
-.sources-hdr:hover{background:var(--card-hover)}
-.sources-hdr h2{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text-dim);display:flex;align-items:center;gap:8px}
-.sources-body{border-top:1px solid var(--border);display:none}
-.sources-body.open{display:block}
-.src-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:1px;background:var(--border)}
-.src-item{
-  background:var(--card);padding:14px 16px;display:flex;flex-direction:column;gap:6px;
-  transition:background .12s;cursor:default;
-}
-.src-item:hover{background:var(--card-hover)}
-.src-name{font-size:11px;font-weight:700}
-.src-bars{display:flex;flex-direction:column;gap:4px}
-.src-bar-row{display:flex;align-items:center;gap:8px}
-.src-bar-lbl{font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;color:var(--text-faint);width:40px}
-.src-bar-track{flex:1;height:3px;background:var(--border);border-radius:2px;overflow:hidden}
-.src-bar-fill{height:100%;border-radius:2px;transition:width .6s ease}
-.src-nums{display:flex;gap:10px;font-size:10px;color:var(--text-dim);margin-top:2px}
-.src-num{display:flex;align-items:center;gap:3px}
-
-/* ── ALL-TIME ────────────────────────────────────────────────────────── */
-.alltime{
-  display:grid;grid-template-columns:repeat(3,1fr);gap:1px;
-  background:var(--border);border-radius:14px;overflow:hidden;
-  border:1px solid var(--border);
-}
-.at-cell{background:var(--card);padding:16px 20px;display:flex;gap:12px;align-items:center;transition:background .12s}
-.at-cell:hover{background:var(--card-hover)}
-.at-icon{font-size:20px;flex-shrink:0}
-.at-num{font-size:22px;font-weight:800;letter-spacing:-.5px;color:var(--text)}
-.at-lbl{font-size:10px;font-weight:600;color:var(--text-faint);text-transform:uppercase;letter-spacing:.5px}
-
-/* ── LOG ────────────────────────────────────────────────────────────── */
-.log-card{background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden}
-.log-hdr{
-  padding:14px 18px;border-bottom:1px solid var(--border);
-  display:flex;align-items:center;justify-content:space-between;
-}
-.log-hdr h2{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text-dim);display:flex;align-items:center;gap:8px}
-.log-controls{display:flex;align-items:center;gap:12px}
-.log-controls label{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text-dim);cursor:pointer}
-.log-ts{font-size:10px;color:var(--text-faint);font-family:'JetBrains Mono',monospace}
-.log-body{background:#060b10;height:200px;overflow-y:auto;padding:12px 14px}
+/* ── LOG ── */
+.log-card{background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.log-hdr{padding:12px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.log-hdr h2{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--dim)}
+.log-hdr label{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--dim);cursor:pointer}
+.log-body{background:#050a0f;height:160px;overflow-y:auto;padding:10px 14px}
 .log-body pre{font-family:'JetBrains Mono',monospace;font-size:10.5px;white-space:pre-wrap;word-break:break-all;line-height:1.7}
-.ll{color:#4a5568}.lw{color:var(--yellow)}.le{color:var(--red)}.lh{color:var(--green);font-weight:600}.lp{color:var(--blue)}
+.ll{color:#3d5166}.lw{color:var(--yellow)}.le{color:var(--red)}.lh{color:var(--green);font-weight:600}.lp{color:var(--blue)}
 
-/* ── MODAL ───────────────────────────────────────────────────────────── */
-.overlay{
-  display:none;position:fixed;inset:0;z-index:500;
-  background:rgba(0,0,0,.8);backdrop-filter:blur(4px);
-  align-items:center;justify-content:center;padding:20px;
-}
+/* ── MODAL ── */
+.overlay{display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.8);backdrop-filter:blur(4px);align-items:center;justify-content:center;padding:20px}
 .overlay.open{display:flex}
-.modal{
-  background:var(--card);border:1px solid var(--border-bright);border-radius:16px;
-  width:100%;max-width:600px;max-height:90vh;overflow-y:auto;
-  padding:28px;position:relative;
-  box-shadow:0 25px 60px rgba(0,0,0,.6);
-}
-.modal-x{
-  position:absolute;top:16px;right:16px;
-  background:none;border:none;color:var(--text-dim);font-size:18px;
-  cursor:pointer;width:32px;height:32px;border-radius:6px;
-  display:flex;align-items:center;justify-content:center;
-  transition:background .12s,color .12s;
-}
+.modal{background:var(--card);border:1px solid var(--border2);border-radius:14px;width:100%;max-width:580px;max-height:88vh;overflow-y:auto;padding:26px;position:relative;box-shadow:0 25px 60px rgba(0,0,0,.7)}
+.modal-x{position:absolute;top:14px;right:14px;background:none;border:none;color:var(--dim);font-size:18px;cursor:pointer;width:30px;height:30px;border-radius:6px;display:flex;align-items:center;justify-content:center;transition:background .12s}
 .modal-x:hover{background:var(--border);color:var(--text)}
-.modal h3{font-size:16px;font-weight:700;line-height:1.4;padding-right:36px;margin-bottom:20px;color:var(--text)}
-.m-section{margin-bottom:16px}
-.m-lbl{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--text-faint);margin-bottom:6px}
-.m-val{font-size:13px;color:var(--text);line-height:1.6}
-.m-post{
-  background:var(--bg);border:1px solid var(--border);border-radius:10px;
-  padding:14px 16px;font-size:13px;line-height:1.7;white-space:pre-wrap;
-  color:var(--text);font-family:'Inter',sans-serif;
-}
-.m-chips{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:16px}
-.m-link{color:var(--blue);text-decoration:none;font-size:12px;display:flex;align-items:center;gap:4px}
-.m-link:hover{text-decoration:underline}
-.x-btn{
-  display:inline-flex;align-items:center;gap:6px;
-  background:#000;color:#fff;border:1px solid #333;border-radius:8px;
-  padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer;text-decoration:none;
-  transition:background .12s;
-}
-.x-btn:hover{background:#111}
+.modal h3{font-size:15px;font-weight:700;line-height:1.4;padding-right:36px;margin-bottom:18px}
+.ml{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--faint);margin-bottom:5px}
+.mv{font-size:12px;color:var(--text);line-height:1.6;margin-bottom:14px}
+.mpost{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:14px;font-size:13px;line-height:1.7;white-space:pre-wrap;margin-bottom:14px}
+.mrow{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.mlink{color:var(--blue);font-size:12px;text-decoration:none}
+.mlink:hover{text-decoration:underline}
+.xbtn{display:inline-flex;align-items:center;gap:5px;background:#000;color:#fff;border:1px solid #333;border-radius:7px;padding:6px 12px;font-size:12px;font-weight:700;text-decoration:none;transition:background .12s}
+.xbtn:hover{background:#111}
 
-/* ── EMPTY ───────────────────────────────────────────────────────────── */
-.empty{display:flex;align-items:center;justify-content:center;padding:40px 20px;font-size:12px;color:var(--text-faint)}
+footer{text-align:center;padding:14px;font-size:10px;color:var(--faint);border-top:1px solid var(--border);margin-top:4px}
 
-/* ── FOOTER ──────────────────────────────────────────────────────────── */
-footer{text-align:center;padding:16px;font-size:10px;color:var(--text-faint);border-top:1px solid var(--border);letter-spacing:.3px}
-
-@media(max-width:900px){
-  .hero{grid-template-columns:1fr}
-  .today-grid{grid-template-columns:repeat(3,1fr)}
-  .panels{grid-template-columns:1fr}
-  .alltime{grid-template-columns:1fr}
-  .hdr-mid{display:none}
+@media(max-width:800px){
+  .top-row{grid-template-columns:1fr}
   .main{padding:16px}
 }
 </style>
 </head>
 <body>
 
-<!-- HEADER -->
 <header class="hdr">
-  <a class="brand" href="/">
-    <span class="brand-flag">🇨🇭</span>
-    <span class="brand-name">Swiss<em>Intel</em></span>
-  </a>
-  <div class="hdr-mid">
-    <div class="hdr-stat">
-      <span class="hdr-stat-val" id="hdr-lastrun">—</span>
-      <span class="hdr-stat-lbl">Letzter Run</span>
-    </div>
-    <div class="hdr-sep"></div>
-    <div class="hdr-stat">
-      <span class="hdr-stat-val" id="hdr-interval">—</span>
-      <span class="hdr-stat-lbl">Interval</span>
-    </div>
-    <div class="hdr-sep"></div>
-    <div class="hdr-stat">
-      <span class="hdr-stat-val" id="hdr-total">—</span>
-      <span class="hdr-stat-lbl">Gesamt analysiert</span>
-    </div>
+  <div class="brand">
+    <span>🇨🇭</span>
+    <h1>Swiss<em>Intel</em></h1>
   </div>
   <div class="hdr-right">
-    <div class="status-badge off" id="bot-badge">
-      <span class="led"></span>
-      <span id="bot-txt">Connecting...</span>
-    </div>
+    <span style="font-size:11px;color:var(--faint)" id="hdr-last">—</span>
+    <div class="pill off" id="bot-pill"><span class="led"></span><span id="bot-txt">—</span></div>
   </div>
 </header>
 
 <div class="main">
 
-  <!-- HERO: Countdown + Today Stats -->
-  <div class="hero">
-    <!-- Countdown -->
-    <div class="cd-card">
-      <div class="cd-top">
-        <span class="cd-icon">⏱</span>
-        <span class="cd-title">Nächster Run</span>
+  <!-- TOP: countdown + stats + chart -->
+  <div class="top-row">
+    <div class="stats-col">
+      <!-- Countdown -->
+      <div class="cd-box">
+        <div class="cd-lbl">Nächster Run</div>
+        <div class="cd-num" id="cd-val">—:——</div>
+        <div class="cd-bar-wrap"><div class="cd-bar" id="cd-bar" style="width:100%"></div></div>
+        <div class="cd-sub" id="cd-sub">Interval: — min</div>
       </div>
-      <div class="cd-display" id="cd-val">—:——</div>
-      <div class="cd-bar-wrap"><div class="cd-bar" id="cd-bar" style="width:100%"></div></div>
-      <div class="cd-foot">Interval: <span id="cd-interval">—</span> · Letzter Run: <span id="cd-last">—</span></div>
+      <!-- Heute analysiert -->
+      <div class="scard blue">
+        <div class="scard-num" id="t-new">—</div>
+        <div class="scard-lbl">Heute analysiert</div>
+      </div>
+      <!-- Heute Tweets -->
+      <div class="scard purple">
+        <div class="scard-num" id="t-posted">—</div>
+        <div class="scard-lbl">Heute Tweets gepostet</div>
+      </div>
     </div>
-    <!-- Today stats -->
-    <div class="today-grid">
-      <div class="tstat blue">
-        <div class="tstat-icon">📥</div>
-        <div class="tstat-num" id="t-new">—</div>
-        <div class="tstat-lbl">Heute analysiert</div>
-        <div class="tstat-sub" id="t-new-sub"></div>
-        <div class="tstat-glow"></div>
+
+    <!-- Monthly chart -->
+    <div class="chart-card">
+      <div class="chart-hdr">
+        <h2>📅 Tweets pro Tag — letzter Monat</h2>
+        <span style="font-size:11px;color:var(--faint)" id="chart-total">—</span>
       </div>
-      <div class="tstat green">
-        <div class="tstat-icon">🔥</div>
-        <div class="tstat-num" id="t-high">—</div>
-        <div class="tstat-lbl">Heute HIGH</div>
-        <div class="tstat-sub" id="t-high-sub"></div>
-        <div class="tstat-glow"></div>
-      </div>
-      <div class="tstat purple">
-        <div class="tstat-icon">🐦</div>
-        <div class="tstat-num" id="t-posted">—</div>
-        <div class="tstat-lbl">Heute Tweets</div>
-        <div class="tstat-sub" id="t-posted-sub"></div>
-        <div class="tstat-glow"></div>
-      </div>
+      <div class="chart-wrap"><canvas id="monthChart"></canvas></div>
     </div>
   </div>
 
-  <!-- LIVE ACTIVITY TICKER -->
-  <div class="ticker-card">
-    <div class="ticker-hdr">
-      <h2><span class="live-dot"></span>Live Activity</h2>
-      <span style="font-size:10px;color:var(--text-faint)" id="ticker-status">Verbinde...</span>
+  <!-- TWEETS PANEL -->
+  <div class="tweets-card">
+    <div class="panel-hdr">
+      <h2>🐦 Gepostete Tweets <span class="cnt" id="tweet-cnt">0</span></h2>
     </div>
-    <div class="ticker-body" id="ticker-body">
-      <div class="ticker-empty">Warte auf nächsten Run...</div>
-    </div>
-  </div>
-
-  <!-- MAIN PANELS: Tweets + HIGH -->
-  <div class="panels">
-    <!-- Recent Tweets -->
-    <div class="panel">
-      <div class="panel-hdr">
-        <h2>🐦 Letzte Tweets <span class="cnt live" id="tweet-cnt">0</span></h2>
-      </div>
-      <div class="panel-body" id="tweet-list">
-        <div class="empty">⏳ Lädt...</div>
-      </div>
-    </div>
-    <!-- HIGH Items -->
-    <div class="panel">
-      <div class="panel-hdr">
-        <h2>🔥 HIGH Relevanz <span class="cnt" id="high-cnt">0</span></h2>
-        <input class="panel-search" id="hi-search" type="text" placeholder="Suchen…">
-      </div>
-      <div class="panel-body" id="hi-list">
-        <div class="empty">⏳ Lädt...</div>
-      </div>
+    <div class="tweet-list" id="tweet-list">
+      <div class="empty">⏳ Lädt...</div>
     </div>
   </div>
 
   <!-- SOURCES -->
-  <div class="sources-card">
-    <div class="sources-hdr" onclick="toggleSources()">
-      <h2>📡 Quellen <span class="cnt" id="src-cnt">0</span></h2>
-      <span style="font-size:11px;color:var(--text-faint)" id="src-toggle">▼ Anzeigen</span>
+  <div class="src-card">
+    <div class="src-toggle-hdr" onclick="toggleSrc()">
+      <h2>📡 Quellen — heute <span class="cnt" id="src-cnt">0</span></h2>
+      <span class="tog" id="src-tog">▼ Anzeigen</span>
     </div>
-    <div class="sources-body" id="sources-body">
-      <div class="src-grid" id="src-grid"></div>
-    </div>
-  </div>
-
-  <!-- ALL-TIME -->
-  <div class="alltime">
-    <div class="at-cell">
-      <span class="at-icon">📊</span>
-      <div><div class="at-num" id="at-total">—</div><div class="at-lbl">Gesamt analysiert</div></div>
-    </div>
-    <div class="at-cell">
-      <span class="at-icon">⭐</span>
-      <div><div class="at-num" id="at-high">—</div><div class="at-lbl">Gesamt HIGH</div></div>
-    </div>
-    <div class="at-cell">
-      <span class="at-icon">✉️</span>
-      <div><div class="at-num" id="at-posted">—</div><div class="at-lbl">Gesamt Tweets</div></div>
+    <div class="src-body" id="src-body">
+      <table>
+        <thead><tr><th>Quelle</th><th>Heute analysiert</th><th>Heute HIGH</th><th>Heute gepostet</th><th>HIGH-Rate</th><th style="width:120px">HIGH-Rate</th></tr></thead>
+        <tbody id="src-tbody"></tbody>
+      </table>
     </div>
   </div>
 
   <!-- LOG -->
   <div class="log-card">
     <div class="log-hdr">
-      <h2>📋 Log <span class="live-dot" style="width:6px;height:6px"></span></h2>
-      <div class="log-controls">
-        <label><input type="checkbox" id="log-scroll" checked> Auto-scroll</label>
-        <span class="log-ts" id="log-ts"></span>
-      </div>
+      <h2>📋 Log</h2>
+      <label><input type="checkbox" id="log-scroll" checked> Auto-scroll</label>
     </div>
-    <div class="log-body" id="log-box"><pre id="log-pre">Verbinde...</pre></div>
+    <div class="log-body" id="log-box"><pre id="log-pre">Lädt...</pre></div>
   </div>
 
 </div>
 
-<footer id="footer">SwissIntel Intelligence Bot · <span id="ft-refresh">Aktualisiert: —</span></footer>
+<footer id="footer">SwissIntel · <span id="ft">Aktualisiert: —</span></footer>
 
 <!-- MODAL -->
 <div class="overlay" id="modal" onclick="if(event.target===this)closeModal()">
   <div class="modal">
     <button class="modal-x" onclick="closeModal()">✕</button>
     <h3 id="m-title">—</h3>
-    <div class="m-section">
-      <div class="m-lbl">Quelle · Zeit</div>
-      <div class="m-val"><span id="m-src">—</span> · <span id="m-time">—</span></div>
-    </div>
-    <div class="m-section">
-      <div class="m-lbl">AI Begründung</div>
-      <div class="m-val" id="m-reason">—</div>
-    </div>
-    <div class="m-section">
-      <div class="m-lbl">Post-Text</div>
-      <div class="m-post" id="m-post">—</div>
-    </div>
-    <div class="m-chips">
-      <a id="m-art" class="m-link" href="#" target="_blank">🔗 Artikel öffnen</a>
-      <a id="m-tweet" class="x-btn" href="#" target="_blank" style="display:none">𝕏 Tweet ansehen</a>
+    <div class="ml">Quelle · Zeit</div>
+    <div class="mv"><span id="m-src">—</span> · <span id="m-time">—</span></div>
+    <div class="ml">Post-Text</div>
+    <div class="mpost" id="m-post">—</div>
+    <div class="mrow">
+      <a id="m-art" class="mlink" href="#" target="_blank">🔗 Artikel öffnen</a>
+      <a id="m-tweet" class="xbtn" href="#" target="_blank" style="display:none">𝕏 Tweet ansehen</a>
     </div>
   </div>
 </div>
 
 <script>
-// ── Utils ──────────────────────────────────────────────────────────────────
 const PAL=['#3b82f6','#22c55e','#a855f7','#f59e0b','#06b6d4','#f43f5e','#8b5cf6','#10b981','#f97316','#6366f1'];
 function srcColor(id){let h=0;for(const c of(id||''))h+=c.charCodeAt(0);return PAL[h%PAL.length]}
 function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
 function fmt(dt){
   if(!dt)return'—';
   const d=new Date(dt.endsWith('Z')?dt:dt+'Z');
-  return d.toLocaleString('de-CH',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
-}
-function fmtTime(dt){
-  if(!dt)return'—';
-  const d=new Date(dt.endsWith('Z')?dt:dt+'Z');
-  return d.toLocaleTimeString('de-CH',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  return d.toLocaleString('de-CH',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
 }
 function trunc(s,n){return s&&s.length>n?s.slice(0,n)+'…':(s||'')}
 async function api(url){const r=await fetch(url);if(!r.ok)throw new Error(r.status);return r.json()}
 
-// ── Animated counter ───────────────────────────────────────────────────────
-function animNum(el,to){
-  const from=parseInt(el.textContent)||0;
-  if(from===to)return;
-  const dur=400,steps=20,inc=(to-from)/steps;
-  let i=0;
-  const t=setInterval(()=>{
-    i++;el.textContent=Math.round(from+inc*i).toLocaleString();
-    if(i>=steps){el.textContent=to.toLocaleString();clearInterval(t)}
-  },dur/steps);
-}
-
 // ── Countdown ──────────────────────────────────────────────────────────────
-let cdSecs=0,cdInterval=300,cdReady=false,isRunning=false;
-
-function cdTick(){
-  const cd=document.getElementById('cd-val');
-  const bar=document.getElementById('cd-bar');
-  if(isRunning){
-    cd.textContent='Läuft...';cd.className='cd-display running';
-    bar.className='cd-bar running';bar.style.width='100%';
-    return;
-  }
-  cd.className='cd-display';bar.className='cd-bar';
+let cdSecs=0,cdInt=300,cdReady=false,isRunning=false;
+setInterval(()=>{
+  const v=document.getElementById('cd-val'),b=document.getElementById('cd-bar');
+  if(isRunning){v.textContent='Läuft...';v.className='cd-num running';b.className='cd-bar running';b.style.width='100%';return}
+  v.className='cd-num';b.className='cd-bar';
   if(cdSecs>0)cdSecs--;
   const m=Math.floor(cdSecs/60),s=cdSecs%60;
-  cd.textContent=`${m}:${String(s).padStart(2,'0')}`;
-  bar.style.width=Math.max(0,(cdSecs/cdInterval*100))+'%';
-}
-setInterval(cdTick,1000);
+  v.textContent=`${m}:${String(s).padStart(2,'0')}`;
+  b.style.width=Math.max(0,cdSecs/cdInt*100)+'%';
+},1000);
 
-function cdSyncOnce(lastRunAt){
-  if(cdReady||!lastRunAt)return;
-  const last=new Date(lastRunAt.endsWith('Z')?lastRunAt:lastRunAt+'Z');
-  const elapsed=Math.floor((Date.now()-last.getTime())/1000);
-  cdSecs=Math.max(0,cdInterval-elapsed);
-  cdReady=true;
+// ── Chart ──────────────────────────────────────────────────────────────────
+Chart.defaults.color='#3a4f63';Chart.defaults.borderColor='#1a2332';
+let chart=null;
+
+function initChart(labels,data){
+  const ctx=document.getElementById('monthChart').getContext('2d');
+  if(chart)chart.destroy();
+  chart=new Chart(ctx,{
+    type:'bar',
+    data:{
+      labels,
+      datasets:[{
+        data,
+        backgroundColor:'rgba(59,130,246,.25)',
+        borderColor:'rgba(59,130,246,.8)',
+        borderWidth:1,
+        borderRadius:3,
+        hoverBackgroundColor:'rgba(59,130,246,.45)',
+      }]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{title:i=>'📅 '+i[0].label,label:i=>`${i.raw} Tweet${i.raw!==1?'s':''}`}}},
+      scales:{
+        x:{ticks:{font:{size:9},maxRotation:45},grid:{color:'rgba(26,35,50,.5)'}},
+        y:{ticks:{font:{size:9},stepSize:1},grid:{color:'rgba(26,35,50,.5)'},beginAtZero:true}
+      }
+    }
+  });
 }
 
-// ── Ticker ─────────────────────────────────────────────────────────────────
-const tickerItems=[];
-function pushTicker(tag,text,cls){
-  const body=document.getElementById('ticker-body');
-  const time=new Date().toLocaleTimeString('de-CH',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
-  const div=document.createElement('div');
-  div.className='ticker-item';
-  div.innerHTML=`<span class="ticker-time">${time}</span><span class="ticker-tag ${cls}">${tag}</span><span class="ticker-text">${esc(text)}</span>`;
-  // remove empty state
-  const em=body.querySelector('.ticker-empty');if(em)em.remove();
-  body.insertBefore(div,body.firstChild);
-  // keep max 3 visible
-  while(body.children.length>3)body.removeChild(body.lastChild);
+async function loadMonthChart(){
+  // get all posted items from last 30 days
+  const rows=await api('/api/items/posted?days=30');
+  // group by day
+  const counts={};
+  rows.forEach(r=>{
+    if(!r.posted_at)return;
+    const d=new Date(r.posted_at.endsWith('Z')?r.posted_at:r.posted_at+'Z');
+    // use Swiss date
+    const key=d.toLocaleDateString('de-CH',{day:'2-digit',month:'2-digit',timeZone:'Europe/Zurich'});
+    counts[key]=(counts[key]||0)+1;
+  });
+  // build last 30 days
+  const labels=[],data=[];
+  for(let i=29;i>=0;i--){
+    const d=new Date();d.setDate(d.getDate()-i);
+    const key=d.toLocaleDateString('de-CH',{day:'2-digit',month:'2-digit',timeZone:'Europe/Zurich'});
+    labels.push(key);data.push(counts[key]||0);
+  }
+  const total=data.reduce((a,b)=>a+b,0);
+  document.getElementById('chart-total').textContent=total+' Tweets total';
+  initChart(labels,data);
+}
+
+// ── Tweets ─────────────────────────────────────────────────────────────────
+let postedItems=[];
+async function loadPosted(){
+  const rows=await api('/api/items/posted?days=30');
+  postedItems=rows;
+  document.getElementById('tweet-cnt').textContent=rows.length;
+  const el=document.getElementById('tweet-list');
+  if(!rows.length){el.innerHTML='<div class="empty">Noch keine Tweets gepostet</div>';return}
+  el.innerHTML=rows.map((r,i)=>{
+    const c=srcColor(r.source_id);
+    return`<div class="tweet-row" onclick="openModal(${i})">
+      <div class="tw-top">
+        <span class="src-tag" style="background:${c}22;color:${c};border:1px solid ${c}44">${esc(r.source_id)}</span>
+        <span class="tw-date">${fmt(r.posted_at)}</span>
+      </div>
+      <div class="tw-text">${esc(trunc(r.post_text,320))}</div>
+    </div>`;
+  }).join('');
+}
+
+// ── Sources (today) ────────────────────────────────────────────────────────
+async function loadSources(){
+  const rows=await api('/api/sources/today');
+  document.getElementById('src-cnt').textContent=rows.length;
+  const maxH=Math.max(...rows.map(r=>r.today_high||0),1);
+  document.getElementById('src-tbody').innerHTML=rows.filter(r=>r.today_total>0).map(r=>{
+    const c=srcColor(r.source_id);
+    const rate=r.today_total>0?Math.round((r.today_high||0)/r.today_total*100):0;
+    return`<tr>
+      <td><span class="src-tag" style="background:${c}22;color:${c};border:1px solid ${c}44;font-size:10px;padding:2px 7px">${esc(r.source_id)}</span></td>
+      <td>${r.today_total}</td>
+      <td style="color:var(--green)">${r.today_high||0}</td>
+      <td style="color:var(--purple)">${r.today_posted||0}</td>
+      <td style="color:var(--dim)">${rate}%</td>
+      <td class="bar-cell"><div class="mini-bar"><div class="mini-fill" style="width:${(r.today_high||0)/maxH*100}%;background:${c}"></div></div></td>
+    </tr>`;
+  }).join('')||'<tr><td colspan="6" style="text-align:center;color:var(--faint);padding:20px">Noch keine Daten heute</td></tr>';
+}
+
+// ── Stats ──────────────────────────────────────────────────────────────────
+async function loadStats(){
+  const s=await api('/api/stats');
+  const pill=document.getElementById('bot-pill');
+  pill.className='pill '+(s.bot_running?'on':'off');
+  document.getElementById('bot-txt').textContent=s.bot_running?`Aktiv · PID ${s.bot_pid}`:'Gestoppt';
+  document.getElementById('hdr-last').textContent=s.last_run?'Letzter Run: '+fmt(s.last_run):'';
+  if(s.interval_seconds){
+    cdInt=s.interval_seconds;
+    document.getElementById('cd-sub').textContent='Interval: '+(cdInt/60)+' min';
+    if(!cdReady&&s.last_run){
+      const last=new Date(s.last_run.endsWith('Z')?s.last_run:s.last_run+'Z');
+      cdSecs=Math.max(0,cdInt-Math.floor((Date.now()-last.getTime())/1000));
+      cdReady=true;
+    }
+  }
+  document.getElementById('t-new').textContent=(s.today_new??'—').toLocaleString();
+  document.getElementById('t-posted').textContent=(s.today_posted??'—').toLocaleString();
+}
+
+// ── Log ────────────────────────────────────────────────────────────────────
+async function loadLog(){
+  const d=await api('/api/log');
+  const pre=document.getElementById('log-pre');
+  pre.innerHTML=d.lines.map(l=>{
+    let c='ll';
+    if(/ERROR/.test(l))c='le';
+    else if(/WARNING/.test(l))c='lw';
+    else if(/→ HIGH/.test(l))c='lh';
+    else if(/Posted tweet|posting/i.test(l))c='lp';
+    return`<span class="${c}">${esc(l)}</span>`;
+  }).join('\n');
+  if(document.getElementById('log-scroll').checked){const b=document.getElementById('log-box');b.scrollTop=b.scrollHeight}
 }
 
 // ── SSE ────────────────────────────────────────────────────────────────────
 function startSSE(){
   const es=new EventSource('/api/stream');
-  const status=document.getElementById('ticker-status');
-  es.onopen=()=>{status.textContent='Verbunden · Live'};
   es.onmessage=e=>{
-    const line=e.data;
-    if(!line)return;
-    if(/Pipeline run started/.test(line)){
-      isRunning=true;pushTicker('RUN','Pipeline gestartet','run');
-      setTimeout(refreshAll,1000);
-    }
-    if(/→ HIGH/.test(line)){
-      const m=line.match(/\[([^\]]+)\]\s+(.+?)→ HIGH/);
-      if(m)pushTicker('HIGH',`[${m[1]}] ${m[2].trim()}`,'high');
-    }
-    if(/Run complete/.test(line)){
-      isRunning=false;cdSecs=cdInterval;
-      pushTicker('DONE','Run abgeschlossen','run');
-      setTimeout(refreshAll,2000);
-    }
-    if(/Posted tweet/.test(line)){
-      pushTicker('TWEET','Gepostet auf X','posted');
-    }
+    if(/Pipeline run started/.test(e.data)){isRunning=true}
+    if(/Run complete/.test(e.data)){isRunning=false;cdSecs=cdInt;setTimeout(refreshAll,2000)}
   };
-  es.onerror=()=>{
-    status.textContent='Verbindung unterbrochen';
-    setTimeout(()=>{es.close();startSSE()},5000);
-  };
+  es.onerror=()=>{setTimeout(()=>{es.close();startSSE()},5000)};
 }
 
-// ── Data loading ───────────────────────────────────────────────────────────
-let allHigh=[];
-
-async function loadStats(){
-  const s=await api('/api/stats');
-  // Bot badge
-  const badge=document.getElementById('bot-badge');
-  const txt=document.getElementById('bot-txt');
-  badge.className='status-badge '+(s.bot_running?'on':'off');
-  txt.textContent=s.bot_running?`Bot aktiv · PID ${s.bot_pid}`:'Bot gestoppt';
-  // Header
-  document.getElementById('hdr-lastrun').textContent=s.last_run?fmt(s.last_run):'—';
-  if(s.interval_seconds){
-    cdInterval=s.interval_seconds;
-    document.getElementById('hdr-interval').textContent=(cdInterval/60)+' min';
-    document.getElementById('cd-interval').textContent=(cdInterval/60)+' min';
-  }
-  document.getElementById('hdr-total').textContent=(s.total||0).toLocaleString();
-  document.getElementById('cd-last').textContent=s.last_run?fmt(s.last_run):'—';
-  // Sync countdown once
-  cdSyncOnce(s.last_run);
-  // Today stats
-  animNum(document.getElementById('t-new'),s.today_new||0);
-  animNum(document.getElementById('t-high'),s.today_high||0);
-  animNum(document.getElementById('t-posted'),s.today_posted||0);
-  const pct=s.today_new>0?Math.round(s.today_high/s.today_new*100):0;
-  document.getElementById('t-new-sub').textContent='von '+s.total.toLocaleString()+' gesamt';
-  document.getElementById('t-high-sub').textContent=pct+'% der heutigen Artikel';
-  document.getElementById('t-posted-sub').textContent=s.today_high?`${Math.round(s.today_posted/s.today_high*100)}% der HIGH Items`:'';
-  // Alltime
-  animNum(document.getElementById('at-total'),s.total||0);
-  animNum(document.getElementById('at-high'),s.high||0);
-  animNum(document.getElementById('at-posted'),s.posted||0);
-}
-
-async function loadPosted(){
-  const rows=await api('/api/items/posted');
-  document.getElementById('tweet-cnt').textContent=rows.length;
-  const el=document.getElementById('tweet-list');
-  if(!rows.length){el.innerHTML='<div class="empty">Noch keine Tweets gepostet</div>';return}
-  el.innerHTML=rows.map(r=>{
-    const c=srcColor(r.source_id);
-    return`<div class="tweet-row" onclick='openTweet(${JSON.stringify(r)})'>
-      <div class="tweet-top">
-        <span class="src" style="background:${c}22;color:${c};border:1px solid ${c}44">${esc(r.source_id)}</span>
-        <span class="tweet-time">${fmtTime(r.posted_at)}</span>
-      </div>
-      <div class="tweet-text">${esc(trunc(r.post_text,300))}</div>
-    </div>`;
-  }).join('');
-}
-
-async function loadHigh(){
-  const rows=await api('/api/items/high');
-  allHigh=rows;renderHigh(rows);
-}
-
-function renderHigh(items){
-  document.getElementById('high-cnt').textContent=items.length;
-  const el=document.getElementById('hi-list');
-  if(!items.length){el.innerHTML='<div class="empty">Keine HIGH Artikel</div>';return}
-  el.innerHTML=items.slice(0,50).map((i,idx)=>{
-    const c=srcColor(i.source_id);
-    const isDup=i.tweet_id==='duplicate_topic';
-    const isPosted=i.posted_at&&i.tweet_id&&!['skipped_history','dry_run','duplicate_topic'].includes(i.tweet_id);
-    const rowCls=isPosted?'posted':isDup?'dup':'';
-    const badgeCls=isPosted?'posted':isDup?'dup':'pending';
-    const badgeTxt=isPosted?'✓ Gepostet':isDup?'⛔ Duplikat':'● Pending';
-    return`<div class="hi-row ${rowCls}" onclick="openHigh(${idx})">
-      <span class="src" style="background:${c}22;color:${c};border:1px solid ${c}44;font-size:9px;padding:2px 5px;flex-shrink:0">${esc(i.source_id)}</span>
-      <div class="hi-body">
-        <div class="hi-title">${esc(i.title)}</div>
-        <div class="hi-meta">${fmt(i.fetched_at)}${i.relevance_reason?' · '+trunc(i.relevance_reason,55):''}</div>
-      </div>
-      <span class="hi-badge ${badgeCls}">${badgeTxt}</span>
-    </div>`;
-  }).join('');
-}
-
-document.getElementById('hi-search').addEventListener('input',function(){
-  const q=this.value.toLowerCase();
-  renderHigh(q?allHigh.filter(i=>(i.title||'').toLowerCase().includes(q)||(i.source_id||'').toLowerCase().includes(q)):allHigh);
-});
-
-async function loadSources(){
-  const rows=await api('/api/sources');
-  document.getElementById('src-cnt').textContent=rows.length;
-  const maxTotal=Math.max(...rows.map(r=>r.total),1);
-  const maxHigh=Math.max(...rows.map(r=>r.high_count),1);
-  document.getElementById('src-grid').innerHTML=rows.map(r=>{
-    const c=srcColor(r.source_id);
-    const rate=r.total>0?Math.round(r.high_count/r.total*100):0;
-    return`<div class="src-item">
-      <div class="src-name" style="color:${c}">${esc(r.source_id)}</div>
-      <div class="src-bars">
-        <div class="src-bar-row">
-          <span class="src-bar-lbl">Total</span>
-          <div class="src-bar-track"><div class="src-bar-fill" style="width:${r.total/maxTotal*100}%;background:${c}66"></div></div>
-        </div>
-        <div class="src-bar-row">
-          <span class="src-bar-lbl">HIGH</span>
-          <div class="src-bar-track"><div class="src-bar-fill" style="width:${r.high_count/maxHigh*100}%;background:${c}"></div></div>
-        </div>
-      </div>
-      <div class="src-nums">
-        <span class="src-num" style="color:${c}">${r.total} total</span>
-        <span class="src-num" style="color:var(--green)">${r.high_count} HIGH</span>
-        <span class="src-num" style="color:var(--text-faint)">${rate}% rate</span>
-      </div>
-    </div>`;
-  }).join('');
-}
-
-async function loadLog(){
-  const data=await api('/api/log');
-  const pre=document.getElementById('log-pre');
-  pre.innerHTML=data.lines.map(l=>{
-    let cls='ll';
-    if(/ERROR/.test(l))cls='le';
-    else if(/WARNING/.test(l))cls='lw';
-    else if(/→ HIGH/.test(l))cls='lh';
-    else if(/Posted tweet|posting/i.test(l))cls='lp';
-    return`<span class="${cls}">${esc(l)}</span>`;
-  }).join('\n');
-  document.getElementById('log-ts').textContent=new Date().toLocaleTimeString('de-CH');
-  if(document.getElementById('log-scroll').checked){
-    const b=document.getElementById('log-box');b.scrollTop=b.scrollHeight;
-  }
-}
-
-// ── Sources toggle ──────────────────────────────────────────────────────────
+// ── Sources toggle ─────────────────────────────────────────────────────────
 let srcOpen=false;
-function toggleSources(){
+function toggleSrc(){
   srcOpen=!srcOpen;
-  document.getElementById('sources-body').classList.toggle('open',srcOpen);
-  document.getElementById('src-toggle').textContent=srcOpen?'▲ Schliessen':'▼ Anzeigen';
+  document.getElementById('src-body').classList.toggle('open',srcOpen);
+  document.getElementById('src-tog').textContent=srcOpen?'▲ Schliessen':'▼ Anzeigen';
 }
 
 // ── Modal ──────────────────────────────────────────────────────────────────
-function openHigh(idx){
-  const i=allHigh[idx];if(!i)return;
-  document.getElementById('m-title').textContent=i.title||'—';
-  document.getElementById('m-src').textContent=i.source_id||'—';
-  document.getElementById('m-time').textContent=fmt(i.fetched_at);
-  document.getElementById('m-reason').textContent=i.relevance_reason||'—';
-  document.getElementById('m-post').textContent=i.post_text||'(kein Post-Text generiert)';
-  document.getElementById('m-art').href=i.url||'#';
-  const isPosted=i.posted_at&&i.tweet_id&&!['skipped_history','dry_run','duplicate_topic'].includes(i.tweet_id);
-  const btn=document.getElementById('m-tweet');
-  if(isPosted){btn.href=`https://x.com/i/web/status/${i.tweet_id}`;btn.style.display='inline-flex'}
-  else btn.style.display='none';
-  document.getElementById('modal').classList.add('open');
-}
-
-function openTweet(r){
+function openModal(idx){
+  const r=postedItems[idx];if(!r)return;
   document.getElementById('m-title').textContent=r.title||'Tweet';
   document.getElementById('m-src').textContent=r.source_id||'—';
   document.getElementById('m-time').textContent=fmt(r.posted_at);
-  document.getElementById('m-reason').textContent='—';
   document.getElementById('m-post').textContent=r.post_text||'—';
   document.getElementById('m-art').href=r.url||'#';
   const btn=document.getElementById('m-tweet');
-  if(r.tweet_id){btn.href=`https://x.com/i/web/status/${r.tweet_id}`;btn.style.display='inline-flex'}
-  else btn.style.display='none';
+  if(r.tweet_id&&!['skipped_history','dry_run'].includes(r.tweet_id)){
+    btn.href=`https://x.com/i/web/status/${r.tweet_id}`;btn.style.display='inline-flex';
+  }else btn.style.display='none';
   document.getElementById('modal').classList.add('open');
 }
-
 function closeModal(){document.getElementById('modal').classList.remove('open')}
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal()});
 
-// ── Main refresh ───────────────────────────────────────────────────────────
+// ── Main ───────────────────────────────────────────────────────────────────
 async function refreshAll(){
   try{
-    await Promise.all([loadStats(),loadPosted(),loadHigh(),loadSources(),loadLog()]);
-    document.getElementById('ft-refresh').textContent='Aktualisiert: '+new Date().toLocaleTimeString('de-CH');
+    await Promise.all([loadStats(),loadPosted(),loadSources(),loadLog()]);
+    loadMonthChart();
+    document.getElementById('ft').textContent='Aktualisiert: '+new Date().toLocaleTimeString('de-CH');
   }catch(e){console.error(e)}
 }
 

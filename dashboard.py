@@ -107,10 +107,28 @@ def api_runs():
 @app.route("/api/items/posted")
 @require_auth
 def api_posted():
+    days = int(request.args.get("days", 1))
     rows = query_db(
-        "SELECT source_id, title, url, post_text, posted_at, tweet_id, fetched_at "
-        "FROM seen_items WHERE posted_at IS NOT NULL AND tweet_id NOT IN ('skipped_history','dry_run','duplicate_topic') "
-        "ORDER BY posted_at DESC LIMIT 20"
+        "SELECT source_id, title, url, post_text, posted_at, tweet_id "
+        "FROM seen_items WHERE posted_at IS NOT NULL "
+        "AND tweet_id NOT IN ('skipped_history','dry_run','duplicate_topic') "
+        "AND posted_at > datetime('now', ? || ' days') "
+        "ORDER BY posted_at DESC",
+        (f"-{days}",)
+    )
+    return jsonify(rows)
+
+
+@app.route("/api/sources/today")
+@require_auth
+def api_sources_today():
+    rows = query_db(
+        "SELECT source_id, "
+        "SUM(CASE WHEN date(fetched_at,'+2 hours')=date('now','+2 hours') THEN 1 ELSE 0 END) as today_total, "
+        "SUM(CASE WHEN relevance='HIGH' AND date(fetched_at,'+2 hours')=date('now','+2 hours') THEN 1 ELSE 0 END) as today_high, "
+        "SUM(CASE WHEN posted_at IS NOT NULL AND tweet_id NOT IN ('skipped_history','dry_run','duplicate_topic') AND date(posted_at,'+2 hours')=date('now','+2 hours') THEN 1 ELSE 0 END) as today_posted "
+        "FROM seen_items GROUP BY source_id "
+        "HAVING today_total > 0 ORDER BY today_total DESC"
     )
     return jsonify(rows)
 
