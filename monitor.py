@@ -66,9 +66,15 @@ def _parse_rss(content: bytes, source_id: str) -> list[dict]:
     items = []
     try:
         root = ET.fromstring(content)
-    except ET.ParseError as exc:
-        logger.warning("[%s] XML parse error: %s", source_id, exc)
-        return []
+    except ET.ParseError:
+        # Try with lxml-style recovery via BeautifulSoup
+        try:
+            soup = BeautifulSoup(content, "xml")
+            content = soup.encode()
+            root = ET.fromstring(content)
+        except Exception as exc:
+            logger.warning("[%s] XML parse error: %s", source_id, exc)
+            return []
 
     # Detect Atom vs RSS
     is_atom = root.tag == "{http://www.w3.org/2005/Atom}feed"
