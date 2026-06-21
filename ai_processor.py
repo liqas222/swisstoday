@@ -26,13 +26,20 @@ HIGH-Beispiele (wirklich wichtig):
 - Politischer Skandal mit konkreten Folgen
 
 ABSOLUT IMMER LOW — keine Ausnahmen:
-- Alles mit Immobilien, Wohnungsmarkt, Mietpreise, Hauspreise — IMMER LOW, ausnahmslos
-- Studien, Analysen, Berichte, Prognosen, Preistrends — IMMER LOW
-- Debatten, Vorstösse, Motionen die noch nicht beschlossen sind
-- Kommentare, Meinungsartikel, Interviews, Ratgeber
-- Internationale Nachrichten ohne direkte CH-Relevanz
-- Alles mit "könnte", "plant", "diskutiert", "erwartet", "prognostiziert", "dürfte", "bleibt"
-- Konjunkturberichte, Wirtschaftsdaten, BIP-Zahlen, Marktberichte
+- Immobilien-Analysen, Preistrends, Wohnungsmarkt-Berichte — IMMER LOW
+- Meinungsartikel, Kommentare, Interviews, Ratgeber
+- Internationale Nachrichten ohne direkte CH-Relevanz (Deutschland, EU ohne CH-Bezug)
+- Sport, Kultur, Entertainment, Lifestyle
+- Alles mit "könnte", "plant", "diskutiert", "erwartet", "prognostiziert", "dürfte"
+- Vorstösse/Motionen die noch nicht beschlossen sind
+
+HIGH wenn konkretes Ereignis in der Schweiz:
+- Verhaftung, Verbrechen, Polizeieinsatz, Gerichtsurteil — IMMER HIGH
+- Bundesgerichtsurteil, Strafprozess — IMMER HIGH
+- Beschlossenes Gesetz/Verordnung, Abstimmungsresultat
+- SNB/FINMA Entscheid, Zinsänderung
+- Unternehmenstransaktion (Übernahme, Konkurs, Entlassung >100 Stellen)
+- Politischer Skandal mit konkreten Folgen
 
 Kategorien (wähle die passendste):
 Finanzen, Steuern, Wirtschaft, Politik, Kriminalität, Recht, Einwanderung, Gesundheit, Energie, Sonstiges
