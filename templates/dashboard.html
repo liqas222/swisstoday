@@ -48,22 +48,34 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;font-
 .top-row{display:grid;grid-template-columns:240px 1fr 300px;gap:16px;align-items:start}
 .stats-col{display:flex;flex-direction:column;gap:10px}
 
-/* Countdown */
-.cd-box{
+/* Radar panel */
+.radar-box{
   background:var(--card);border:1px solid var(--border);border-radius:14px;
-  padding:22px 24px 18px;position:relative;overflow:hidden;
+  padding:20px 24px 16px;position:relative;overflow:hidden;display:flex;flex-direction:column;align-items:center;gap:10px;
 }
-.cd-box::before{content:'';position:absolute;top:-40px;right:-40px;width:120px;height:120px;border-radius:50%;background:radial-gradient(circle,rgba(245,158,11,.07) 0%,transparent 70%);pointer-events:none}
-.cd-lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--dim);margin-bottom:12px;display:flex;align-items:center;gap:6px}
-.cd-num{font-size:56px;font-weight:800;line-height:1;letter-spacing:-3px;color:var(--yellow);font-variant-numeric:tabular-nums;font-family:'JetBrains Mono',monospace}
-.cd-num.running{color:var(--green);animation:glow 1.4s ease-in-out infinite alternate}
-.cd-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--yellow);box-shadow:0 0 6px var(--yellow);transition:background .4s,box-shadow .4s}
-.cd-dot.running{background:var(--green);box-shadow:0 0 8px var(--green)}
-@keyframes glow{from{text-shadow:0 0 20px rgba(34,197,94,.2)}to{text-shadow:0 0 40px rgba(34,197,94,.55)}}
-.cd-bar-wrap{height:2px;background:var(--border);border-radius:2px;overflow:hidden;margin-top:14px}
-.cd-bar{height:100%;background:linear-gradient(90deg,var(--yellow),#fbbf24);border-radius:2px;transition:width 1s linear}
-.cd-bar.running{background:linear-gradient(90deg,var(--green),#4ade80)}
-.cd-sub{font-size:10px;color:var(--faint);margin-top:8px;letter-spacing:.3px}
+.radar-lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--dim);align-self:flex-start;display:flex;align-items:center;gap:6px}
+.radar-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green);transition:background .4s,box-shadow .4s}
+.radar-dot.idle{background:var(--yellow);box-shadow:0 0 6px var(--yellow)}
+.radar-wrap{position:relative;width:110px;height:110px;flex-shrink:0}
+.radar-ring{position:absolute;border-radius:50%;border:1px solid rgba(34,197,94,.18);top:50%;left:50%;transform:translate(-50%,-50%)}
+.radar-ring:nth-child(1){width:110px;height:110px}
+.radar-ring:nth-child(2){width:74px;height:74px}
+.radar-ring:nth-child(3){width:38px;height:38px}
+.radar-cross{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:110px;height:110px}
+.radar-cross::before,.radar-cross::after{content:'';position:absolute;background:rgba(34,197,94,.12)}
+.radar-cross::before{width:1px;height:100%;left:50%;top:0}
+.radar-cross::after{height:1px;width:100%;top:50%;left:0}
+.radar-sweep{position:absolute;top:50%;left:50%;width:55px;height:55px;transform-origin:0% 100%;animation:sweep 4s linear infinite;opacity:0}
+.radar-sweep.active{opacity:1}
+@keyframes sweep{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+.radar-sweep::after{content:'';position:absolute;bottom:0;left:0;width:55px;height:55px;border-radius:0 55px 0 0;background:conic-gradient(from 270deg,transparent 270deg,rgba(34,197,94,.35) 360deg)}
+.radar-blip{position:absolute;width:5px;height:5px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green);top:50%;left:50%;transform:translate(-50%,-50%);animation:blip 4s ease-in-out infinite;opacity:0}
+.radar-blip.active{opacity:1}
+@keyframes blip{0%,100%{opacity:0}40%{opacity:1}70%{opacity:.3}}
+.radar-center{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green)}
+.radar-status{font-size:11px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--green);font-family:'JetBrains Mono',monospace}
+.radar-status.idle{color:var(--yellow)}
+.radar-since{font-size:10px;color:var(--faint);letter-spacing:.3px;text-align:center}
 
 /* Stat cards */
 .scard{
@@ -252,12 +264,21 @@ footer{text-align:center;padding:14px;font-size:10px;color:var(--faint);border-t
   <!-- TOP: countdown + stats + chart -->
   <div class="top-row">
     <div class="stats-col">
-      <!-- Countdown -->
-      <div class="cd-box">
-        <div class="cd-lbl"><span class="cd-dot" id="cd-dot"></span>Nächster Run</div>
-        <div class="cd-num" id="cd-val">—:——</div>
-        <div class="cd-bar-wrap"><div class="cd-bar" id="cd-bar" style="width:100%"></div></div>
-        <div class="cd-sub" id="cd-sub">Interval: — min</div>
+      <!-- Radar -->
+      <div class="radar-box">
+        <div class="radar-lbl"><span class="radar-dot idle" id="rd-dot"></span>System Status</div>
+        <div class="radar-wrap">
+          <div class="radar-ring"></div>
+          <div class="radar-ring"></div>
+          <div class="radar-ring"></div>
+          <div class="radar-cross"></div>
+          <div class="radar-sweep" id="rd-sweep"></div>
+          <div class="radar-blip" id="rd-blip" style="top:30%;left:65%"></div>
+          <div class="radar-blip" id="rd-blip2" style="top:62%;left:28%;animation-delay:1.5s"></div>
+          <div class="radar-center"></div>
+        </div>
+        <div class="radar-status idle" id="rd-status">BEREIT</div>
+        <div class="radar-since" id="rd-since">—</div>
       </div>
       <!-- Heute analysiert -->
       <div class="scard blue">
@@ -425,22 +446,41 @@ function fmt(dt){
 function trunc(s,n){return s&&s.length>n?s.slice(0,n)+'…':(s||'')}
 async function api(url){const r=await fetch(url);if(!r.ok)throw new Error(r.status);return r.json()}
 
-// ── Countdown ──────────────────────────────────────────────────────────────
-let cdSecs=0,cdInt=300,cdReady=false,isRunning=false;
-setInterval(()=>{
-  const v=document.getElementById('cd-val'),b=document.getElementById('cd-bar'),dot=document.getElementById('cd-dot');
+// ── Radar ──────────────────────────────────────────────────────────────────
+let isRunning=false,lastRunTs=null;
+function updateRadar(){
+  const dot=document.getElementById('rd-dot');
+  const sweep=document.getElementById('rd-sweep');
+  const blip=document.getElementById('rd-blip');
+  const blip2=document.getElementById('rd-blip2');
+  const status=document.getElementById('rd-status');
+  const since=document.getElementById('rd-since');
   if(isRunning){
-    v.textContent='Läuft...';v.className='cd-num running';
-    b.className='cd-bar running';b.style.width='100%';
-    if(dot)dot.className='cd-dot running';return;
+    dot.className='radar-dot';
+    sweep.className='radar-sweep active';
+    blip.className='radar-blip active';
+    blip2.className='radar-blip active';
+    status.className='radar-status';
+    status.textContent='SCANNING';
+    since.textContent='Daten werden abgerufen…';
+  } else {
+    dot.className='radar-dot idle';
+    sweep.className='radar-sweep';
+    blip.className='radar-blip';
+    blip2.className='radar-blip';
+    status.className='radar-status idle';
+    status.textContent='BEREIT';
+    if(lastRunTs){
+      const diff=Math.floor((Date.now()-lastRunTs)/1000);
+      const m=Math.floor(diff/60);
+      since.textContent=m<1?'Zuletzt: gerade eben':m===1?'Zuletzt: vor 1 Minute':`Zuletzt: vor ${m} Minuten`;
+    } else {
+      since.textContent='—';
+    }
   }
-  v.className='cd-num';b.className='cd-bar';
-  if(dot)dot.className='cd-dot';
-  if(cdSecs>0)cdSecs--;
-  const m=Math.floor(cdSecs/60),s=cdSecs%60;
-  v.textContent=`${m}:${String(s).padStart(2,'0')}`;
-  b.style.width=Math.max(0,cdSecs/cdInt*100)+'%';
-},1000);
+}
+setInterval(updateRadar,10000);
+updateRadar();
 
 // ── Chart (pure CSS bars) ──────────────────────────────────────────────────
 function initChart(labels,data){
@@ -626,14 +666,10 @@ async function loadStats(){
   pill.className='pill '+(s.bot_running?'on':'off');
   document.getElementById('bot-txt').textContent=s.bot_running?`Aktiv · PID ${s.bot_pid}`:'Gestoppt';
   document.getElementById('hdr-last').textContent=s.last_run?'Letzter Run: '+fmt(s.last_run):'';
-  if(s.interval_seconds){
-    cdInt=s.interval_seconds;
-    document.getElementById('cd-sub').textContent='Interval: '+(cdInt/60)+' min';
-    if(!cdReady&&s.last_run){
-      const last=new Date(s.last_run.endsWith('Z')?s.last_run:s.last_run+'Z');
-      cdSecs=Math.max(0,cdInt-Math.floor((Date.now()-last.getTime())/1000));
-      cdReady=true;
-    }
+  if(s.last_run){
+    const last=new Date(s.last_run.endsWith('Z')?s.last_run:s.last_run+'Z');
+    lastRunTs=last.getTime();
+    updateRadar();
   }
   setNum('t-new',(s.today_new??'—').toLocaleString());
   setNum('t-posted',(s.today_posted??'—').toLocaleString());
@@ -664,9 +700,9 @@ function startSSE(){
   es.onopen=()=>setLive(true);
   es.onmessage=e=>{
     setLive(true);
-    if(/Pipeline run started/.test(e.data)){isRunning=true}
+    if(/Pipeline run started/.test(e.data)){isRunning=true;updateRadar();}
     if(/Run complete/.test(e.data)){
-      isRunning=false;cdSecs=cdInt;
+      isRunning=false;lastRunTs=Date.now();updateRadar();
       setTimeout(()=>{loadStats();loadPosted();loadSources();loadMonthChart();loadViews()},2000);
     }
     // append to log live
