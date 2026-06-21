@@ -1,5 +1,6 @@
 import logging
 import time
+from datetime import datetime, timezone
 
 import anthropic
 import tweepy
@@ -16,7 +17,8 @@ logger = logging.getLogger(__name__)
 
 def run_pipeline(cfg, anthropic_client):
     logger.info("=== Pipeline run started ===")
-    stats = {"fetched": 0, "new_items": 0, "high_relevance": 0, "posted": 0, "errors": 0}
+    run_started_at = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+    stats = {"run_at": run_started_at, "fetched": 0, "new_items": 0, "high_relevance": 0, "posted": 0, "errors": 0}
 
     # 1. Fetch all sources
     all_items = monitor.fetch_all_sources()

@@ -161,7 +161,7 @@ def update_error(db_path: str, item_id: int, error: str) -> None:
 def log_run(db_path: str, stats: dict) -> None:
     with _connect(db_path) as conn:
         conn.execute(
-            """INSERT INTO run_log (fetched, new_items, high_relevance, posted, errors)
-               VALUES (:fetched, :new_items, :high_relevance, :posted, :errors)""",
+            """INSERT INTO run_log (run_at, fetched, new_items, high_relevance, posted, errors)
+               VALUES (:run_at, :fetched, :new_items, :high_relevance, :posted, :errors)""",
             stats,
         )
