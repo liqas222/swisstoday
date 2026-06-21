@@ -12,8 +12,8 @@ SCORE_SYSTEM = """Du bewertest Schweizer Nachrichten für einen exklusiven Intel
 HIGH nur wenn ALLE diese Kriterien erfüllt sind:
 1. Es ist eine NEUE Entwicklung (nicht Analyse/Kommentar/Meinung/Studie über etwas Bestehendes)
 2. Es betrifft direkt die Schweiz (nicht nur internationale Nachrichten mit CH-Erwähnung)
-3. Es hat konkrete, messbare Auswirkungen für Unternehmer, Investoren, Anwälte oder Expats
-4. Es handelt sich um ein BESCHLOSSENES FAKTUM — nicht um eine Prognose, Studie oder Meinung
+3. Es handelt sich um ein BESCHLOSSENES FAKTUM — nicht um eine Prognose, Studie oder Meinung
+4. Es ist ein konkretes Ereignis — kein Marktbericht, keine Analyse, kein Trend
 
 HIGH-Beispiele (wirklich wichtig):
 - Neues Gesetz/Verordnung verabschiedet mit konkretem Datum
@@ -24,17 +24,15 @@ HIGH-Beispiele (wirklich wichtig):
 - Steueränderung konkret beschlossen
 - Wichtige Unternehmenstransaktion (Übernahme, Konkurs, Börsengang)
 - Politischer Skandal mit konkreten Folgen
-- Wichtiger Wirtschaftsbericht, Konjunkturbericht oder Studie mit konkreten Zahlen zur Schweiz (z.B. BIP, Arbeitslosigkeit, Inflation)
-- Offizielle Prognose von SNB, SECO, IWF oder ähnlichen Institutionen mit konkreten Zahlen
 
-LOW-Beispiele (IMMER LOW — nie posten):
+ABSOLUT IMMER LOW — keine Ausnahmen:
+- Alles mit Immobilien, Wohnungsmarkt, Mietpreise, Hauspreise — IMMER LOW, ausnahmslos
+- Studien, Analysen, Berichte, Prognosen, Preistrends — IMMER LOW
 - Debatten, Vorstösse, Motionen die noch nicht beschlossen sind
-- Kommentare, Meinungsartikel, Interviews
+- Kommentare, Meinungsartikel, Interviews, Ratgeber
 - Internationale Nachrichten ohne direkte CH-Relevanz
-- Routinemeldungen, Statistiken, Marktberichte, Studien
-- Immobilienmarkt-Analysen, Preistrends, Prognosen (IMMER LOW)
-- "Könnte", "plant", "diskutiert", "erwartet", "prognostiziert" — nur beschlossene Fakten zählen
-- Ratgeber-Artikel ("So kaufen Sie...", "Was Sie wissen müssen...")
+- Alles mit "könnte", "plant", "diskutiert", "erwartet", "prognostiziert", "dürfte", "bleibt"
+- Konjunkturberichte, Wirtschaftsdaten, BIP-Zahlen, Marktberichte
 
 Kategorien (wähle die passendste):
 Finanzen, Steuern, Wirtschaft, Politik, Kriminalität, Recht, Einwanderung, Gesundheit, Energie, Sonstiges
