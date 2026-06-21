@@ -215,6 +215,9 @@ def rank_items_by_potential(client: anthropic.Anthropic, model: str, items: list
     except Exception as e:
         logger.warning("Ranking failed: %s", e)
         return items
+
+
+def generate_post(client: anthropic.Anthropic, model: str, item: dict) -> Optional[str]:
     user_msg = (
         f"Titel: {item['title']}\n\n"
         f"Zusammenfassung: {item.get('summary', '')[:800]}\n\n"
