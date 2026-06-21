@@ -57,7 +57,7 @@ EMOJI HEADLINE
 
 ERKLÄRUNG (4-5 Sätze)
 
-URL
+HASHTAGS
 
 HEADLINE-Regeln (wichtigste Regel überhaupt):
 - Maximal 6-8 Wörter, knapp und direkt
@@ -88,7 +88,7 @@ HASHTAGS:
   #Einwanderung (nur Migrationsentscheide), #Kriminalität (nur Strafrecht/Verhaftungen)
 - Kein #Wirtschaft, #Politik, #News oder andere generische Tags
 
-Ziel: 700-1000 Zeichen gesamt. Gib NUR den Post-Text zurück, nichts anderes."""
+Ziel: 700-1000 Zeichen gesamt. Kein Link, keine URL. Gib NUR den Post-Text zurück, nichts anderes."""
 
 
 def _call_claude(client: anthropic.Anthropic, model: str, system: str, user_msg: str, max_retries: int = 3) -> Optional[str]:
@@ -221,7 +221,6 @@ def generate_post(client: anthropic.Anthropic, model: str, item: dict) -> Option
     user_msg = (
         f"Titel: {item['title']}\n\n"
         f"Zusammenfassung: {item.get('summary', '')[:800]}\n\n"
-        f"URL: {item.get('url', '')}\n\n"
         f"Quelle: {item.get('source_id', '')}"
     )
     return _call_claude(client, model, POST_SYSTEM, user_msg)
