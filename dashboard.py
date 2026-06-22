@@ -13,6 +13,8 @@ DB_PATH = os.getenv("DB_PATH", "swissintel.db")
 LOG_PATH = os.getenv("LOG_PATH", "bot.log")
 DASHBOARD_PASSWORD = os.getenv("DASHBOARD_PASSWORD", "swiss2024")
 CHECK_INTERVAL_MINUTES = int(os.getenv("CHECK_INTERVAL_MINUTES", "15"))
+# Path prefix when served behind a reverse proxy (e.g. Tailscale "/intel"). Empty = root.
+BASE_PATH = os.getenv("BASE_PATH", "").rstrip("/")
 
 
 def require_auth(f):
@@ -20,7 +22,7 @@ def require_auth(f):
     def decorated(*args, **kwargs):
         token = request.cookies.get("dash_token")
         if token != DASHBOARD_PASSWORD:
-            return redirect("/login")
+            return redirect(BASE_PATH + "/login")
         return f(*args, **kwargs)
     return decorated
 
@@ -31,11 +33,11 @@ def login():
     if request.method == "POST":
         pw = request.form.get("password", "")
         if pw == DASHBOARD_PASSWORD:
-            resp = make_response(redirect("/"))
+            resp = make_response(redirect(BASE_PATH + "/"))
             resp.set_cookie("dash_token", pw, max_age=86400 * 30, httponly=True)
             return resp
         error = True
-    return render_template("login.html", error=error)
+    return render_template("login.html", error=error, base_path=BASE_PATH)
 
 
 def _migrate_db():
@@ -82,7 +84,7 @@ def get_bot_status():
 @app.route("/")
 @require_auth
 def index():
-    return render_template("dashboard.html")
+    return render_template("dashboard.html", base_path=BASE_PATH)
 
 
 @app.route("/api/stats")
