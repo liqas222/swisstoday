@@ -467,24 +467,37 @@ def api_health():
 @require_auth
 def api_stream():
     def generate():
+        import time as _time
+        import subprocess as _sp
+        # Try log file first, fall back to journalctl
         try:
-            with open(LOG_PATH, "r") as f:
-                f.seek(0, 2)  # seek to end
-                while True:
-                    line = f.readline()
-                    if line:
+            if LOG_PATH and os.path.exists(LOG_PATH):
+                with open(LOG_PATH, "r") as f:
+                    f.seek(0, 2)
+                    while True:
+                        line = f.readline()
+                        if line:
+                            yield f"data: {line.rstrip()}\n\n"
+                        else:
+                            _time.sleep(0.5)
+            else:
+                proc = _sp.Popen(
+                    ["journalctl", "-u", "swissintel-bot", "-f", "-n", "50", "--no-pager", "-o", "cat"],
+                    stdout=_sp.PIPE, stderr=_sp.DEVNULL, text=True
+                )
+                try:
+                    for line in proc.stdout:
                         yield f"data: {line.rstrip()}\n\n"
-                    else:
-                        import time as _time
-                        _time.sleep(0.5)
+                finally:
+                    proc.terminate()
         except GeneratorExit:
             pass
-        except Exception:
-            yield "data: [stream error]\n\n"
+        except Exception as e:
+            yield f"data: [stream error: {e}]\n\n"
     return Response(generate(), mimetype="text/event-stream",
                     headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
 
 
 if __name__ == "__main__":
     _migrate_db()
-    app.run(host="0.0.0.0", port=8080, debug=False, threaded=True)
+    app.run(host="0.0.0.0", port=8081, debug=False, threaded=True)
