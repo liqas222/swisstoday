@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Phantom Copy Trader</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #0d0d0d; color: #e0e0e0; font-family: 'Courier New', monospace; font-size: 13px; }
+  header { background: #1a1a2e; padding: 16px 24px; display: flex; align-items: center; gap: 16px; border-bottom: 1px solid #333; }
+  header h1 { color: #ab9ff2; font-size: 18px; }
+  .badge { padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: bold; }
+  .badge-paper { background: #2a4a2a; color: #6fcf6f; }
+  .badge-live  { background: #4a2a2a; color: #ef5350; }
+  .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 12px; margin-bottom: 24px; }
+  .card { background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 8px; padding: 16px; }
+  .card-label { color: #888; font-size: 11px; text-transform: uppercase; margin-bottom: 6px; }
+  .card-value { font-size: 22px; font-weight: bold; color: #fff; }
+  .card-value.green { color: #4caf50; }
+  .card-value.red   { color: #ef5350; }
+  h2 { color: #ab9ff2; font-size: 14px; text-transform: uppercase; margin-bottom: 12px; letter-spacing: 1px; }
+  section { margin-bottom: 32px; }
+  table { width: 100%; border-collapse: collapse; }
+  th { text-align: left; color: #888; font-size: 11px; text-transform: uppercase; padding: 8px 12px; border-bottom: 1px solid #2a2a2a; }
+  td { padding: 9px 12px; border-bottom: 1px solid #1e1e1e; }
+  tr:hover td { background: #1e1e1e; }
+  a { color: #ab9ff2; text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .rank { color: #ffd700; font-weight: bold; }
+  .long  { color: #4caf50; }
+  .short { color: #ef5350; }
+  .status-executed { color: #4caf50; }
+  .status-failed   { color: #ef5350; }
+  .status-pending  { color: #ffb300; }
+  .status-closed   { color: #888; }
+  .pnl-pos { color: #4caf50; }
+  .pnl-neg { color: #ef5350; }
+  .ts { color: #555; font-size: 11px; }
+  .nav { display: flex; gap: 16px; margin-bottom: 24px; }
+  .nav a { color: #ab9ff2; font-size: 13px; padding: 6px 14px; border: 1px solid #ab9ff2; border-radius: 4px; }
+  .nav a:hover { background: #ab9ff2; color: #0d0d0d; text-decoration: none; }
+  .empty { color: #555; padding: 20px; text-align: center; }
+  footer { color: #333; text-align: center; padding: 20px; font-size: 11px; }
+  .win-bar-bg { background: #2a2a2a; border-radius: 3px; height: 6px; width: 80px; display: inline-block; vertical-align: middle; }
+  .win-bar-fg { background: #4caf50; border-radius: 3px; height: 6px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>⬡ Phantom Copy Trader</h1>
+  {% if paper_trading %}
+    <span class="badge badge-paper">PAPER MODE</span>
+  {% else %}
+    <span class="badge badge-live">LIVE</span>
+  {% endif %}
+  <span style="color:#555; margin-left:auto; font-size:11px;">{{ now }}</span>
+</header>
+
+<div class="container">
+  <div class="nav">
+    <a href="/">Dashboard</a>
+    <a href="/signals">All Signals</a>
+  </div>
+
+  <!-- Stats row -->
+  <div class="grid">
+    <div class="card">
+      <div class="card-label">Paper Balance</div>
+      <div class="card-value {% if paper.balance and paper.balance >= 1000 %}green{% else %}red{% endif %}">
+        ${{ "%.2f"|format(paper.balance or 0) }}
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-label">Total PnL</div>
+      <div class="card-value {% if (paper.total_pnl or 0) >= 0 %}green{% else %}red{% endif %}">
+        {% if (paper.total_pnl or 0) >= 0 %}+{% endif %}${{ "%.2f"|format(paper.total_pnl or 0) }}
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-label">Trades Taken</div>
+      <div class="card-value">{{ paper.total_trades or 0 }}</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Win Rate</div>
+      <div class="card-value {% if paper.total_trades and (paper.wins / paper.total_trades) >= 0.6 %}green{% else %}{% endif %}">
+        {% if paper.total_trades %}{{ "%.0f"|format(paper.wins / paper.total_trades * 100) }}%{% else %}—{% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Leaderboard -->
+  <section>
+    <h2>Top 20 Wallets (7d Perps)</h2>
+    {% if wallets %}
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Wallet</th>
+          <th>7d PnL</th>
+          <th>Win Rate</th>
+          <th>Trades</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for w in wallets %}
+        <tr>
+          <td class="rank">#{{ w.rank }}</td>
+          <td><a href="/wallet/{{ w.address }}">{{ w.address[:6] }}…{{ w.address[-4:] }}</a></td>
+          <td class="{% if (w.pnl_7d or 0) >= 0 %}pnl-pos{% else %}pnl-neg{% endif %}">
+            {% if (w.pnl_7d or 0) >= 0 %}+{% endif %}${{ "%.0f"|format(w.pnl_7d or 0) }}
+          </td>
+          <td>
+            {% if w.win_rate %}
+            <div class="win-bar-bg"><div class="win-bar-fg" style="width:{{ (w.win_rate * 100)|int }}%"></div></div>
+            {{ "%.0f"|format(w.win_rate * 100) }}%
+            {% else %}—{% endif %}
+          </td>
+          <td>{{ w.trade_count or "—" }}</td>
+          <td>
+            {% if w.win_rate and w.win_rate >= 0.60 %}
+              <span style="color:#4caf50">✓ qualifying</span>
+            {% else %}
+              <span style="color:#555">watching</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty">
+      No wallets tracked yet — leaderboard fetch runs on startup.<br>
+      Check logs or set <code>LEADERBOARD_URL</code> if it fails.
+    </div>
+    {% endif %}
+  </section>
+
+  <!-- Recent signals -->
+  <section>
+    <h2>Recent Copy Signals</h2>
+    {% if signals %}
+    <table>
+      <thead>
+        <tr>
+          <th>Time</th>
+          <th>Token</th>
+          <th>Side</th>
+          <th>Size</th>
+          <th>Entry</th>
+          <th>Wallet</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in signals %}
+        <tr>
+          <td class="ts">{{ s.signal_at[:16].replace("T"," ") }}</td>
+          <td>{{ s.token }}</td>
+          <td class="{% if s.side == 'LONG' %}long{% else %}short{% endif %}">{{ s.side }}</td>
+          <td>${{ "%.0f"|format(s.size_usd or 0) }}</td>
+          <td>{% if s.entry_price %}${{ "%.4f"|format(s.entry_price) }}{% else %}—{% endif %}</td>
+          <td><a href="/wallet/{{ s.wallet }}">{{ s.wallet[:6] }}…{{ s.wallet[-4:] }}</a></td>
+          <td class="status-{{ s.status|lower }}">{{ s.status }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty">No copy signals yet — waiting for qualifying trades.</div>
+    {% endif %}
+  </section>
+</div>
+<footer>phantom-copy-trader · refreshes every 60s · <a href="/api/status">JSON status</a></footer>
+<script>setTimeout(() => location.reload(), 60000);</script>
+</body>
+</html>

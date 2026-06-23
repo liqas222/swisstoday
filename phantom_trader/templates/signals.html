@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Signals — Phantom Copy Trader</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #0d0d0d; color: #e0e0e0; font-family: 'Courier New', monospace; font-size: 13px; }
+  header { background: #1a1a2e; padding: 16px 24px; border-bottom: 1px solid #333; }
+  header h1 { color: #ab9ff2; font-size: 18px; }
+  .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+  .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 24px; }
+  .card { background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 8px; padding: 14px; }
+  .card-label { color: #888; font-size: 11px; text-transform: uppercase; margin-bottom: 6px; }
+  .card-value { font-size: 20px; font-weight: bold; }
+  .card-value.green { color: #4caf50; }
+  .card-value.red   { color: #ef5350; }
+  h2 { color: #ab9ff2; font-size: 14px; text-transform: uppercase; margin-bottom: 12px; }
+  table { width: 100%; border-collapse: collapse; }
+  th { text-align: left; color: #888; font-size: 11px; text-transform: uppercase; padding: 8px 12px; border-bottom: 1px solid #2a2a2a; }
+  td { padding: 9px 12px; border-bottom: 1px solid #1e1e1e; }
+  tr:hover td { background: #1e1e1e; }
+  a { color: #ab9ff2; text-decoration: none; }
+  .long  { color: #4caf50; }
+  .short { color: #ef5350; }
+  .ts { color: #555; font-size: 11px; }
+  .status-executed { color: #4caf50; }
+  .status-failed   { color: #ef5350; }
+  .status-pending  { color: #ffb300; }
+  .status-closed   { color: #888; }
+  .nav { display: flex; gap: 16px; margin-bottom: 24px; }
+  .nav a { color: #ab9ff2; font-size: 13px; padding: 6px 14px; border: 1px solid #ab9ff2; border-radius: 4px; }
+  .empty { color: #555; padding: 20px; text-align: center; }
+</style>
+</head>
+<body>
+<header><h1>⬡ Copy Signals</h1></header>
+<div class="container">
+  <div class="nav">
+    <a href="/">Dashboard</a>
+    <a href="/signals">All Signals</a>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <div class="card-label">Balance</div>
+      <div class="card-value {% if (paper.balance or 0) >= 1000 %}green{% else %}red{% endif %}">
+        ${{ "%.2f"|format(paper.balance or 0) }}
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-label">Total PnL</div>
+      <div class="card-value {% if (paper.total_pnl or 0) >= 0 %}green{% else %}red{% endif %}">
+        {% if (paper.total_pnl or 0) >= 0 %}+{% endif %}${{ "%.2f"|format(paper.total_pnl or 0) }}
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-label">Total Trades</div>
+      <div class="card-value">{{ paper.total_trades or 0 }}</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Wins</div>
+      <div class="card-value green">{{ paper.wins or 0 }}</div>
+    </div>
+  </div>
+
+  {% if signals %}
+  <table>
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Time</th>
+        <th>Token</th>
+        <th>Side</th>
+        <th>Size</th>
+        <th>Entry</th>
+        <th>Wallet</th>
+        <th>Our Tx</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for s in signals %}
+      <tr>
+        <td style="color:#555">{{ s.id }}</td>
+        <td class="ts">{{ s.signal_at[:16].replace("T"," ") }}</td>
+        <td>{{ s.token }}</td>
+        <td class="{% if s.side == 'LONG' %}long{% else %}short{% endif %}">{{ s.side }}</td>
+        <td>${{ "%.0f"|format(s.size_usd or 0) }}</td>
+        <td>{% if s.entry_price %}${{ "%.4f"|format(s.entry_price) }}{% else %}—{% endif %}</td>
+        <td><a href="/wallet/{{ s.wallet }}">{{ s.wallet[:6] }}…{{ s.wallet[-4:] }}</a></td>
+        <td class="ts">
+          {% if s.our_tx_sig and not s.our_tx_sig.startswith("PAPER") %}
+            <a href="https://solscan.io/tx/{{ s.our_tx_sig }}" target="_blank">{{ s.our_tx_sig[:8] }}…</a>
+          {% elif s.our_tx_sig %}{{ s.our_tx_sig[:14] }}…{% else %}—{% endif %}
+        </td>
+        <td class="status-{{ s.status|lower }}">{{ s.status }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="empty">No signals yet — the system is watching for qualifying trades.</div>
+  {% endif %}
+</div>
+<script>setTimeout(() => location.reload(), 30000);</script>
+</body>
+</html>

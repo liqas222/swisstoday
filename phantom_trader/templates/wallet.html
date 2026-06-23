@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{ wallet.address[:8] }}… — Phantom Copy Trader</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #0d0d0d; color: #e0e0e0; font-family: 'Courier New', monospace; font-size: 13px; }
+  header { background: #1a1a2e; padding: 16px 24px; border-bottom: 1px solid #333; }
+  header h1 { color: #ab9ff2; font-size: 16px; }
+  .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+  .grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 24px; }
+  .card { background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 8px; padding: 14px; }
+  .card-label { color: #888; font-size: 11px; text-transform: uppercase; margin-bottom: 6px; }
+  .card-value { font-size: 20px; font-weight: bold; color: #fff; }
+  .card-value.green { color: #4caf50; }
+  .card-value.red   { color: #ef5350; }
+  h2 { color: #ab9ff2; font-size: 14px; text-transform: uppercase; margin-bottom: 12px; letter-spacing: 1px; }
+  section { margin-bottom: 32px; }
+  table { width: 100%; border-collapse: collapse; }
+  th { text-align: left; color: #888; font-size: 11px; text-transform: uppercase; padding: 8px 12px; border-bottom: 1px solid #2a2a2a; }
+  td { padding: 9px 12px; border-bottom: 1px solid #1e1e1e; }
+  tr:hover td { background: #1e1e1e; }
+  a { color: #ab9ff2; text-decoration: none; }
+  .long  { color: #4caf50; }
+  .short { color: #ef5350; }
+  .pnl-pos { color: #4caf50; }
+  .pnl-neg { color: #ef5350; }
+  .ts { color: #555; font-size: 11px; }
+  .back { display: inline-block; margin-bottom: 16px; color: #ab9ff2; font-size: 12px; }
+  .addr { font-size: 11px; color: #888; margin-top: 4px; word-break: break-all; }
+  .empty { color: #555; padding: 20px; text-align: center; }
+  .qual-pass { color: #4caf50; }
+  .qual-fail { color: #ef5350; }
+</style>
+</head>
+<body>
+<header>
+  <h1>⬡ Wallet Detail</h1>
+  <div class="addr">{{ wallet.address }}</div>
+</header>
+<div class="container">
+  <a class="back" href="/">← Back to Dashboard</a>
+
+  <div class="grid">
+    <div class="card">
+      <div class="card-label">Rank</div>
+      <div class="card-value" style="color:#ffd700">#{{ wallet.rank }}</div>
+    </div>
+    <div class="card">
+      <div class="card-label">7d PnL</div>
+      <div class="card-value {% if (wallet.pnl_7d or 0) >= 0 %}green{% else %}red{% endif %}">
+        {% if (wallet.pnl_7d or 0) >= 0 %}+{% endif %}${{ "%.0f"|format(wallet.pnl_7d or 0) }}
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-label">Win Rate</div>
+      <div class="card-value {% if (wallet.win_rate or 0) >= 0.6 %}green{% else %}red{% endif %}">
+        {{ "%.0f"|format((wallet.win_rate or 0) * 100) }}%
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-label">Trade Count</div>
+      <div class="card-value">{{ wallet.trade_count or "—" }}</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Copy Status</div>
+      <div class="card-value" style="font-size:14px">
+        {% if (wallet.win_rate or 0) >= 0.6 %}
+          <span class="qual-pass">✓ Qualifying</span>
+        {% else %}
+          <span class="qual-fail">✗ Below threshold</span>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <section>
+    <h2>Trade History (stored)</h2>
+    {% if trades %}
+    <table>
+      <thead>
+        <tr>
+          <th>Opened</th>
+          <th>Token</th>
+          <th>Side</th>
+          <th>Size</th>
+          <th>Leverage</th>
+          <th>Entry</th>
+          <th>Exit</th>
+          <th>PnL</th>
+          <th>ROI %</th>
+          <th>Loss Hold (min)</th>
+          <th>Tx</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for t in trades %}
+        <tr>
+          <td class="ts">{{ t.opened_at[:16].replace("T"," ") if t.opened_at else "—" }}</td>
+          <td>{{ t.token or "—" }}</td>
+          <td class="{% if t.side == 'LONG' %}long{% else %}short{% endif %}">{{ t.side or "—" }}</td>
+          <td>{% if t.size_usd %}${{ "%.0f"|format(t.size_usd) }}{% else %}—{% endif %}</td>
+          <td>{% if t.leverage %}{{ "%.1f"|format(t.leverage) }}x{% else %}—{% endif %}</td>
+          <td>{% if t.entry_price %}${{ "%.4f"|format(t.entry_price) }}{% else %}—{% endif %}</td>
+          <td>{% if t.exit_price %}${{ "%.4f"|format(t.exit_price) }}{% else %}<span style="color:#555">open</span>{% endif %}</td>
+          <td class="{% if t.pnl and t.pnl >= 0 %}pnl-pos{% elif t.pnl %}pnl-neg{% endif %}">
+            {% if t.pnl is not none %}
+              {% if t.pnl >= 0 %}+{% endif %}${{ "%.2f"|format(t.pnl) }}
+            {% else %}—{% endif %}
+          </td>
+          <td class="{% if t.pnl_pct and t.pnl_pct >= 30 %}pnl-pos{% elif t.pnl_pct %}pnl-neg{% endif %}">
+            {% if t.pnl_pct is not none %}{{ "%.1f"|format(t.pnl_pct) }}%{% else %}—{% endif %}
+          </td>
+          <td>{% if t.loss_peak_min is not none %}{{ t.loss_peak_min }}{% else %}—{% endif %}</td>
+          <td class="ts">
+            {% if t.tx_sig and not t.tx_sig.startswith("PAPER") %}
+              <a href="https://solscan.io/tx/{{ t.tx_sig }}" target="_blank">{{ t.tx_sig[:8] }}…</a>
+            {% elif t.tx_sig %}{{ t.tx_sig[:12] }}{% else %}—{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty">No trades stored yet — backfill runs in background after wallet is discovered.</div>
+    {% endif %}
+  </section>
+</div>
+</body>
+</html>

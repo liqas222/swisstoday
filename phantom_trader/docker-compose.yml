@@ -1,0 +1,12 @@
+version: "3.9"
+services:
+  phantom-trader:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "5001:5001"
+    volumes:
+      - ./phantom_trader.db:/app/phantom_trader.db
+      - ./.env:/app/.env
+    env_file:
+      - .env
