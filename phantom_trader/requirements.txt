@@ -2,6 +2,7 @@ flask>=3.0.0
 apscheduler>=3.10.0
 requests>=2.32.0
 python-dotenv>=1.0.0
+websocket-client>=1.8.0
 # Live trading only (uncomment when going live):
-# solders>=0.21.0
-# base58>=2.1.1
+# hyperliquid-python-sdk>=0.4.0
+# eth-account>=0.13.0

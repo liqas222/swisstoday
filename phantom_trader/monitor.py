@@ -1,190 +1,215 @@
 """
-Helius webhook management.
+Hyperliquid real-time monitoring via WebSocket.
 
-Registers the top-20 wallet addresses with Helius so that Helius POSTs to
-WEBHOOK_URL whenever any of those wallets makes a transaction. Also provides
-the Flask endpoint handler that parses incoming webhook payloads.
-
-Webhook registration docs:
-  https://docs.helius.dev/webhooks-and-websockets/what-are-webhooks
+Subscribes to userFills for each top-20 wallet address.
+Backfills historical fills via the REST info endpoint.
 """
 
+import json
 import logging
-import requests
+import threading
+import time
 from datetime import datetime, timezone
 
+import requests
+
 import database as db
-from config import HELIUS_API_KEY, HELIUS_API_BASE, WEBHOOK_URL, WEBHOOK_SECRET, JUPITER_PERPS_PROGRAM
+from config import HL_API_URL, HL_WS_URL
 
 log = logging.getLogger(__name__)
 
-_webhook_id: str | None = None   # Helius webhook ID, stored in memory
+_HEADERS = {"Content-Type": "application/json"}
+_subscribed: set[str] = set()
+_ws_lock = threading.Lock()
+_ws = None   # active websocket-client WebSocketApp
 
 
-# ── Helius registration ───────────────────────────────────────────────────────
+# ── Backfill ──────────────────────────────────────────────────────────────────
 
-def _helius_headers():
-    return {"Content-Type": "application/json"}
+def backfill_wallet_history(wallet: str, limit: int = 200):
+    """Fetch historical fills for a wallet and store them in the DB."""
+    try:
+        resp = requests.post(
+            f"{HL_API_URL}/info",
+            json={"type": "userFills", "user": wallet},
+            headers=_HEADERS,
+            timeout=15,
+        )
+        resp.raise_for_status()
+        fills = resp.json()
+        if not isinstance(fills, list):
+            fills = fills.get("fills", [])
 
-
-def register_webhook(wallet_addresses: list[str]) -> str | None:
-    """Create or update the Helius webhook to watch the given addresses."""
-    global _webhook_id
-    if not HELIUS_API_KEY or not WEBHOOK_URL:
-        log.warning("HELIUS_API_KEY or WEBHOOK_URL not set — skipping webhook registration")
-        return None
-
-    payload = {
-        "webhookURL": WEBHOOK_URL,
-        "transactionTypes": ["ANY"],
-        "accountAddresses": wallet_addresses,
-        "webhookType": "enhanced",
-        "authHeader": WEBHOOK_SECRET or None,
-    }
-
-    if _webhook_id:
-        # Update existing
-        url = f"{HELIUS_API_BASE}/webhooks/{_webhook_id}?api-key={HELIUS_API_KEY}"
-        resp = requests.put(url, json=payload, headers=_helius_headers(), timeout=10)
-    else:
-        # Create new
-        url = f"{HELIUS_API_BASE}/webhooks?api-key={HELIUS_API_KEY}"
-        resp = requests.post(url, json=payload, headers=_helius_headers(), timeout=10)
-
-    if resp.status_code in (200, 201):
-        data = resp.json()
-        _webhook_id = data.get("webhookID") or data.get("id")
-        log.info("Helius webhook registered (id=%s) watching %d wallets", _webhook_id, len(wallet_addresses))
-        return _webhook_id
-    else:
-        log.error("Helius webhook registration failed: %s %s", resp.status_code, resp.text[:200])
-        return None
+        count = 0
+        for fill in fills[:limit]:
+            trade = _parse_fill(wallet, fill)
+            if trade:
+                _save_trade(trade)
+                count += 1
+        log.info("Backfilled %d fills for %s", count, wallet[:10])
+    except Exception as exc:
+        log.error("Backfill error for %s: %s", wallet[:10], exc)
 
 
-# ── Historical trade backfill ─────────────────────────────────────────────────
+# ── WebSocket ─────────────────────────────────────────────────────────────────
 
-def backfill_wallet_history(wallet: str, limit: int = 100):
-    """
-    Fetch the last `limit` transactions for a wallet via Helius and parse any
-    Jupiter Perps trades. Called when a wallet first appears on the leaderboard
-    so the analyzer has enough history to make copy decisions.
-    """
-    if not HELIUS_API_KEY:
+def start_ws_listener():
+    """Start the WebSocket listener in a background daemon thread."""
+    t = threading.Thread(target=_ws_loop, daemon=True, name="hl-ws")
+    t.start()
+
+
+def update_ws_subscriptions(addresses: list[str]):
+    """Subscribe to userFills for any new addresses (safe to call repeatedly)."""
+    global _ws
+    with _ws_lock:
+        new = [a for a in addresses if a not in _subscribed]
+    if not new:
+        return
+    ws = _ws
+    if ws:
+        for addr in new:
+            _send_subscribe(ws, addr)
+    # _ws_loop will pick up any unsubscribed addresses on next reconnect too
+
+
+def _ws_loop():
+    """Persistent WebSocket loop — reconnects automatically on disconnect."""
+    try:
+        import websocket  # websocket-client
+    except ImportError:
+        log.error("websocket-client not installed. Run: pip install websocket-client")
         return
 
-    url = f"{HELIUS_API_BASE}/addresses/{wallet}/transactions"
-    params = {"api-key": HELIUS_API_KEY, "limit": limit, "type": "ANY"}
-    try:
-        resp = requests.get(url, params=params, timeout=15)
-        if resp.status_code != 200:
-            log.warning("Backfill failed for %s: %s", wallet, resp.status_code)
-            return
-        txns = resp.json()
-        count = 0
-        for txn in txns:
-            if _is_perps_transaction(txn):
-                trade = _parse_perps_trade(wallet, txn)
-                if trade:
-                    _save_trade(trade)
-                    count += 1
-        log.info("Backfilled %d perps trades for %s", count, wallet)
-    except Exception as exc:
-        log.error("Backfill error for %s: %s", wallet, exc)
-
-
-# ── Webhook payload handler ───────────────────────────────────────────────────
-
-def handle_webhook_payload(payload: dict | list):
-    """
-    Called by the Flask route when Helius POSTs a transaction.
-    payload may be a single transaction dict or a list of transactions.
-    """
-    from analyzer import analyze_and_signal
-
-    transactions = payload if isinstance(payload, list) else [payload]
-    for txn in transactions:
+    backoff = 2
+    while True:
         try:
-            fee_payer = txn.get("feePayer", "")
-            if not _is_perps_transaction(txn):
-                continue
+            log.info("Connecting to Hyperliquid WebSocket...")
+            ws = websocket.WebSocketApp(
+                HL_WS_URL,
+                on_open=_on_open,
+                on_message=_on_message,
+                on_error=lambda ws, e: log.warning("WS error: %s", e),
+                on_close=lambda ws, c, m: log.info("WS closed (%s)", c),
+            )
+            global _ws
+            _ws = ws
+            ws.run_forever(ping_interval=30, ping_timeout=10)
+        except Exception as exc:
+            log.error("WS loop error: %s", exc)
+        finally:
+            _ws = None
 
-            trade = _parse_perps_trade(fee_payer, txn)
+        log.info("WebSocket disconnected — reconnecting in %ds", backoff)
+        time.sleep(backoff)
+        backoff = min(backoff * 2, 60)
+
+
+def _on_open(ws):
+    global _ws
+    _ws = ws
+    with _ws_lock:
+        to_sub = list(_subscribed)
+    for addr in to_sub:
+        _send_subscribe(ws, addr)
+    log.info("WS connected — resubscribed %d wallets", len(to_sub))
+
+
+def _send_subscribe(ws, addr: str):
+    msg = json.dumps({
+        "method": "subscribe",
+        "subscription": {"type": "userFills", "user": addr},
+    })
+    try:
+        ws.send(msg)
+        with _ws_lock:
+            _subscribed.add(addr)
+        log.debug("Subscribed to userFills for %s", addr[:10])
+    except Exception as exc:
+        log.warning("Subscribe failed for %s: %s", addr[:10], exc)
+
+
+def _on_message(ws, raw: str):
+    from analyzer import analyze_and_signal
+    try:
+        msg = json.loads(raw)
+        if msg.get("channel") != "userFills":
+            return
+        data = msg.get("data", {})
+        if data.get("isSnapshot"):
+            return   # skip historical snapshot delivered at subscribe time
+
+        fills = data.get("fills", [])
+        user = data.get("user", "")
+        for fill in fills:
+            trade = _parse_fill(user, fill)
             if trade:
                 trade_id = _save_trade(trade)
-                if trade_id and trade.get("side"):   # only signal on open
-                    analyze_and_signal(fee_payer, trade_id, trade)
-        except Exception as exc:
-            log.error("Error handling webhook payload: %s", exc)
+                if trade_id and _is_open(fill):
+                    analyze_and_signal(user, trade_id, trade)
+    except Exception as exc:
+        log.error("WS message error: %s", exc)
 
 
-# ── Transaction parsing ───────────────────────────────────────────────────────
-
-def _is_perps_transaction(txn: dict) -> bool:
-    instructions = txn.get("instructions", [])
-    for instr in instructions:
-        if instr.get("programId") == JUPITER_PERPS_PROGRAM:
-            return True
-        for inner in instr.get("innerInstructions", []):
-            if inner.get("programId") == JUPITER_PERPS_PROGRAM:
-                return True
-    # Also check via source field
-    return txn.get("source") in ("JUPITER", "JUPITER_PERPS")
-
-
-def _parse_perps_trade(wallet: str, txn: dict) -> dict | None:
-    """
-    Extract trade fields from a Helius enhanced transaction.
-    Best-effort — Jupiter Perps instruction layouts can change.
-    """
-    sig = txn.get("signature", "")
-    ts = txn.get("timestamp")
-    opened_at = (
-        datetime.fromtimestamp(ts, tz=timezone.utc).isoformat() if ts
-        else datetime.now(timezone.utc).isoformat()
-    )
-
-    token = None
-    side = None
-    size_usd = 0.0
-    leverage = 1.0
-    entry_price = 0.0
-
-    # Helius enhanced transactions include a description and events
-    desc = txn.get("description", "").lower()
-    events = txn.get("events", {})
-    perps_event = events.get("perps") or events.get("perpetuals")
-
-    if perps_event:
-        token       = perps_event.get("market") or perps_event.get("token") or "UNKNOWN"
-        side        = (perps_event.get("side") or perps_event.get("direction") or "").upper()
-        size_usd    = float(perps_event.get("sizeUsd") or perps_event.get("size") or 0)
-        leverage    = float(perps_event.get("leverage") or 1)
-        entry_price = float(perps_event.get("price") or perps_event.get("entryPrice") or 0)
+def subscribe_wallet(address: str):
+    """Called from app.py when a new wallet appears on the leaderboard."""
+    ws = _ws
+    if ws and address not in _subscribed:
+        _send_subscribe(ws, address)
     else:
-        # Fallback: infer from description text
-        if "long" in desc:
-            side = "LONG"
-        elif "short" in desc:
-            side = "SHORT"
-        # Try to find token from account keys
-        for instr in txn.get("instructions", []):
-            if instr.get("programId") == JUPITER_PERPS_PROGRAM:
-                accounts = instr.get("accounts", [])
-                if accounts:
-                    token = accounts[0][:8] + "..."  # partial address as placeholder
+        with _ws_lock:
+            _subscribed.add(address)   # will subscribe on next connect
 
-    if not side or not token:
+
+# ── Fill parsing ──────────────────────────────────────────────────────────────
+
+def _is_open(fill: dict) -> bool:
+    direction = (fill.get("dir") or "").lower()
+    return "open" in direction
+
+
+def _parse_fill(wallet: str, fill: dict) -> dict | None:
+    """
+    Hyperliquid fill fields:
+      coin, side (B=buy/long, A=ask/short), px, sz, dir, closedPnl, time (ms), hash
+    """
+    coin = fill.get("coin")
+    if not coin:
         return None
+
+    hl_side = fill.get("side", "")
+    direction = (fill.get("dir") or "").lower()
+
+    if hl_side == "B":
+        side = "LONG"
+    elif hl_side == "A":
+        side = "SHORT"
+    else:
+        return None
+
+    is_close = "close" in direction
+    price = float(fill.get("px") or 0)
+    size_usd = float(fill.get("sz") or 0) * price
+    pnl = float(fill.get("closedPnl") or 0) if is_close else None
+
+    ts_ms = fill.get("time")
+    if ts_ms:
+        dt = datetime.fromtimestamp(ts_ms / 1000, tz=timezone.utc).isoformat()
+    else:
+        dt = datetime.now(timezone.utc).isoformat()
 
     return {
         "wallet": wallet,
-        "token": token,
+        "token": coin,
         "side": side,
         "size_usd": size_usd,
-        "leverage": leverage,
-        "entry_price": entry_price,
-        "opened_at": opened_at,
-        "tx_sig": sig,
+        "leverage": 1.0,     # HL fills don't carry leverage; analyzer uses it as filter only
+        "entry_price": price if not is_close else 0.0,
+        "exit_price": price if is_close else None,
+        "pnl": pnl,
+        "opened_at": dt if not is_close else None,
+        "closed_at": dt if is_close else None,
+        "tx_sig": fill.get("hash") or fill.get("tid") or "",
     }
 
 
@@ -197,9 +222,9 @@ def _save_trade(trade: dict) -> int | None:
             size_usd=trade["size_usd"],
             leverage=trade["leverage"],
             entry_price=trade["entry_price"],
-            opened_at=trade["opened_at"],
-            tx_sig=trade["tx_sig"],
+            opened_at=trade.get("opened_at") or datetime.now(timezone.utc).isoformat(),
+            tx_sig=str(trade["tx_sig"]),
         )
     except Exception as exc:
-        log.debug("Duplicate or error saving trade %s: %s", trade.get("tx_sig"), exc)
+        log.debug("Duplicate or error saving fill %s: %s", trade.get("tx_sig"), exc)
         return None

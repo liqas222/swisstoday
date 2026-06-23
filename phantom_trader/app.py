@@ -6,14 +6,13 @@ Routes:
   GET  /wallet/<a> → per-wallet trade history
   GET  /signals    → copy signals log
   GET  /api/status → JSON health check
-  POST /webhook    → Helius real-time transaction hook
 """
 
 import logging
 import threading
 from datetime import datetime, timezone
 
-from flask import Flask, render_template, request, jsonify, abort
+from flask import Flask, render_template, jsonify, abort
 from apscheduler.schedulers.background import BackgroundScheduler
 
 import config
@@ -29,14 +28,13 @@ log = logging.getLogger(__name__)
 
 app = Flask(__name__)
 
-_known_wallets: set[str] = set()   # track wallets we've already backfilled
+_known_wallets: set[str] = set()
 _scheduler: BackgroundScheduler | None = None
 
 
 # ── Scheduler jobs ────────────────────────────────────────────────────────────
 
 def refresh_leaderboard():
-    """Fetch top-20 from Phantom leaderboard, update DB, re-register webhook."""
     global _known_wallets
     log.info("Refreshing leaderboard...")
     entries = lb.fetch_leaderboard()
@@ -46,13 +44,13 @@ def refresh_leaderboard():
 
     addresses = [e["address"] for e in entries]
 
-    # New wallets get a history backfill
+    # New wallets: backfill history and subscribe to real-time fills
     new_wallets = [a for a in addresses if a not in _known_wallets]
     for addr in new_wallets:
         threading.Thread(target=monitor.backfill_wallet_history, args=(addr,), daemon=True).start()
+        monitor.subscribe_wallet(addr)
     _known_wallets.update(addresses)
 
-    # Persist to DB
     for entry in entries:
         db.upsert_wallet(
             address=entry["address"],
@@ -63,8 +61,7 @@ def refresh_leaderboard():
         )
     db.remove_wallets_not_in(addresses)
 
-    # Re-register Helius webhook
-    monitor.register_webhook(addresses)
+    monitor.update_ws_subscriptions(addresses)
     log.info("Leaderboard updated — tracking %d wallets", len(addresses))
 
 
@@ -111,23 +108,6 @@ def api_status():
     })
 
 
-@app.route("/webhook", methods=["POST"])
-def webhook():
-    # Optional secret header validation
-    if config.WEBHOOK_SECRET:
-        auth = request.headers.get("Authorization") or request.headers.get("auth-header", "")
-        if auth != config.WEBHOOK_SECRET:
-            log.warning("Webhook rejected — invalid secret")
-            abort(401)
-
-    payload = request.get_json(force=True, silent=True)
-    if payload is None:
-        abort(400)
-
-    threading.Thread(target=monitor.handle_webhook_payload, args=(payload,), daemon=True).start()
-    return jsonify({"ok": True}), 200
-
-
 def _now() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
 
@@ -138,10 +118,13 @@ def start():
     db.init_db()
     db.init_paper_state(config.PAPER_BALANCE)
 
+    # Start Hyperliquid WebSocket listener
+    monitor.start_ws_listener()
+
     global _scheduler
     _scheduler = BackgroundScheduler(timezone="UTC")
     _scheduler.add_job(refresh_leaderboard, "interval", hours=1, id="leaderboard",
-                       next_run_time=datetime.now(timezone.utc))   # run immediately at start
+                       next_run_time=datetime.now(timezone.utc))
     _scheduler.start()
     log.info(
         "Phantom Copy Trader starting — paper_trading=%s, balance=$%.0f, port=%d",

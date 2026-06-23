@@ -2,16 +2,20 @@
 Trade execution.
 
 PAPER_TRADING=true  → simulates the trade and updates virtual balance.
-PAPER_TRADING=false → signs and submits a real Jupiter Perps transaction.
+PAPER_TRADING=false → opens a real position on Hyperliquid via the Python SDK.
 """
 
 import logging
 from datetime import datetime, timezone
 
+import requests
+
 import database as db
-from config import PAPER_TRADING, MAX_POSITION_USD
+from config import PAPER_TRADING, MAX_POSITION_USD, HL_API_URL, HL_PRIVATE_KEY
 
 log = logging.getLogger(__name__)
+
+_HEADERS = {"Content-Type": "application/json"}
 
 
 def execute(signal_id: int, trade: dict):
@@ -36,7 +40,6 @@ def _execute_paper(signal_id: int, trade: dict):
 
 def close_paper_position(signal_id: int, exit_price: float, entry_price: float,
                           size_usd: float, leverage: float, side: str):
-    """Call this when the source wallet closes the position we copied."""
     if side == "LONG":
         pnl = (exit_price - entry_price) / entry_price * leverage * size_usd
     else:
@@ -51,82 +54,66 @@ def close_paper_position(signal_id: int, exit_price: float, entry_price: float,
     )
 
 
-# ── Live trading (stub — fill in when going live) ─────────────────────────────
+# ── Live trading via Hyperliquid ──────────────────────────────────────────────
 
 def _execute_live(signal_id: int, trade: dict):
     """
-    Real trade execution via Jupiter Perps.
+    Opens a real position on Hyperliquid.
 
     Requires:
-      - WALLET_PRIVATE_KEY env var (base58 Solana private key)
-      - solders library for transaction signing
-      - Jupiter Perps SDK or REST API for position construction
-
-    Implementation outline:
-      1. Build position params (token, side, size, leverage, slippage)
-      2. Call Jupiter Perps API to get transaction bytes
-      3. Sign with local keypair using solders
-      4. Submit via Helius RPC sendTransaction
-      5. Confirm and update signal status
+      - HL_PRIVATE_KEY env var (EVM 0x... private key)
+      - hyperliquid-python-sdk: pip install hyperliquid-python-sdk eth-account
     """
-    from config import WALLET_PRIVATE_KEY, HELIUS_RPC_URL, MAX_POSITION_USD
-    if not WALLET_PRIVATE_KEY:
-        log.error("WALLET_PRIVATE_KEY not set — cannot execute live trade")
+    if not HL_PRIVATE_KEY:
+        log.error("HL_PRIVATE_KEY not set — cannot execute live trade")
         db.update_signal(signal_id, status="FAILED")
         return
 
     try:
-        from solders.keypair import Keypair  # type: ignore
-        import base58, requests as req
+        from hyperliquid.exchange import Exchange       # type: ignore
+        from hyperliquid.utils import constants        # type: ignore
+        from eth_account import Account                # type: ignore
 
-        keypair = Keypair.from_base58_string(WALLET_PRIVATE_KEY)
-        size = min(trade.get("size_usd", MAX_POSITION_USD), MAX_POSITION_USD)
+        wallet = Account.from_key(HL_PRIVATE_KEY)
+        exchange = Exchange(wallet, constants.MAINNET_API_URL)
 
-        # --- Step 1: Request transaction from Jupiter Perps API ---
-        jup_resp = req.post(
-            "https://perps-api.jup.ag/v1/order",
-            json={
-                "wallet": str(keypair.pubkey()),
-                "market": trade["token"],
-                "side": trade["side"],
-                "sizeUsd": size,
-                "leverage": trade.get("leverage", 2),
-                "slippageBps": 50,
-            },
-            timeout=10,
-        )
-        if jup_resp.status_code != 200:
-            raise RuntimeError(f"Jupiter API error: {jup_resp.status_code} {jup_resp.text[:200]}")
+        size_usd = min(trade.get("size_usd", MAX_POSITION_USD), MAX_POSITION_USD)
+        coin = trade["token"]
+        is_buy = trade["side"] == "LONG"
 
-        tx_data = jup_resp.json()
-        tx_bytes = base58.b58decode(tx_data["transaction"])
+        # Convert USD → coin quantity using current mid price
+        price = _get_mid_price(coin)
+        if not price:
+            raise RuntimeError(f"Could not get price for {coin}")
+        size_coins = round(size_usd / price, 5)
 
-        # --- Step 2: Sign ---
-        from solders.transaction import VersionedTransaction  # type: ignore
-        tx = VersionedTransaction.from_bytes(tx_bytes)
-        tx.sign([keypair])
+        result = exchange.market_open(coin, is_buy, size_coins)
 
-        # --- Step 3: Submit ---
-        rpc_resp = req.post(
-            HELIUS_RPC_URL,
-            json={
-                "jsonrpc": "2.0", "id": 1,
-                "method": "sendTransaction",
-                "params": [base58.b58encode(bytes(tx)).decode(), {"encoding": "base58"}],
-            },
-            timeout=15,
-        )
-        result = rpc_resp.json()
-        if "error" in result:
-            raise RuntimeError(f"RPC error: {result['error']}")
-
-        tx_sig = result["result"]
-        db.update_signal(signal_id, status="EXECUTED", our_tx_sig=tx_sig)
-        log.info("Live trade submitted: %s", tx_sig)
+        if result.get("status") == "ok":
+            tx_hash = (result.get("response") or {}).get("data", {}).get("statuses", [{}])[0].get("resting", {}).get("oid") or "ok"
+            db.update_signal(signal_id, status="EXECUTED", our_tx_sig=str(tx_hash))
+            log.info("Live trade executed: %s %s %.5f %s (~$%.0f)", trade["side"], coin, size_coins, coin, size_usd)
+        else:
+            raise RuntimeError(f"Exchange error: {result}")
 
     except ImportError:
-        log.error("solders / base58 not installed. Run: pip install solders base58")
+        log.error("hyperliquid-python-sdk or eth-account not installed. "
+                  "Run: pip install hyperliquid-python-sdk eth-account")
         db.update_signal(signal_id, status="FAILED")
     except Exception as exc:
         log.error("Live execution failed (signal #%d): %s", signal_id, exc)
         db.update_signal(signal_id, status="FAILED")
+
+
+def _get_mid_price(coin: str) -> float | None:
+    try:
+        resp = requests.post(
+            f"{HL_API_URL}/info",
+            json={"type": "allMids"},
+            headers=_HEADERS,
+            timeout=5,
+        )
+        mids = resp.json()
+        return float(mids.get(coin) or mids.get(coin.split("-")[0]) or 0) or None
+    except Exception:
+        return None
