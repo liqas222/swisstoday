@@ -17,6 +17,14 @@ logger = logging.getLogger(__name__)
 
 
 def run_pipeline(cfg, anthropic_client):
+    """Wrapper that guarantees one pipeline failure never kills the scheduler."""
+    try:
+        _run_pipeline(cfg, anthropic_client)
+    except Exception as e:
+        logger.exception("Pipeline run crashed (continuing): %s", e)
+
+
+def _run_pipeline(cfg, anthropic_client):
     logger.info("=== Pipeline run started ===")
     run_started_at = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
     stats = {"run_at": run_started_at, "fetched": 0, "new_items": 0, "high_relevance": 0, "posted": 0, "errors": 0}
@@ -43,15 +51,19 @@ def run_pipeline(cfg, anthropic_client):
 
     # 3. Score relevance for each new item
     for item in new_items:
-        relevance, reason, category, viral_score = ai_processor.score_relevance(anthropic_client, cfg.claude_model, item, trends=current_trends)
-        database.update_relevance(cfg.db_path, item["id"], relevance, reason, category, viral_score)
-        item["relevance"] = relevance
-        logger.info("[%s] %s → %s (%s)", item["source_id"], item["title"][:60], relevance, reason)
-        if relevance == "HIGH":
-            stats["high_relevance"] += 1
-            post_text = ai_processor.generate_post(anthropic_client, cfg.claude_model, item)
-            if post_text:
-                database.update_post_text(cfg.db_path, item["id"], post_text)
+        try:
+            relevance, reason, category, viral_score = ai_processor.score_relevance(anthropic_client, cfg.claude_model, item, trends=current_trends)
+            database.update_relevance(cfg.db_path, item["id"], relevance, reason, category, viral_score)
+            item["relevance"] = relevance
+            logger.info("[%s] %s → %s (%s)", item["source_id"], item["title"][:60], relevance, reason)
+            if relevance == "HIGH":
+                stats["high_relevance"] += 1
+                post_text = ai_processor.generate_post(anthropic_client, cfg.claude_model, item)
+                if post_text:
+                    database.update_post_text(cfg.db_path, item["id"], post_text)
+        except Exception as e:
+            logger.error("Scoring failed for item %s: %s", item.get("id"), e)
+            stats["errors"] += 1
         time.sleep(0.5)
 
     # 3b. Re-score viral_score for unscored items (queue + recently posted slots)
