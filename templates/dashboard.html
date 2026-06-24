@@ -95,19 +95,23 @@ body{
 @keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
 
 /* ── LAYOUT ── */
-.main{max-width:1200px;margin:0 auto;padding:24px 28px;display:flex;flex-direction:column;gap:16px}
+.main{max-width:1400px;margin:0 auto;padding:24px 28px;display:flex;flex-direction:column;gap:16px}
 
-/* ── TOP STATS ROW ── */
-.top-row{display:grid;grid-template-columns:240px 1fr 420px;gap:16px;align-items:start}
-.stats-col{display:flex;flex-direction:column;gap:10px}
+/* ── STATS ROW (horizontal) ── */
+.stats-row{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;align-items:stretch}
+
+/* ── PANELS GRID (2×2) ── */
+.panels-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
 .right-col{display:flex;flex-direction:column;gap:16px}
 
 /* ── RADAR / PULSE ── */
 .radar-box{
   background:var(--surface);border:1px solid var(--border);border-radius:12px;
-  padding:20px 24px 16px;position:relative;overflow:hidden;
-  display:flex;flex-direction:column;align-items:center;gap:10px;
+  padding:16px 20px;position:relative;overflow:hidden;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;
+  transition:border-color .2s;
 }
+.radar-box:hover{border-color:var(--border-hi)}
 .radar-lbl{
   font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.16em;
   color:var(--dim);align-self:flex-start;display:flex;align-items:center;gap:6px;
@@ -431,7 +435,7 @@ footer{
 /* ── FOLLOWER CARD ── */
 .follower-card{
   background:var(--surface);border:1px solid var(--border);border-radius:12px;
-  padding:16px 20px;display:flex;flex-direction:column;gap:12px;
+  padding:16px 20px;display:flex;flex-direction:column;gap:8px;
   transition:border-color .2s;
 }
 .follower-card:hover{border-color:var(--border-hi)}
@@ -442,9 +446,10 @@ footer{
 /* ── BREAKDOWN ROWS ── */
 .breakdown-wrap{border-top:1px solid var(--border);padding:14px 18px;display:flex;flex-direction:column;gap:6px}
 
-@media(max-width:1100px){.top-row{grid-template-columns:240px 1fr}}
+@media(max-width:1100px){.stats-row{grid-template-columns:repeat(3,1fr)}.panels-grid{grid-template-columns:1fr}}
 @media(max-width:800px){
-  .top-row{grid-template-columns:1fr}
+  .stats-row{grid-template-columns:repeat(2,1fr)}
+  .panels-grid{grid-template-columns:1fr}
   .main{padding:16px}
 }
 </style>
@@ -469,104 +474,106 @@ footer{
 
 <div class="main">
 
-  <!-- TOP ROW: left stats + middle chart + right queue/slots -->
-  <div class="top-row">
-    <div class="stats-col">
+  <!-- STATS ROW: all 5 cards horizontally -->
+  <div class="stats-row">
 
-      <!-- Radar / Pulse Panel -->
-      <div class="radar-box">
-        <div class="radar-lbl"><span class="radar-dot idle" id="rd-dot"></span>System Status</div>
-        <div class="radar-wrap">
-          <div class="radar-ring"></div>
-          <div class="radar-ring"></div>
-          <div class="radar-ring"></div>
-          <div class="radar-cross"></div>
-          <div class="radar-sweep" id="rd-sweep"></div>
-          <div class="radar-blip" id="rd-blip" style="top:30%;left:65%"></div>
-          <div class="radar-blip" id="rd-blip2" style="top:62%;left:28%;animation-delay:1.5s"></div>
-          <div class="radar-center"></div>
-        </div>
-        <div class="radar-status idle" id="rd-status">BEREIT</div>
-        <div class="radar-since" id="rd-since">—</div>
+    <!-- Radar / Pulse Panel -->
+    <div class="radar-box">
+      <div class="radar-lbl"><span class="radar-dot idle" id="rd-dot"></span>System Status</div>
+      <div class="radar-wrap">
+        <div class="radar-ring"></div>
+        <div class="radar-ring"></div>
+        <div class="radar-ring"></div>
+        <div class="radar-cross"></div>
+        <div class="radar-sweep" id="rd-sweep"></div>
+        <div class="radar-blip" id="rd-blip" style="top:30%;left:65%"></div>
+        <div class="radar-blip" id="rd-blip2" style="top:62%;left:28%;animation-delay:1.5s"></div>
+        <div class="radar-center"></div>
       </div>
-
-      <!-- Heute analysiert -->
-      <div class="scard blue" style="flex-direction:column;align-items:flex-start">
-        <div style="display:flex;align-items:center;gap:14px;width:100%">
-          <div class="scard-icon">🔍</div>
-          <div class="scard-body">
-            <div class="scard-num" id="t-new">—</div>
-            <div class="scard-lbl">Heute analysiert</div>
-          </div>
-        </div>
-        <div id="sparkline-tweets" style="width:100%;margin-top:6px"></div>
-      </div>
-
-      <!-- Heute Tweets -->
-      <div class="scard purple" onclick="openTweetList()">
-        <div class="scard-icon">𝕏</div>
-        <div class="scard-body">
-          <div class="scard-num" id="t-posted">—</div>
-          <div class="scard-lbl">Heute gepostet</div>
-          <div class="scard-sub" style="color:var(--purple)">↗ Anzeigen</div>
-        </div>
-      </div>
-
-      <!-- Follower + Ziel -->
-      <div class="follower-card">
-        <div style="display:flex;align-items:center;gap:12px">
-          <div style="font-size:20px;flex-shrink:0">👥</div>
-          <div style="flex:1">
-            <div style="display:flex;align-items:baseline;gap:8px">
-              <div class="scard-num" id="f-count" style="color:var(--green);text-shadow:0 0 20px rgba(34,197,94,0.4);font-family:'JetBrains Mono',monospace;font-size:28px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums">—</div>
-              <div style="font-size:10px;color:var(--dim)" id="f-delta"></div>
-            </div>
-            <div class="sec-lbl" style="margin-top:2px">Follower</div>
-          </div>
-        </div>
-        <!-- Follower area chart (shown when ≥2 data points) -->
-        <div id="follower-chart-wrap" style="display:none">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
-            <span class="sec-lbl">Verlauf — 30 Tage</span>
-          </div>
-          <svg id="follower-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 50" preserveAspectRatio="none" style="width:100%;height:50px;display:block">
-            <defs>
-              <linearGradient id="fgrad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stop-color="#A855F7" stop-opacity="0.45"/>
-                <stop offset="100%" stop-color="#A855F7" stop-opacity="0.02"/>
-              </linearGradient>
-            </defs>
-          </svg>
-        </div>
-        <!-- Fallback: goal progress bar -->
-        <div id="follower-goal-wrap">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
-            <span class="sec-lbl">Ziel</span>
-            <span id="f-goal-display" onclick="editGoal()" style="font-size:11px;font-weight:700;color:var(--green);cursor:pointer;border-bottom:1px dashed rgba(34,197,94,.35);font-family:'JetBrains Mono',monospace" title="Klicken zum Ändern">—</span>
-          </div>
-          <div style="height:4px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden">
-            <div id="f-goal-bar" style="height:100%;background:linear-gradient(90deg,var(--green),#4ade80);border-radius:3px;width:0%;transition:width .6s ease"></div>
-          </div>
-          <div style="display:flex;justify-content:space-between;margin-top:5px">
-            <span style="font-size:10px;color:var(--dim)" id="f-pct">0%</span>
-            <span style="font-size:10px;color:var(--dim)" id="f-remaining">— verbleibend</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Heute Views -->
-      <div class="scard" style="border-color:rgba(6,182,212,0.12)">
-        <div class="scard-icon">👁</div>
-        <div class="scard-body" style="flex:1">
-          <div class="scard-num" id="t-views" style="color:var(--cyan);text-shadow:0 0 20px rgba(6,182,212,0.4)">—</div>
-          <div class="scard-lbl">Heute Views</div>
-          <div class="scard-sub">X Impressionen</div>
-        </div>
-      </div>
-
+      <div class="radar-status idle" id="rd-status">BEREIT</div>
+      <div class="radar-since" id="rd-since">—</div>
     </div>
 
-    <!-- Monthly chart (middle) -->
+    <!-- Heute analysiert -->
+    <div class="scard blue" style="flex-direction:column;align-items:flex-start">
+      <div style="display:flex;align-items:center;gap:14px;width:100%">
+        <div class="scard-icon">🔍</div>
+        <div class="scard-body">
+          <div class="scard-num" id="t-new">—</div>
+          <div class="scard-lbl">Heute analysiert</div>
+        </div>
+      </div>
+      <div id="sparkline-tweets" style="width:100%;margin-top:6px"></div>
+    </div>
+
+    <!-- Heute Tweets -->
+    <div class="scard purple" onclick="openTweetList()">
+      <div class="scard-icon">𝕏</div>
+      <div class="scard-body">
+        <div class="scard-num" id="t-posted">—</div>
+        <div class="scard-lbl">Heute gepostet</div>
+        <div class="scard-sub" style="color:var(--purple)">↗ Anzeigen</div>
+      </div>
+    </div>
+
+    <!-- Follower + Ziel -->
+    <div class="follower-card">
+      <div style="display:flex;align-items:center;gap:12px">
+        <div style="font-size:20px;flex-shrink:0">👥</div>
+        <div style="flex:1">
+          <div style="display:flex;align-items:baseline;gap:8px">
+            <div class="scard-num" id="f-count" style="color:var(--green);text-shadow:0 0 20px rgba(34,197,94,0.4);font-family:'JetBrains Mono',monospace;font-size:28px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums">—</div>
+            <div style="font-size:10px;color:var(--dim)" id="f-delta"></div>
+          </div>
+          <div class="sec-lbl" style="margin-top:2px">Follower</div>
+        </div>
+      </div>
+      <!-- Follower area chart (shown when ≥2 data points) -->
+      <div id="follower-chart-wrap" style="display:none">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+          <span class="sec-lbl">Verlauf — 30 Tage</span>
+        </div>
+        <svg id="follower-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 50" preserveAspectRatio="none" style="width:100%;height:50px;display:block">
+          <defs>
+            <linearGradient id="fgrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#A855F7" stop-opacity="0.45"/>
+              <stop offset="100%" stop-color="#A855F7" stop-opacity="0.02"/>
+            </linearGradient>
+          </defs>
+        </svg>
+      </div>
+      <!-- Fallback: goal progress bar -->
+      <div id="follower-goal-wrap">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+          <span class="sec-lbl">Ziel</span>
+          <span id="f-goal-display" onclick="editGoal()" style="font-size:11px;font-weight:700;color:var(--green);cursor:pointer;border-bottom:1px dashed rgba(34,197,94,.35);font-family:'JetBrains Mono',monospace" title="Klicken zum Ändern">—</span>
+        </div>
+        <div style="height:4px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden">
+          <div id="f-goal-bar" style="height:100%;background:linear-gradient(90deg,var(--green),#4ade80);border-radius:3px;width:0%;transition:width .6s ease"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-top:5px">
+          <span style="font-size:10px;color:var(--dim)" id="f-pct">0%</span>
+          <span style="font-size:10px;color:var(--dim)" id="f-remaining">— verbleibend</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Heute Views -->
+    <div class="scard" style="border-color:rgba(6,182,212,0.12)">
+      <div class="scard-icon">👁</div>
+      <div class="scard-body" style="flex:1">
+        <div class="scard-num" id="t-views" style="color:var(--cyan);text-shadow:0 0 20px rgba(6,182,212,0.4)">—</div>
+        <div class="scard-lbl">Heute Views</div>
+        <div class="scard-sub">X Impressionen</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- PANELS 2×2 -->
+  <div class="panels-grid">
+
+    <!-- Panel 1: Charts (left) -->
     <div class="chart-card">
       <div class="chart-hdr">
         <h2>Tweets pro Tag — letzter Monat</h2>
@@ -585,7 +592,7 @@ footer{
       <div class="breakdown-wrap" id="src-breakdown"></div>
     </div>
 
-    <!-- Queue + Slots (right column) -->
+    <!-- Panel 2: Queue + Slots (right) -->
     <div class="right-col">
       <div class="tweets-card" style="max-height:500px;overflow:hidden;display:flex;flex-direction:column">
         <div class="panel-hdr">
@@ -602,43 +609,44 @@ footer{
         <div class="slots-grid" id="slots-grid"></div>
       </div>
     </div>
-  </div>
 
-  <!-- SOURCES -->
-  <div class="src-card">
-    <div class="panel-hdr">
-      <h2>Quellen — heute <span class="cnt" id="src-cnt">0</span></h2>
-    </div>
-    <table>
-      <thead>
-        <tr>
-          <th>Quelle</th>
-          <th>Heute analysiert</th>
-          <th>Heute HIGH</th>
-          <th>Heute gepostet</th>
-          <th>HIGH-Rate</th>
-          <th style="width:120px">Verhältnis</th>
-        </tr>
-      </thead>
-      <tbody id="src-tbody"></tbody>
-    </table>
-  </div>
-
-  <!-- INSIGHTS -->
-  <div class="insights-card" id="insights-card">
-    <div class="insights-hdr">
-      <div style="display:flex;align-items:center;gap:10px">
-        <h2>Tweet-Optimierung — KI Analyse</h2>
-        <span class="cnt" id="ins-status" style="background:rgba(168,85,247,0.1);color:var(--purple);border-color:rgba(168,85,247,0.2)">—</span>
+    <!-- Panel 3: Sources (left) -->
+    <div class="src-card">
+      <div class="panel-hdr">
+        <h2>Quellen — heute <span class="cnt" id="src-cnt">0</span></h2>
       </div>
-      <button class="ins-btn" id="ins-btn" onclick="fetchInsights()">✨ Analyse starten</button>
+      <table>
+        <thead>
+          <tr>
+            <th>Quelle</th>
+            <th>Heute analysiert</th>
+            <th>Heute HIGH</th>
+            <th>Heute gepostet</th>
+            <th>HIGH-Rate</th>
+            <th style="width:120px">Verhältnis</th>
+          </tr>
+        </thead>
+        <tbody id="src-tbody"></tbody>
+      </table>
     </div>
-    <div id="ins-body" style="padding:20px 22px;color:var(--dim);font-size:12px">
-      Klicke auf "Analyse starten" um KI-Empfehlungen zu generieren, wie du mehr Views bekommst.
+
+    <!-- Panel 4: Insights (right) -->
+    <div class="insights-card" id="insights-card">
+      <div class="insights-hdr">
+        <div style="display:flex;align-items:center;gap:10px">
+          <h2>Tweet-Optimierung — KI Analyse</h2>
+          <span class="cnt" id="ins-status" style="background:rgba(168,85,247,0.1);color:var(--purple);border-color:rgba(168,85,247,0.2)">—</span>
+        </div>
+        <button class="ins-btn" id="ins-btn" onclick="fetchInsights()">✨ Analyse starten</button>
+      </div>
+      <div id="ins-body" style="padding:20px 22px;color:var(--dim);font-size:12px">
+        Klicke auf "Analyse starten" um KI-Empfehlungen zu generieren, wie du mehr Views bekommst.
+      </div>
     </div>
+
   </div>
 
-  <!-- LOG -->
+  <!-- LOG: full width below -->
   <div class="log-card">
     <div class="log-hdr">
       <h2>Log <span id="fetch-countdown" style="font-size:10px;font-weight:400;color:var(--dim);margin-left:8px;font-family:'JetBrains Mono',monospace;text-transform:none;letter-spacing:0"></span></h2>
