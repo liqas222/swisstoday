@@ -49,14 +49,14 @@ Hinweis: Alles zu Banken, SNB, FINMA, Zinsen, Krediten → Finanzen
 Antworte NUR mit validem JSON:
 {"relevance": "HIGH" | "LOW", "reason": "kurze Begründung auf Deutsch (max 80 Zeichen)", "category": "eine der obigen Kategorien", "viral_score": 1-100}
 
-viral_score (1-100) — Wie viral ist dieser Post auf X? Sei PRÄZISE, nicht immer 50-75:
-- 85-100: Thema ist GERADE auf X im Trend (Schweiz-Trend = +20 Bonus), betrifft fast alle direkt
-- 65-84: Grosses Thema, viele betroffen (Steuererhöhung, SNB-Entscheid, grosse Verhaftung)
-- 45-64: Relevantes Thema für eine grössere Gruppe (neue Gesetze, Unternehmenstransaktionen)
-- 25-44: Nischenthema, wenige betroffen (technische Vorschriften, kleinere Entscheide)
-- 1-24: Kaum Interesse ausserhalb von Spezialisten (interne Verwaltung, Routine)
+viral_score (1-100) — Berechne so:
+A) Betroffene Menschen: Trifft es fast alle Schweizer? (20 Punkte) | Viele? (12) | Eine Berufsgruppe? (6) | Wenige Spezialisten? (2)
+B) Emotionale Wirkung: Wut/Freude/Schock? (25 Punkte) | Interesse? (15) | Neutral informativ? (8) | Trocken/technisch? (3)
+C) Aktualität: Heute/diese Woche? (20 Punkte) | Diesen Monat? (12) | Älteres Thema? (5)
+D) Trends: Thema steht in den X-TRENDS SCHWEIZ unten? (25 Punkte) | In GLOBAL-Trends? (15) | Kein Trend-Bezug? (0)
+E) Konkretheit: Konkrete Zahl, Datum, Person? (10 Punkte) | Vage? (3)
 
-WICHTIG: Vergib unterschiedliche Scores! Nicht alle Posts sind gleich wichtig."""
+Addiere A+B+C+D+E = viral_score (1-100). Rechne es WIRKLICH aus — nicht schätzen!"""
 
 POST_SYSTEM = """Du erstellst X-Posts (Twitter) auf Deutsch für den Account @SwissIntelNews.
 Zielgruppe: Unternehmer, Gründer, Investoren, Anwälte, Expats in der Schweiz.

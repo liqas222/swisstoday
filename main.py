@@ -54,9 +54,11 @@ def run_pipeline(cfg, anthropic_client):
                 database.update_post_text(cfg.db_path, item["id"], post_text)
         time.sleep(0.5)
 
-    # 3b. Re-score viral_score for any queue items that are missing it
+    # 3b. Re-score viral_score for unscored items (queue + recently posted slots)
     unscored = database.get_unscored_queue_items(cfg.db_path)
-    for item in unscored[:10]:  # max 10 per run to limit API cost
+    unscored_slots = database.get_unscored_posted_items(cfg.db_path)
+    to_rescore = (unscored + unscored_slots)[:10]
+    for item in to_rescore:
         _, _, _, viral_score = ai_processor.score_relevance(anthropic_client, cfg.claude_model, item, trends=current_trends)
         if viral_score:
             database.update_viral_score(cfg.db_path, item["id"], viral_score)

@@ -133,6 +133,21 @@ def get_recently_posted_items(db_path: str, hours: int = 24) -> list[dict]:
         return [dict(r) for r in rows if r[0]]
 
 
+def get_unscored_posted_items(db_path: str, hours: int = 48) -> list[dict]:
+    """Return recently posted items that still have no viral_score."""
+    with _connect(db_path) as conn:
+        rows = conn.execute(
+            """SELECT id, title, url, summary, source_id FROM seen_items
+               WHERE posted_at IS NOT NULL
+               AND tweet_id NOT IN ('skipped_history','dry_run','duplicate_topic','archived')
+               AND (viral_score IS NULL OR viral_score = 0)
+               AND posted_at > datetime('now', ? || ' hours')
+               ORDER BY posted_at DESC LIMIT 10""",
+            (f"-{hours}",),
+        ).fetchall()
+        return [dict(r) for r in rows]
+
+
 def get_unscored_queue_items(db_path: str) -> list[dict]:
     with _connect(db_path) as conn:
         rows = conn.execute(
