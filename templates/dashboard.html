@@ -686,8 +686,7 @@ async function loadQueue(){
         <span class="tw-date">${age}</span>
       </div>
       ${hasScore?`<div style="height:2px;background:var(--border);border-radius:2px;overflow:hidden;margin-bottom:6px"><div style="width:${score}%;height:100%;background:${sc};border-radius:2px"></div></div>`:''}
-      <div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:6px;line-height:1.4">${esc(r.title||'')}</div>
-      <div class="tw-text" style="font-size:11px;color:var(--dim);max-height:60px;overflow:hidden">${esc((r.post_text||'').slice(0,200))}${(r.post_text||'').length>200?'…':''}</div>
+      <div style="font-size:12px;font-weight:600;color:var(--text);line-height:1.4">${esc(r.title||'')}</div>
     </div>`;
   }).join('');
 }
@@ -735,12 +734,10 @@ async function loadSlots(){
         <span class="slot-status ${statusCls}" style="margin-left:auto">${statusTxt}</span>
       </div>
       <div class="slot-title">${esc(s.title||'')}</div>
-      ${hasScore?`<div style="display:flex;align-items:center;gap:8px;margin-top:2px">
+      ${hasScore?`<div style="display:flex;align-items:center;gap:8px;margin-top:4px">
         <span style="font-size:9px;font-weight:700;color:${scoreColor};font-family:'JetBrains Mono',monospace">VIRAL ${score}/100</span>
         <div style="flex:1">${scoreBar}</div>
-      </div>`:'<div style="font-size:9px;color:var(--faint)">Score: wird beim nächsten Run berechnet</div>'}
-      ${s.relevance_reason?`<div style="font-size:9px;color:var(--faint);font-style:italic;line-height:1.4">🤖 ${esc(s.relevance_reason)}</div>`:''}
-      <div class="slot-preview">${esc(preview)}${(s.post_text||'').length>160?'…':''}</div>
+      </div>`:'<div style="font-size:9px;color:var(--faint);margin-top:4px">Score: nächster Run</div>'}
       ${!isPending?'<span class="slot-lock">🔒</span>':''}
     </div>`;
   }).join('');
