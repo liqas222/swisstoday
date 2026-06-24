@@ -85,6 +85,8 @@ ERKLÄRUNG-Regeln:
 - Fachbegriffe kurz erklären
 - Nur Fakten aus der Quelle, keine Meinungen
 - NIEMALS erwähnen für wen es relevant ist ("relevant für...", "betrifft Unternehmer...", etc.)
+- Schweizer Direktheit: Komm auf den Punkt, kein Blabla, kein Weichspülen
+- Subtiler Humor erlaubt wenn passend — nie bei Katastrophen, Verbrechen oder ernsten Themen
 
 HASHTAGS:
 - Immer am Ende: #Schweiz
