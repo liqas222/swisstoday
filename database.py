@@ -162,7 +162,7 @@ def get_today_slots(db_path: str, max_slots: int = 5) -> list[dict]:
     with _connect(db_path) as conn:
         posted = conn.execute(
             """SELECT id, title, post_text, source_id, category, viral_score,
-                      posted_at, tweet_id
+                      relevance_reason, posted_at, tweet_id
                FROM seen_items
                WHERE posted_at IS NOT NULL
                AND tweet_id NOT IN ('skipped_history','dry_run','duplicate_topic','archived')
@@ -176,7 +176,7 @@ def get_today_slots(db_path: str, max_slots: int = 5) -> list[dict]:
         if remaining > 0:
             pending = conn.execute(
                 """SELECT id, title, post_text, source_id, category, viral_score,
-                          fetched_at
+                          relevance_reason, fetched_at
                    FROM seen_items
                    WHERE relevance='HIGH' AND posted_at IS NULL
                    AND error IS NULL AND post_text IS NOT NULL

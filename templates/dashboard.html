@@ -709,19 +709,27 @@ async function loadSlots(){
     }
     const isPending=s.status==='pending';
     const statusCls=isPending?'status-pending':'status-posted';
-    const statusTxt=isPending?'Wartend':'Gepostet';
+    const statusTxt=isPending?'⏳ Wartend':'✓ Gepostet';
     const slotCls=isPending?'pending':'posted';
     const icon=CAT_ICONS[s.category]||'📌';
-    const preview=(s.post_text||'').slice(0,180);
+    const preview=(s.post_text||'').slice(0,160);
+    const score=s.viral_score||0;
+    const scoreColor=score>=80?'#f87171':score>=60?'var(--green)':score>=40?'#fbbf24':'#60a5fa';
+    const scoreBar=`<div style="height:3px;background:var(--border);border-radius:2px;overflow:hidden;margin-top:2px">
+      <div style="width:${score}%;height:100%;background:${scoreColor};border-radius:2px;transition:width .5s"></div>
+    </div>`;
     return`<div class="slot ${slotCls}">
       <div class="slot-top">
-        <span class="slot-num">${icon} Slot ${s.slot}</span>
-        ${viralBadge(s.viral_score)}
+        <span class="slot-num">${icon} ${esc(s.source_id||'')}</span>
+        <span class="slot-status ${statusCls}" style="margin-left:auto">${statusTxt}</span>
       </div>
-      <span class="slot-status ${statusCls}">${statusTxt}</span>
       <div class="slot-title">${esc(s.title||'')}</div>
-      <div class="slot-preview">${esc(preview)}${(s.post_text||'').length>180?'…':''}</div>
-      <div class="slot-src">${esc(s.source_id||'')}${isPending?'':`<span style="color:var(--green);margin-left:6px">✓ gepostet</span>`}</div>
+      <div style="display:flex;align-items:center;gap:8px;margin-top:2px">
+        <span style="font-size:9px;font-weight:700;color:${scoreColor};font-family:'JetBrains Mono',monospace">VIRAL ${score}/100</span>
+        <div style="flex:1">${scoreBar}</div>
+      </div>
+      ${s.relevance_reason?`<div style="font-size:9px;color:var(--faint);font-style:italic;line-height:1.4">🤖 ${esc(s.relevance_reason)}</div>`:''}
+      <div class="slot-preview">${esc(preview)}${(s.post_text||'').length>160?'…':''}</div>
       ${!isPending?'<span class="slot-lock">🔒</span>':''}
     </div>`;
   }).join('');
