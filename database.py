@@ -22,6 +22,7 @@ def init_db(db_path: str) -> None:
                 fetched_at TEXT DEFAULT CURRENT_TIMESTAMP,
                 relevance TEXT,
                 relevance_reason TEXT,
+                viral_score INTEGER,
                 post_text TEXT,
                 posted_at TEXT,
                 tweet_id TEXT,
@@ -105,11 +106,11 @@ def insert_item(db_path: str, item: dict) -> Optional[int]:
             return None
 
 
-def update_relevance(db_path: str, item_id: int, relevance: str, reason: str, category: str = "Sonstiges") -> None:
+def update_relevance(db_path: str, item_id: int, relevance: str, reason: str, category: str = "Sonstiges", viral_score: int = 0) -> None:
     with _connect(db_path) as conn:
         conn.execute(
-            "UPDATE seen_items SET relevance=?, relevance_reason=?, category=? WHERE id=?",
-            (relevance, reason, category, item_id),
+            "UPDATE seen_items SET relevance=?, relevance_reason=?, category=?, viral_score=? WHERE id=?",
+            (relevance, reason, category, viral_score, item_id),
         )
 
 
@@ -154,6 +155,46 @@ def archive_stale_queue_items(db_path: str, hours: int = 24) -> int:
             (f"-{hours}",),
         )
         return cur.rowcount
+
+
+def get_today_slots(db_path: str, max_slots: int = 5) -> list[dict]:
+    """Return today's posting slots: posted items (fixed) + best pending queue items."""
+    with _connect(db_path) as conn:
+        posted = conn.execute(
+            """SELECT id, title, post_text, source_id, category, viral_score,
+                      posted_at, tweet_id
+               FROM seen_items
+               WHERE posted_at IS NOT NULL
+               AND tweet_id NOT IN ('skipped_history','dry_run','duplicate_topic','archived')
+               AND date(posted_at, '+2 hours') = date('now', '+2 hours')
+               ORDER BY posted_at ASC"""
+        ).fetchall()
+        posted = [dict(r) for r in posted]
+
+        remaining = max_slots - len(posted)
+        pending = []
+        if remaining > 0:
+            pending = conn.execute(
+                """SELECT id, title, post_text, source_id, category, viral_score,
+                          fetched_at
+                   FROM seen_items
+                   WHERE relevance='HIGH' AND posted_at IS NULL
+                   AND error IS NULL AND post_text IS NOT NULL
+                   ORDER BY COALESCE(viral_score, 0) DESC, id ASC
+                   LIMIT ?""",
+                (remaining,),
+            ).fetchall()
+            pending = [dict(r) for r in pending]
+
+    slots = []
+    for i, item in enumerate(posted):
+        slots.append({**item, "slot": i + 1, "status": "posted"})
+    for i, item in enumerate(pending):
+        slots.append({**item, "slot": len(posted) + i + 1, "status": "pending"})
+    # Fill remaining empty slots
+    for i in range(len(slots), max_slots):
+        slots.append({"slot": i + 1, "status": "empty"})
+    return slots
 
 
 def get_unposted_high_items(db_path: str) -> list[dict]:

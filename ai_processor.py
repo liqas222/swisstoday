@@ -47,7 +47,13 @@ Finanzen, Steuern, Wirtschaft, Politik, Kriminalität, Recht, Einwanderung, Gesu
 Hinweis: Alles zu Banken, SNB, FINMA, Zinsen, Krediten → Finanzen
 
 Antworte NUR mit validem JSON:
-{"relevance": "HIGH" | "LOW", "reason": "kurze Begründung auf Deutsch (max 80 Zeichen)", "category": "eine der obigen Kategorien"}"""
+{"relevance": "HIGH" | "LOW", "reason": "kurze Begründung auf Deutsch (max 80 Zeichen)", "category": "eine der obigen Kategorien", "viral_score": 1-100}
+
+viral_score (1-100): Wie viral/reichweitenstark ist dieser Post auf X?
+- 80-100: Betrifft fast alle (SNB-Zinsentscheid, Volksabstimmung, Grosskatastrophe)
+- 60-79: Betrifft viele (Steueränderung, grosse Verhaftung, Unternehmenskonkurs)
+- 40-59: Nischenpublikum (Behördenentscheid, Gesetzesänderung für Spezialisten)
+- 1-39: Wenig Reichweite (technische Vorschriften, interne Verwaltung)"""
 
 POST_SYSTEM = """Du erstellst X-Posts (Twitter) auf Deutsch für den Account @SwissIntelNews.
 Zielgruppe: Unternehmer, Gründer, Investoren, Anwälte, Expats in der Schweiz.
@@ -124,21 +130,22 @@ def _extract_json(raw: str) -> str:
     return raw.strip()
 
 
-def score_relevance(client: anthropic.Anthropic, model: str, item: dict) -> tuple[str, str, str]:
+def score_relevance(client: anthropic.Anthropic, model: str, item: dict) -> tuple[str, str, str, int]:
     title = item.get("title", "").strip()
     summary = item.get("summary", "").strip()
     if not title and not summary:
-        return "LOW", "Kein Inhalt verfügbar", "Sonstiges"
+        return "LOW", "Kein Inhalt verfügbar", "Sonstiges", 0
     user_msg = f"Titel: {title}\n\nZusammenfassung: {summary[:500]}\n\nQuelle: {item.get('source_id', '')}"
     raw = _call_claude(client, model, SCORE_SYSTEM, user_msg)
     if not raw:
-        return "LOW", "API-Fehler bei Bewertung", "Sonstiges"
+        return "LOW", "API-Fehler bei Bewertung", "Sonstiges", 0
     try:
         data = json.loads(_extract_json(raw))
-        return data.get("relevance", "LOW"), data.get("reason", ""), data.get("category", "Sonstiges")
-    except json.JSONDecodeError:
+        viral = max(1, min(100, int(data.get("viral_score", 50))))
+        return data.get("relevance", "LOW"), data.get("reason", ""), data.get("category", "Sonstiges"), viral
+    except (json.JSONDecodeError, ValueError):
         logger.warning("Could not parse relevance JSON: %s", raw[:200])
-        return "LOW", "JSON-Parsing-Fehler", "Sonstiges"
+        return "LOW", "JSON-Parsing-Fehler", "Sonstiges", 0
 
 
 def is_duplicate_topic(client: anthropic.Anthropic, model: str, new_item: dict, recent_items: list[dict]) -> bool:

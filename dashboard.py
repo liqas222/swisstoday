@@ -45,7 +45,7 @@ def _migrate_db():
     try:
         conn = sqlite3.connect(DB_PATH)
         cols = [r[1] for r in conn.execute("PRAGMA table_info(seen_items)").fetchall()]
-        for col, typedef in [("category", "TEXT"), ("views", "INTEGER")]:
+        for col, typedef in [("category", "TEXT"), ("views", "INTEGER"), ("viral_score", "INTEGER")]:
             if col not in cols:
                 conn.execute(f"ALTER TABLE seen_items ADD COLUMN {col} {typedef}")
         # Merge Banken → Finanzen
@@ -456,6 +456,14 @@ def api_followers():
         return jsonify({"followers": None})
     except Exception as e:
         return jsonify({"followers": None, "error": str(e)})
+
+
+@app.route("/api/slots/today")
+@require_auth
+def api_slots_today():
+    import database as _db
+    slots = _db.get_today_slots(DB_PATH, max_slots=5)
+    return jsonify(slots)
 
 
 @app.route("/api/health")

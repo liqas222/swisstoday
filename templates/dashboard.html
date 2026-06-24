@@ -169,6 +169,42 @@ tr:hover td{background:rgba(255,255,255,.015)}
 .mini-bar{height:4px;background:var(--border);border-radius:2px;overflow:hidden}
 .mini-fill{height:100%;border-radius:2px}
 
+/* ── SLOTS ── */
+.slots-card{background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.slots-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:0;padding:0}
+.slot{
+  padding:14px 14px 16px;border-right:1px solid var(--border);
+  display:flex;flex-direction:column;gap:8px;min-height:180px;position:relative;
+  transition:background .15s;
+}
+.slot:last-child{border-right:none}
+.slot-top{display:flex;align-items:center;justify-content:space-between}
+.slot-num{font-size:10px;font-weight:800;color:var(--faint);letter-spacing:.5px;text-transform:uppercase}
+.viral-badge{
+  font-size:10px;font-weight:800;padding:2px 7px;border-radius:20px;
+  font-family:'JetBrains Mono',monospace;letter-spacing:.3px;
+}
+.viral-low{background:rgba(59,130,246,.12);color:#60a5fa;border:1px solid rgba(59,130,246,.2)}
+.viral-mid{background:rgba(245,158,11,.12);color:#fbbf24;border:1px solid rgba(245,158,11,.2)}
+.viral-high{background:rgba(34,197,94,.12);color:var(--green);border:1px solid rgba(34,197,94,.2)}
+.viral-hot{background:rgba(239,68,68,.15);color:#f87171;border:1px solid rgba(239,68,68,.25)}
+.slot-status{
+  font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;
+  padding:2px 7px;border-radius:4px;align-self:flex-start;
+}
+.status-posted{background:rgba(34,197,94,.12);color:var(--green);border:1px solid rgba(34,197,94,.2)}
+.status-pending{background:rgba(245,158,11,.1);color:#fbbf24;border:1px solid rgba(245,158,11,.2)}
+.status-empty{background:rgba(107,127,148,.08);color:var(--faint);border:1px solid var(--border)}
+.slot-title{font-size:11px;font-weight:600;color:var(--text);line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.slot-preview{font-size:10.5px;color:var(--dim);line-height:1.55;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;white-space:pre-wrap}
+.slot-src{font-size:9px;color:var(--faint);margin-top:auto;font-weight:600;text-transform:uppercase;letter-spacing:.4px}
+.slot.posted{border-top:2px solid var(--green)}
+.slot.pending{border-top:2px solid #f59e0b}
+.slot.empty-slot{border-top:2px solid var(--border);opacity:.5}
+.slot-lock{position:absolute;bottom:12px;right:12px;font-size:14px;opacity:.5}
+@media(max-width:900px){.slots-grid{grid-template-columns:repeat(3,1fr)}.slot:nth-child(3){border-right:none}.slot:nth-child(4),.slot:nth-child(5){border-top:1px solid var(--border)}}
+@media(max-width:600px){.slots-grid{grid-template-columns:1fr 1fr}.slot:nth-child(2n){border-right:none}.slot:nth-child(n+3){border-top:1px solid var(--border)}}
+
 /* ── INSIGHTS ── */
 .insights-card{background:var(--card);border:1px solid rgba(168,85,247,.25);border-radius:14px;overflow:hidden}
 .insights-hdr{padding:14px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
@@ -375,6 +411,15 @@ footer{text-align:center;padding:14px;font-size:10px;color:var(--faint);border-t
       <thead><tr><th>Quelle</th><th>Heute analysiert</th><th>Heute HIGH</th><th>Heute gepostet</th><th>HIGH-Rate</th><th style="width:120px">Verhältnis</th></tr></thead>
       <tbody id="src-tbody"></tbody>
     </table>
+  </div>
+
+  <!-- TAGES-SLOTS -->
+  <div class="slots-card">
+    <div class="panel-hdr">
+      <h2>🎯 Heutige Post-Slots <span class="cnt" id="slots-posted-cnt">0</span><span style="font-size:10px;color:var(--faint);font-weight:400;margin-left:4px">/ 5</span></h2>
+      <span style="font-size:10px;color:var(--faint)">Peak-Fenster: 7–9h · 12–14h · 18–21h</span>
+    </div>
+    <div class="slots-grid" id="slots-grid"></div>
   </div>
 
   <!-- INSIGHTS -->
@@ -634,6 +679,48 @@ async function loadQueue(){
   }).join('');
 }
 
+// ── Slots ──────────────────────────────────────────────────────────────────
+function viralBadge(score){
+  if(!score)return'';
+  let cls='viral-low',lbl='';
+  if(score>=80){cls='viral-hot';lbl='🔥'}
+  else if(score>=60){cls='viral-high';lbl='⚡'}
+  else if(score>=40){cls='viral-mid';lbl=''}
+  return`<span class="viral-badge ${cls}">${lbl}${score}</span>`;
+}
+async function loadSlots(){
+  const slots=await api('/api/slots/today');
+  const grid=document.getElementById('slots-grid');
+  const postedCount=slots.filter(s=>s.status==='posted').length;
+  document.getElementById('slots-posted-cnt').textContent=postedCount;
+  grid.innerHTML=slots.map(s=>{
+    if(s.status==='empty'){
+      return`<div class="slot empty-slot">
+        <div class="slot-top"><span class="slot-num">Slot ${s.slot}</span></div>
+        <span class="slot-status status-empty">Leer</span>
+        <div class="slot-src" style="margin-top:auto;opacity:.4">Kein Artikel</div>
+      </div>`;
+    }
+    const isPending=s.status==='pending';
+    const statusCls=isPending?'status-pending':'status-posted';
+    const statusTxt=isPending?'Wartend':'Gepostet';
+    const slotCls=isPending?'pending':'posted';
+    const icon=CAT_ICONS[s.category]||'📌';
+    const preview=(s.post_text||'').slice(0,180);
+    return`<div class="slot ${slotCls}">
+      <div class="slot-top">
+        <span class="slot-num">${icon} Slot ${s.slot}</span>
+        ${viralBadge(s.viral_score)}
+      </div>
+      <span class="slot-status ${statusCls}">${statusTxt}</span>
+      <div class="slot-title">${esc(s.title||'')}</div>
+      <div class="slot-preview">${esc(preview)}${(s.post_text||'').length>180?'…':''}</div>
+      <div class="slot-src">${esc(s.source_id||'')}${isPending?'':`<span style="color:var(--green);margin-left:6px">✓ gepostet</span>`}</div>
+      ${!isPending?'<span class="slot-lock">🔒</span>':''}
+    </div>`;
+  }).join('');
+}
+
 // ── Tweets ─────────────────────────────────────────────────────────────────
 let postedItems=[];
 async function loadPosted(){
@@ -704,7 +791,7 @@ function startSSE(){
     if(/Pipeline run started/.test(e.data)){isRunning=true;updateRadar();}
     if(/Run complete/.test(e.data)){
       isRunning=false;lastRunTs=Date.now();updateRadar();
-      setTimeout(()=>{loadStats();loadPosted();loadSources();loadMonthChart();loadViews()},2000);
+      setTimeout(()=>{loadStats();loadPosted();loadSources();loadMonthChart();loadViews();loadSlots()},2000);
     }
     // append to log live
     const pre=document.getElementById('log-pre');
@@ -911,7 +998,7 @@ async function globalRefresh(){
 // ── Main ───────────────────────────────────────────────────────────────────
 async function refreshAll(){
   try{
-    await Promise.all([loadStats(),loadPosted(),loadSources(),loadLog(),loadQueue()]);
+    await Promise.all([loadStats(),loadPosted(),loadSources(),loadLog(),loadQueue(),loadSlots()]);
     loadMonthChart();
     loadViews();
     document.getElementById('ft').textContent='Aktualisiert: '+new Date().toLocaleTimeString('de-CH');
