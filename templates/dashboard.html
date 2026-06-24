@@ -443,6 +443,60 @@ footer{
 /* ── SECTION LABEL UTILITY ── */
 .sec-lbl{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.16em;color:var(--dim)}
 
+/* ── HIGHLIGHTS ── */
+.highlights-row{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.highlight-card{
+  background:var(--surface);border:1px solid var(--border);border-radius:12px;
+  padding:16px 18px;display:flex;align-items:center;gap:14px;position:relative;overflow:hidden;
+  transition:border-color .2s,transform .12s;
+}
+.highlight-card:hover{border-color:var(--border-hi);transform:translateY(-1px)}
+.highlight-card::before{
+  content:'';position:absolute;top:0;left:0;width:3px;height:100%;
+}
+.hl-gold::before{background:linear-gradient(180deg,#F59E0B,#FCD34D)}
+.hl-purple::before{background:linear-gradient(180deg,#A855F7,#EC4899)}
+.hl-cyan::before{background:linear-gradient(180deg,#06B6D4,#22D3EE)}
+.hl-icon{font-size:26px;flex-shrink:0;opacity:.9}
+.hl-body{flex:1;min-width:0}
+.hl-lbl{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.16em;color:var(--dim)}
+.hl-val{font-size:22px;font-weight:700;line-height:1.2;margin-top:2px;font-family:'JetBrains Mono',monospace;font-variant-numeric:tabular-nums}
+.hl-gold .hl-val{color:var(--yellow)}
+.hl-purple .hl-val{color:var(--purple)}
+.hl-cyan .hl-val{color:var(--cyan)}
+.hl-sub{font-size:11px;color:var(--muted);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.4}
+
+/* ── ACHIEVEMENTS ── */
+.ach-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.ach-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;padding:18px}
+.ach-badge{
+  background:var(--surface2);border:1px solid var(--border);border-radius:12px;
+  padding:14px 12px;display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center;
+  position:relative;transition:border-color .2s,transform .12s;
+}
+.ach-badge.unlocked{border-color:rgba(245,158,11,0.3)}
+.ach-badge.unlocked:hover{transform:translateY(-2px);border-color:rgba(245,158,11,0.55)}
+.ach-badge.locked{opacity:.4}
+.ach-badge-icon{
+  font-size:30px;line-height:1;width:54px;height:54px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  background:rgba(255,255,255,0.03);border:1px solid var(--border);
+}
+.ach-badge.unlocked .ach-badge-icon{
+  background:radial-gradient(circle,rgba(245,158,11,0.18),rgba(245,158,11,0.04));
+  border-color:rgba(245,158,11,0.35);
+  box-shadow:0 0 18px rgba(245,158,11,0.25);
+}
+.ach-badge.locked .ach-badge-icon{filter:grayscale(1)}
+.ach-badge-title{font-size:11px;font-weight:700;color:var(--text2);line-height:1.3}
+.ach-badge-lbl{font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:var(--dim)}
+.ach-badge-prog{width:100%;margin-top:2px}
+.ach-prog-bar{height:3px;background:rgba(255,255,255,0.06);border-radius:2px;overflow:hidden}
+.ach-prog-fill{height:100%;border-radius:2px;background:linear-gradient(90deg,#F59E0B,#FCD34D);transition:width .6s ease}
+.ach-prog-txt{font-size:9px;color:var(--dim);margin-top:3px;font-family:'JetBrains Mono',monospace}
+@media(max-width:900px){.highlights-row{grid-template-columns:1fr}.ach-grid{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:560px){.ach-grid{grid-template-columns:repeat(2,1fr)}}
+
 /* ── BREAKDOWN ROWS ── */
 .breakdown-wrap{border-top:1px solid var(--border);padding:14px 18px;display:flex;flex-direction:column;gap:6px}
 
@@ -568,6 +622,42 @@ footer{
       </div>
     </div>
 
+  </div>
+
+  <!-- HIGHLIGHTS -->
+  <div class="highlights-row" id="highlights-row">
+    <div class="highlight-card hl-gold">
+      <div class="hl-icon">🏆</div>
+      <div class="hl-body">
+        <div class="hl-lbl">Bester Tweet</div>
+        <div class="hl-val" id="hl-best-views">—</div>
+        <div class="hl-sub" id="hl-best-title">Noch keine Daten</div>
+      </div>
+    </div>
+    <div class="highlight-card hl-purple">
+      <div class="hl-icon">⭐</div>
+      <div class="hl-body">
+        <div class="hl-lbl">Top-Quelle der Woche</div>
+        <div class="hl-val" id="hl-top-src">—</div>
+        <div class="hl-sub" id="hl-top-src-sub">Noch keine Daten</div>
+      </div>
+    </div>
+    <div class="highlight-card hl-cyan">
+      <div class="hl-icon">🕐</div>
+      <div class="hl-body">
+        <div class="hl-lbl">Beste Tageszeit</div>
+        <div class="hl-val" id="hl-best-hour">—</div>
+        <div class="hl-sub" id="hl-best-hour-sub">Noch keine Daten</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ACHIEVEMENTS -->
+  <div class="ach-card">
+    <div class="panel-hdr">
+      <h2>Erfolge <span class="cnt" id="ach-cnt" style="background:rgba(245,158,11,0.1);color:var(--yellow);border-color:rgba(245,158,11,0.2)">0</span></h2>
+    </div>
+    <div class="ach-grid" id="ach-grid"></div>
   </div>
 
   <!-- PANELS 2×2 -->
@@ -1337,10 +1427,61 @@ async function globalRefresh(){
   btn.disabled=false;
 }
 
+// ── Highlights ───────────────────────────────────────────────────────────────
+function fmtNum(n){return(n==null)?'—':Number(n).toLocaleString('de-CH')}
+async function loadHighlights(){
+  try{
+    const d=await api('/api/highlights');
+    // Best tweet
+    const bt=d.best_tweet;
+    if(bt){
+      document.getElementById('hl-best-views').textContent=fmtNum(bt.views)+' Views';
+      document.getElementById('hl-best-title').textContent=trunc(bt.title||bt.post_text||'—',60);
+    }
+    // Top source this week
+    const ts=d.top_source_week;
+    if(ts){
+      document.getElementById('hl-top-src').textContent=ts.source_id;
+      document.getElementById('hl-top-src-sub').textContent=`${ts.posts} Tweets · ${fmtNum(ts.views)} Views`;
+    }
+    // Best hour
+    const bh=d.best_hour;
+    if(bh){
+      document.getElementById('hl-best-hour').textContent=`${bh.hour}:00 Uhr`;
+      document.getElementById('hl-best-hour-sub').textContent=`∅ ${fmtNum(bh.avg_views)} Views · ${bh.cnt} Tweets`;
+    }
+  }catch(e){console.error('highlights',e)}
+}
+
+// ── Achievements ──────────────────────────────────────────────────────────────
+async function loadAchievements(){
+  try{
+    const d=await api('/api/achievements');
+    const badges=d.badges||[];
+    const grid=document.getElementById('ach-grid');
+    const unlocked=badges.filter(b=>b.unlocked).length;
+    document.getElementById('ach-cnt').textContent=`${unlocked}/${badges.length}`;
+    grid.innerHTML=badges.map(b=>{
+      const pct=b.next>0?Math.min(100,Math.round((b.value/b.next)*100)):100;
+      return `<div class="ach-badge ${b.unlocked?'unlocked':'locked'}" title="${esc(b.title)}">
+        <div class="ach-badge-icon">${b.unlocked?b.icon:'🔒'}</div>
+        <div class="ach-badge-title">${esc(b.title)}</div>
+        <div class="ach-badge-lbl">${esc(b.label)}</div>
+        <div class="ach-badge-prog">
+          <div class="ach-prog-bar"><div class="ach-prog-fill" style="width:${pct}%"></div></div>
+          <div class="ach-prog-txt">${fmtNum(b.value)} / ${fmtNum(b.next)}</div>
+        </div>
+      </div>`;
+    }).join('');
+  }catch(e){console.error('achievements',e)}
+}
+
 // ── Main ───────────────────────────────────────────────────────────────────
 async function refreshAll(){
   try{
     await Promise.all([loadStats(),loadPosted(),loadSources(),loadLog(),loadQueue(),loadSlots()]);
+    loadHighlights();
+    loadAchievements();
     loadMonthChart();
     loadViews();
     document.getElementById('ft').textContent='Aktualisiert: '+new Date().toLocaleTimeString('de-CH');

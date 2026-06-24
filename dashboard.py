@@ -486,6 +486,157 @@ def api_trends():
         return jsonify({"topics": []})
 
 
+@app.route("/api/highlights")
+@require_auth
+def api_highlights():
+    """Best-of statistics: top tweet, top source this week, best time of day."""
+    EXCL = "('skipped_history','dry_run','duplicate_topic','archived')"
+
+    best_tweet = query_db(
+        f"SELECT title, post_text, views, COALESCE(category,'Sonstiges') as category, "
+        f"source_id, tweet_id, posted_at "
+        f"FROM seen_items WHERE posted_at IS NOT NULL AND views IS NOT NULL AND views > 0 "
+        f"AND tweet_id NOT IN {EXCL} "
+        f"ORDER BY views DESC LIMIT 1"
+    )
+
+    top_source_week = query_db(
+        f"SELECT source_id, COUNT(*) as posts, COALESCE(SUM(views),0) as views "
+        f"FROM seen_items WHERE posted_at IS NOT NULL "
+        f"AND tweet_id NOT IN {EXCL} "
+        f"AND posted_at > datetime('now', '-7 days') "
+        f"GROUP BY source_id ORDER BY posts DESC, views DESC LIMIT 1"
+    )
+
+    best_hour = query_db(
+        f"SELECT strftime('%H', posted_at, '+2 hours') as hour, "
+        f"ROUND(AVG(views)) as avg_views, COUNT(*) as cnt "
+        f"FROM seen_items WHERE posted_at IS NOT NULL AND views IS NOT NULL AND views > 0 "
+        f"AND tweet_id NOT IN {EXCL} "
+        f"GROUP BY hour HAVING cnt >= 2 ORDER BY avg_views DESC LIMIT 1"
+    )
+
+    return jsonify({
+        "best_tweet": best_tweet[0] if best_tweet else None,
+        "top_source_week": top_source_week[0] if top_source_week else None,
+        "best_hour": best_hour[0] if best_hour else None,
+    })
+
+
+@app.route("/api/achievements")
+@require_auth
+def api_achievements():
+    """Milestone badges based on real performance data."""
+    EXCL = "('skipped_history','dry_run','duplicate_topic','archived')"
+
+    followers_row = query_db("SELECT count FROM follower_log ORDER BY date DESC LIMIT 1")
+    followers = followers_row[0]["count"] if followers_row else 0
+
+    total_posted_row = query_db(
+        f"SELECT COUNT(*) as c FROM seen_items WHERE posted_at IS NOT NULL "
+        f"AND tweet_id NOT IN {EXCL}"
+    )
+    total_posted = total_posted_row[0]["c"] if total_posted_row else 0
+
+    max_day_views_row = query_db(
+        f"SELECT date(posted_at,'+2 hours') as day, COALESCE(SUM(views),0) as v "
+        f"FROM seen_items WHERE posted_at IS NOT NULL AND views IS NOT NULL "
+        f"AND tweet_id NOT IN {EXCL} "
+        f"GROUP BY day ORDER BY v DESC LIMIT 1"
+    )
+    max_day_views = max_day_views_row[0]["v"] if max_day_views_row else 0
+
+    total_views_row = query_db(
+        f"SELECT COALESCE(SUM(views),0) as v FROM seen_items WHERE posted_at IS NOT NULL "
+        f"AND views IS NOT NULL AND tweet_id NOT IN {EXCL}"
+    )
+    total_views = total_views_row[0]["v"] if total_views_row else 0
+
+    # Posting streak: consecutive days (ending today/yesterday) with >=1 post
+    days = query_db(
+        f"SELECT DISTINCT date(posted_at,'+2 hours') as day "
+        f"FROM seen_items WHERE posted_at IS NOT NULL AND tweet_id NOT IN {EXCL} "
+        f"ORDER BY day DESC LIMIT 60"
+    )
+    day_set = {r["day"] for r in days}
+    from datetime import timedelta
+    streak = 0
+    cursor = datetime.now(timezone.utc).date()
+    # Allow streak to start today or yesterday
+    if cursor.isoformat() not in day_set and (cursor - timedelta(days=1)).isoformat() in day_set:
+        cursor = cursor - timedelta(days=1)
+    while cursor.isoformat() in day_set:
+        streak += 1
+        cursor = cursor - timedelta(days=1)
+
+    def milestone(value, tiers):
+        """Return (achieved_tier, next_tier) for a value against a tier list."""
+        achieved = 0
+        nxt = tiers[-1]
+        for t in tiers:
+            if value >= t:
+                achieved = t
+            elif nxt == tiers[-1] or t < nxt:
+                if t > value:
+                    nxt = t
+                    break
+        return achieved, nxt
+
+    badges = []
+
+    # Follower milestones
+    f_tiers = [10, 50, 100, 250, 500, 1000, 2500, 5000, 10000]
+    f_ach, f_next = milestone(followers, f_tiers)
+    badges.append({
+        "id": "followers", "icon": "👥", "label": "Follower",
+        "value": followers, "achieved": f_ach, "next": f_next,
+        "unlocked": f_ach > 0,
+        "title": f"{f_ach}+ Follower" if f_ach else "Erste Follower",
+    })
+
+    # Total posts milestones
+    p_tiers = [10, 50, 100, 250, 500, 1000, 2500, 5000]
+    p_ach, p_next = milestone(total_posted, p_tiers)
+    badges.append({
+        "id": "posts", "icon": "📢", "label": "Tweets gesamt",
+        "value": total_posted, "achieved": p_ach, "next": p_next,
+        "unlocked": p_ach > 0,
+        "title": f"{p_ach}+ Tweets" if p_ach else "Erste Tweets",
+    })
+
+    # Views in a single day
+    v_tiers = [100, 500, 1000, 5000, 10000, 50000, 100000]
+    v_ach, v_next = milestone(max_day_views, v_tiers)
+    badges.append({
+        "id": "dayviews", "icon": "🔥", "label": "Views an einem Tag",
+        "value": max_day_views, "achieved": v_ach, "next": v_next,
+        "unlocked": v_ach > 0,
+        "title": f"{v_ach}+ Views/Tag" if v_ach else "Erste Views",
+    })
+
+    # Total views
+    tv_tiers = [1000, 10000, 50000, 100000, 500000, 1000000]
+    tv_ach, tv_next = milestone(total_views, tv_tiers)
+    badges.append({
+        "id": "totalviews", "icon": "👁", "label": "Views gesamt",
+        "value": total_views, "achieved": tv_ach, "next": tv_next,
+        "unlocked": tv_ach > 0,
+        "title": f"{tv_ach}+ Views" if tv_ach else "Erste Views",
+    })
+
+    # Posting streak
+    s_tiers = [3, 7, 14, 30, 60, 100]
+    s_ach, s_next = milestone(streak, s_tiers)
+    badges.append({
+        "id": "streak", "icon": "⚡", "label": "Streak",
+        "value": streak, "achieved": s_ach, "next": s_next,
+        "unlocked": streak >= 1,
+        "title": f"{streak}-Tage-Streak" if streak >= 1 else "Streak starten",
+    })
+
+    return jsonify({"badges": badges})
+
+
 @app.route("/api/slots/today")
 @require_auth
 def api_slots_today():
