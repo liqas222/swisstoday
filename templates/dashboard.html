@@ -45,7 +45,7 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;font-
 .main{max-width:1200px;margin:0 auto;padding:24px 28px;display:flex;flex-direction:column;gap:16px}
 
 /* ── TOP STATS ROW ── */
-.top-row{display:grid;grid-template-columns:240px 1fr;gap:16px;align-items:start}
+.top-row{display:grid;grid-template-columns:240px 1fr 300px;gap:16px;align-items:start}
 .stats-col{display:flex;flex-direction:column;gap:10px}
 .right-col{display:flex;flex-direction:column;gap:16px}
 
@@ -172,13 +172,13 @@ tr:hover td{background:rgba(255,255,255,.015)}
 
 /* ── SLOTS ── */
 .slots-card{background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden}
-.slots-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:0;padding:0}
+.slots-grid{display:flex;flex-direction:column;gap:0}
 .slot{
-  padding:14px 14px 16px;border-right:1px solid var(--border);
-  display:flex;flex-direction:column;gap:8px;min-height:180px;position:relative;
+  padding:12px 14px 14px;border-bottom:1px solid var(--border);
+  display:flex;flex-direction:column;gap:6px;position:relative;
   transition:background .15s;
 }
-.slot:last-child{border-right:none}
+.slot:last-child{border-bottom:none}
 .slot-top{display:flex;align-items:center;justify-content:space-between}
 .slot-num{font-size:10px;font-weight:800;color:var(--faint);letter-spacing:.5px;text-transform:uppercase}
 .viral-badge{
@@ -203,8 +203,6 @@ tr:hover td{background:rgba(255,255,255,.015)}
 .slot.pending{border-top:2px solid #f59e0b}
 .slot.empty-slot{border-top:2px solid var(--border);opacity:.5}
 .slot-lock{position:absolute;bottom:12px;right:12px;font-size:14px;opacity:.5}
-.slot:nth-child(3){border-right:none}.slot:nth-child(4),.slot:nth-child(5){border-top:1px solid var(--border)}
-@media(max-width:600px){.slots-grid{grid-template-columns:1fr 1fr}.slot:nth-child(3){border-right:1px solid var(--border)}.slot:nth-child(2n){border-right:none}.slot:nth-child(n+3){border-top:1px solid var(--border)}}
 
 /* ── INSIGHTS ── */
 .insights-card{background:var(--card);border:1px solid rgba(168,85,247,.25);border-radius:14px;overflow:hidden}
@@ -273,6 +271,7 @@ footer{text-align:center;padding:14px;font-size:10px;color:var(--faint);border-t
 #global-refresh-btn:active{transform:translateY(0)}
 #global-refresh-btn:disabled{opacity:.6;cursor:default;transform:none}
 
+@media(max-width:1100px){.top-row{grid-template-columns:240px 1fr}}
 @media(max-width:800px){
   .top-row{grid-template-columns:1fr}
   .main{padding:16px}
@@ -370,6 +369,23 @@ footer{text-align:center;padding:14px;font-size:10px;color:var(--faint);border-t
       </div>
     </div>
 
+    <!-- Monthly chart (middle) -->
+    <div class="chart-card">
+      <div class="chart-hdr">
+        <h2>📅 Tweets pro Tag — letzter Monat</h2>
+        <span style="font-size:11px;color:var(--faint)" id="chart-total">—</span>
+      </div>
+      <div class="chart-wrap"><div class="bar-chart" id="monthChart"></div></div>
+      <div style="border-top:1px solid var(--border);padding:14px 20px 0;display:flex;align-items:center;justify-content:space-between">
+        <h2 style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--faint)">👁 Views pro Tag — letzter Monat</h2>
+        <span style="font-size:11px;color:var(--faint)" id="views-chart-total">—</span>
+      </div>
+      <div class="chart-wrap"><div class="bar-chart" id="viewsChart"></div></div>
+      <div style="border-top:1px solid var(--border);padding:14px 18px;display:flex;flex-direction:column;gap:6px" id="cat-breakdown"></div>
+      <div style="border-top:1px solid var(--border);padding:14px 18px;display:flex;flex-direction:column;gap:6px" id="views-breakdown"></div>
+      <div style="border-top:1px solid var(--border);padding:14px 18px;display:flex;flex-direction:column;gap:6px" id="src-breakdown"></div>
+    </div>
+
     <!-- Queue + Slots (right column) -->
     <div class="right-col">
       <div class="tweets-card" style="max-height:500px;overflow:hidden;display:flex;flex-direction:column">
@@ -378,36 +394,14 @@ footer{text-align:center;padding:14px;font-size:10px;color:var(--faint);border-t
         </div>
         <div id="queue-list" class="tweet-list" style="flex:1;overflow-y:auto"></div>
       </div>
-      <!-- TAGES-SLOTS (under queue) -->
+      <!-- TAGES-SLOTS -->
       <div class="slots-card">
         <div class="panel-hdr">
-          <h2>🎯 Heutige Post-Slots <span class="cnt" id="slots-posted-cnt">0</span><span style="font-size:10px;color:var(--faint);font-weight:400;margin-left:4px">/ 5</span></h2>
-          <span style="font-size:10px;color:var(--faint)">7–9h · 12–14h · 18–21h</span>
+          <h2>🎯 Post-Slots heute <span class="cnt" id="slots-posted-cnt">0</span><span style="font-size:10px;color:var(--faint);font-weight:400;margin-left:4px">/ 5</span></h2>
         </div>
         <div class="slots-grid" id="slots-grid"></div>
       </div>
     </div>
-  </div>
-
-  <!-- CHART (full width) -->
-  <div class="chart-card">
-    <div class="chart-hdr">
-      <h2>📅 Tweets pro Tag — letzter Monat</h2>
-      <span style="font-size:11px;color:var(--faint)" id="chart-total">—</span>
-    </div>
-    <div class="chart-wrap"><div class="bar-chart" id="monthChart"></div></div>
-    <!-- Views per day -->
-    <div style="border-top:1px solid var(--border);padding:14px 20px 0;display:flex;align-items:center;justify-content:space-between">
-      <h2 style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--faint)">👁 Views pro Tag — letzter Monat</h2>
-      <span style="font-size:11px;color:var(--faint)" id="views-chart-total">—</span>
-    </div>
-    <div class="chart-wrap"><div class="bar-chart" id="viewsChart"></div></div>
-    <!-- Category breakdown -->
-    <div style="border-top:1px solid var(--border);padding:14px 18px;display:flex;flex-direction:column;gap:6px" id="cat-breakdown"></div>
-    <!-- Views per category -->
-    <div style="border-top:1px solid var(--border);padding:14px 18px;display:flex;flex-direction:column;gap:6px" id="views-breakdown"></div>
-    <!-- Source breakdown -->
-    <div style="border-top:1px solid var(--border);padding:14px 18px;display:flex;flex-direction:column;gap:6px" id="src-breakdown"></div>
   </div>
 
   <!-- SOURCES -->
