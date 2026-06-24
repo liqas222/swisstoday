@@ -11,17 +11,23 @@ from config import Config
 logger = logging.getLogger(__name__)
 
 SWISS_TZ = ZoneInfo("Europe/Zurich")
-POSTING_HOUR_START = 6
-POSTING_HOUR_END = 22
-MAX_POSTS_PER_RUN = 1
+MAX_POSTS_PER_DAY = 5
+
+# Peak posting windows: (start_hour, end_hour) Swiss time
+PEAK_WINDOWS = [
+    (7, 9),
+    (12, 14),
+    (18, 21),
+]
 
 
 def _swiss_now() -> datetime:
     return datetime.now(SWISS_TZ)
 
 
-def _is_posting_allowed() -> bool:
-    return POSTING_HOUR_START <= _swiss_now().hour < POSTING_HOUR_END
+def _is_peak_window() -> bool:
+    hour = _swiss_now().hour
+    return any(start <= hour < end for start, end in PEAK_WINDOWS)
 
 
 def _build_client(cfg: Config) -> Optional[tweepy.Client]:
@@ -63,24 +69,23 @@ def post_tweet(client: tweepy.Client, text: str, dry_run: bool) -> Optional[str]
         raise
 
 
-def post_batch(cfg: Config, items: list[dict]) -> dict[int, tuple[str, Optional[str]]]:
+def post_batch(cfg: Config, items: list[dict], posted_today: int = 0) -> dict[int, tuple[str, Optional[str]]]:
     """Returns {item_id: ('ok'|'error', tweet_id_or_error_msg)}"""
-    if not _is_posting_allowed():
-        logger.info("Outside posting window (%02d:00 Swiss time) — skipping %d items", _swiss_now().hour, len(items))
+    if not _is_peak_window():
+        h = _swiss_now().hour
+        logger.info("Outside peak window (%02d:00 Swiss) — %d items queued", h, len(items))
+        return {}
+    if posted_today >= MAX_POSTS_PER_DAY:
+        logger.info("Daily limit (%d) reached — skipping", MAX_POSTS_PER_DAY)
         return {}
     client = _build_client(cfg)
     results = {}
-    posted_this_run = 0
-    for item in items:
-        if posted_this_run >= MAX_POSTS_PER_RUN:
-            logger.info("Max posts per run (%d) reached — remaining items queued for next run", MAX_POSTS_PER_RUN)
-            break
+    for item in items[:1]:  # max 1 per run — best item (already ranked) goes first
         item_id = item["id"]
         text = item["post_text"]
         try:
             tweet_id = post_tweet(client, text, cfg.dry_run)
             results[item_id] = ("ok", tweet_id)
-            posted_this_run += 1
         except Exception as exc:
             results[item_id] = ("error", str(exc))
         time.sleep(2)

@@ -48,7 +48,11 @@ def run_pipeline(cfg, anthropic_client):
                 database.update_post_text(cfg.db_path, item["id"], post_text)
         time.sleep(0.5)
 
-    # 4. Post all unposted HIGH items (skip duplicate topics)
+    # 4. Archive stale queue items and post best unposted HIGH item
+    archived = database.archive_stale_queue_items(cfg.db_path, hours=24)
+    if archived:
+        logger.info("Archived %d stale queue items (>24h old)", archived)
+    posted_today = database.get_posted_today_count(cfg.db_path)
     unposted = database.get_unposted_high_items(cfg.db_path)
     if unposted:
         logger.info("Posting %d HIGH items", len(unposted))
@@ -65,7 +69,7 @@ def run_pipeline(cfg, anthropic_client):
             else:
                 recent_items.append({"title": item["title"], "post_text": item.get("post_text", "")})
                 to_post.append(item)
-        results = publisher.post_batch(cfg, to_post)
+        results = publisher.post_batch(cfg, to_post, posted_today=posted_today)
         for item_id, (status, payload) in results.items():
             if status == "ok":
                 database.update_posted(cfg.db_path, item_id, payload)

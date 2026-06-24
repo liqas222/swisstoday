@@ -132,6 +132,30 @@ def get_recently_posted_items(db_path: str, hours: int = 24) -> list[dict]:
         return [dict(r) for r in rows if r[0]]
 
 
+def get_posted_today_count(db_path: str) -> int:
+    with _connect(db_path) as conn:
+        row = conn.execute(
+            """SELECT COUNT(*) FROM seen_items
+               WHERE posted_at > date('now')
+               AND tweet_id NOT IN ('skipped_history', 'dry_run', 'duplicate_topic', 'archived')
+               AND tweet_id IS NOT NULL"""
+        ).fetchone()
+        return row[0] if row else 0
+
+
+def archive_stale_queue_items(db_path: str, hours: int = 24) -> int:
+    """Mark unposted HIGH items older than `hours` as archived so the queue doesn't bloat."""
+    with _connect(db_path) as conn:
+        cur = conn.execute(
+            """UPDATE seen_items
+               SET posted_at=CURRENT_TIMESTAMP, tweet_id='archived'
+               WHERE relevance='HIGH' AND posted_at IS NULL AND error IS NULL
+               AND fetched_at < datetime('now', ? || ' hours')""",
+            (f"-{hours}",),
+        )
+        return cur.rowcount
+
+
 def get_unposted_high_items(db_path: str) -> list[dict]:
     with _connect(db_path) as conn:
         rows = conn.execute(
