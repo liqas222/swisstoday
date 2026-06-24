@@ -248,15 +248,27 @@ def api_sources():
 @app.route("/api/log")
 @require_auth
 def api_log():
+    ts = datetime.now(timezone.utc).isoformat()
+    # Prefer the log file if it exists; otherwise fall back to journald.
+    if LOG_PATH and os.path.exists(LOG_PATH):
+        try:
+            with open(LOG_PATH, "r") as f:
+                lines = f.readlines()
+            return jsonify({"lines": [l.rstrip() for l in lines[-50:]], "timestamp": ts})
+        except Exception as e:
+            app.logger.error("api_log file read error: %s", e)
+    # Fallback: read last 50 lines from journalctl (bot logs to stdout/journald)
     try:
-        with open(LOG_PATH, "r") as f:
-            lines = f.readlines()
-        return jsonify({
-            "lines": [l.rstrip() for l in lines[-50:]],
-            "timestamp": datetime.now(timezone.utc).isoformat()
-        })
-    except FileNotFoundError:
-        return jsonify({"lines": ["Log file not found"], "timestamp": ""})
+        result = subprocess.run(
+            ["journalctl", "-u", "swissintel-bot", "-n", "50", "--no-pager", "-o", "cat"],
+            capture_output=True, text=True, timeout=8,
+        )
+        out = [l.rstrip() for l in result.stdout.splitlines() if l.strip()]
+        if out:
+            return jsonify({"lines": out, "timestamp": ts})
+    except Exception as e:
+        app.logger.error("api_log journalctl error: %s", e)
+    return jsonify({"lines": ["Log file not found"], "timestamp": ""})
 
 
 @app.route("/api/views")
