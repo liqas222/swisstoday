@@ -48,6 +48,15 @@ def run_pipeline(cfg, anthropic_client):
                 database.update_post_text(cfg.db_path, item["id"], post_text)
         time.sleep(0.5)
 
+    # 3b. Re-score viral_score for any queue items that are missing it
+    unscored = database.get_unscored_queue_items(cfg.db_path)
+    for item in unscored[:10]:  # max 10 per run to limit API cost
+        _, _, _, viral_score = ai_processor.score_relevance(anthropic_client, cfg.claude_model, item)
+        if viral_score:
+            database.update_viral_score(cfg.db_path, item["id"], viral_score)
+            logger.info("[RE-SCORE] %s → viral=%d", item["title"][:50], viral_score)
+        time.sleep(0.3)
+
     # 4. Archive stale queue items and post best unposted HIGH item
     archived = database.archive_stale_queue_items(cfg.db_path, hours=24)
     if archived:

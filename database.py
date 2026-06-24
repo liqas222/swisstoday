@@ -133,6 +133,22 @@ def get_recently_posted_items(db_path: str, hours: int = 24) -> list[dict]:
         return [dict(r) for r in rows if r[0]]
 
 
+def get_unscored_queue_items(db_path: str) -> list[dict]:
+    with _connect(db_path) as conn:
+        rows = conn.execute(
+            """SELECT id, title, url, summary, source_id FROM seen_items
+               WHERE relevance='HIGH' AND posted_at IS NULL AND error IS NULL
+               AND (viral_score IS NULL OR viral_score = 0)
+               ORDER BY id ASC LIMIT 20"""
+        ).fetchall()
+        return [dict(r) for r in rows]
+
+
+def update_viral_score(db_path: str, item_id: int, viral_score: int) -> None:
+    with _connect(db_path) as conn:
+        conn.execute("UPDATE seen_items SET viral_score=? WHERE id=?", (viral_score, item_id))
+
+
 def get_posted_today_count(db_path: str) -> int:
     with _connect(db_path) as conn:
         row = conn.execute(

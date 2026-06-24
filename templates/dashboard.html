@@ -660,8 +660,10 @@ async function loadViews(){
 
 // ── Queue ──────────────────────────────────────────────────────────────────
 const CAT_ICONS={'Finanzen':'🏦','Steuern':'🧾','Wirtschaft':'📈','Politik':'🏛️','Kriminalität':'🔒','Recht':'⚖️','Einwanderung':'🌍','Gesundheit':'🏥','Energie':'⚡','Sonstiges':'📌'};
+let queueItems=[];
 async function loadQueue(){
   const rows=await api('/api/items/queue');
+  queueItems=rows;
   document.getElementById('queue-cnt').textContent=rows.length;
   const el=document.getElementById('queue-list');
   if(!rows.length){
@@ -675,12 +677,12 @@ async function loadQueue(){
     const score=r.viral_score||0;
     const hasScore=score>0;
     const sc=score>=80?'#f87171':score>=60?'var(--green)':score>=40?'#fbbf24':'#60a5fa';
-    return`<div class="tweet-row">
+    return`<div class="tweet-row" onclick="openItemModal(queueItems[${i}])" style="cursor:pointer">
       <div class="tw-top">
         <span style="font-size:13px">${icon}</span>
         <span class="src-tag" style="background:${c}22;color:${c};border:1px solid ${c}44;font-size:10px;padding:2px 7px">${esc(r.source_id)}</span>
         <span style="font-size:10px;font-weight:700;color:var(--yellow);background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.2);padding:2px 6px;border-radius:4px">#${i+1}</span>
-        ${hasScore?`<span style="font-size:10px;font-weight:800;color:${sc};font-family:'JetBrains Mono',monospace;padding:2px 6px;border-radius:4px;background:${sc}18;border:1px solid ${sc}44">🔥${score}</span>`:''}
+        ${hasScore?`<span style="font-size:10px;font-weight:800;color:${sc};font-family:'JetBrains Mono',monospace;padding:2px 6px;border-radius:4px;background:${sc}18;border:1px solid ${sc}44">⚡${score}</span>`:''}
         <span class="tw-date">${age}</span>
       </div>
       ${hasScore?`<div style="height:2px;background:var(--border);border-radius:2px;overflow:hidden;margin-bottom:6px"><div style="width:${score}%;height:100%;background:${sc};border-radius:2px"></div></div>`:''}
@@ -691,6 +693,7 @@ async function loadQueue(){
 }
 
 // ── Slots ──────────────────────────────────────────────────────────────────
+let slotItems=[];
 function viralBadge(score){
   if(!score)return'';
   let cls='viral-low',lbl='';
@@ -701,6 +704,7 @@ function viralBadge(score){
 }
 async function loadSlots(){
   const slots=await api('/api/slots/today');
+  slotItems=slots;
   const grid=document.getElementById('slots-grid');
   const postedCount=slots.filter(s=>s.status==='posted').length;
   document.getElementById('slots-posted-cnt').textContent=postedCount;
@@ -724,7 +728,8 @@ async function loadSlots(){
     const scoreBar=hasScore?`<div style="height:3px;background:var(--border);border-radius:2px;overflow:hidden;margin-top:2px">
       <div style="width:${score}%;height:100%;background:${scoreColor};border-radius:2px;transition:width .5s"></div>
     </div>`:'';
-    return`<div class="slot ${slotCls}">
+    const si=slots.indexOf(s);
+    return`<div class="slot ${slotCls}" onclick="openItemModal(slotItems[${si}])" style="cursor:pointer">
       <div class="slot-top">
         <span class="slot-num">${icon} ${esc(s.source_id||'')}</span>
         <span class="slot-status ${statusCls}" style="margin-left:auto">${statusTxt}</span>
@@ -851,18 +856,23 @@ function toggleSrc(){
 }
 
 // ── Modal ──────────────────────────────────────────────────────────────────
-function openModal(idx){
-  const r=postedItems[idx];if(!r)return;
+function openItemModal(r){
   document.getElementById('m-title').textContent=r.title||'Tweet';
   document.getElementById('m-src').textContent=r.source_id||'—';
-  document.getElementById('m-time').textContent=fmt(r.posted_at);
+  document.getElementById('m-time').textContent=fmt(r.posted_at||r.fetched_at||null);
   document.getElementById('m-post').textContent=r.post_text||'—';
-  document.getElementById('m-art').href=r.url||'#';
+  const artLink=document.getElementById('m-art');
+  artLink.href=r.url||'#';
+  artLink.style.display=r.url?'inline':'none';
   const btn=document.getElementById('m-tweet');
-  if(r.tweet_id&&!['skipped_history','dry_run'].includes(r.tweet_id)){
+  if(r.tweet_id&&!['skipped_history','dry_run','duplicate_topic','archived'].includes(r.tweet_id)){
     btn.href=`https://x.com/i/web/status/${r.tweet_id}`;btn.style.display='inline-flex';
   }else btn.style.display='none';
   document.getElementById('modal').classList.add('open');
+}
+function openModal(idx){
+  const r=postedItems[idx];if(!r)return;
+  openItemModal(r);
 }
 function closeModal(){document.getElementById('modal').classList.remove('open')}
 
