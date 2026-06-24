@@ -341,17 +341,72 @@ tr:hover td{background:rgba(255,255,255,0.02)}
 }
 .xbtn:hover{background:#111}
 
-.toast{
-  position:fixed;bottom:80px;right:28px;z-index:300;
-  background:var(--surface2);border:1px solid var(--border-hi);border-radius:10px;
-  padding:10px 16px;font-size:12px;font-weight:600;color:var(--text);
-  box-shadow:0 4px 24px rgba(0,0,0,.5);
-  opacity:0;transform:translateY(8px);transition:opacity .2s,transform .2s;
-  pointer-events:none;max-width:280px;
+/* ── TOAST STACK ── */
+#toast-container{position:fixed;bottom:28px;right:28px;z-index:400;display:flex;flex-direction:column-reverse;gap:8px;pointer-events:none}
+.toast-item{
+  min-width:240px;max-width:320px;background:#11111A;border:1px solid rgba(255,255,255,0.1);
+  border-radius:10px;padding:10px 14px;display:flex;align-items:center;gap:10px;font-size:12px;
+  pointer-events:all;opacity:1;transform:translateX(0);transition:opacity .3s,transform .3s;
 }
-.toast.show{opacity:1;transform:translateY(0)}
-.toast.ok{border-color:rgba(34,197,94,0.4);color:var(--green)}
-.toast.err{border-color:rgba(239,68,68,0.4);color:var(--red)}
+.toast-item.fade-out{opacity:0;transform:translateX(20px)}
+.toast-item.ok{border-left:3px solid #22C55E}
+.toast-item.error{border-left:3px solid #EF4444}
+.toast-item.info{border-left:3px solid #6366F1}
+.toast-icon{font-size:14px;flex-shrink:0}
+.toast-item.ok .toast-icon{color:#22C55E}
+.toast-item.error .toast-icon{color:#EF4444}
+.toast-item.info .toast-icon{color:#6366F1}
+.toast-msg{flex:1;line-height:1.4}
+.toast-close{background:none;border:none;color:var(--dim);cursor:pointer;font-size:14px;padding:0;line-height:1;flex-shrink:0}
+.toast-close:hover{color:var(--text)}
+
+/* ── EMPTY STATE ── */
+.empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 20px;gap:8px}
+.empty-icon{font-size:28px;opacity:0.2}
+.empty-title{font-size:13px;font-weight:600;color:rgba(255,255,255,0.5)}
+.empty-desc{font-size:11px;color:#71717A;text-align:center}
+
+/* ── X SHARE BUTTON ── */
+.x-share-btn{
+  display:none;width:24px;height:24px;flex-shrink:0;
+  border-radius:4px;background:none;border:none;cursor:pointer;
+  position:relative;align-items:center;justify-content:center;
+  font-size:11px;font-weight:700;color:var(--dim);
+  transition:color .15s;
+}
+.x-share-btn::before{
+  content:'';position:absolute;inset:-1px;border-radius:5px;
+  background:linear-gradient(135deg,#6366F1,#A855F7);
+  -webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);
+  -webkit-mask-composite:xor;mask-composite:exclude;padding:1px;
+}
+.tweet-row:hover .x-share-btn,.slot:hover .x-share-btn{display:inline-flex}
+.x-share-btn:hover{color:var(--purple)}
+
+/* ── TICKER ── */
+.ticker-strip{
+  height:32px;background:rgba(255,255,255,0.02);border-bottom:1px solid rgba(255,255,255,0.06);
+  overflow:hidden;display:flex;align-items:center;position:relative;
+}
+.ticker-track{display:flex;align-items:center;gap:0;white-space:nowrap;animation:ticker-scroll 40s linear infinite}
+.ticker-track:hover{animation-play-state:paused}
+.ticker-pill{
+  display:inline-flex;align-items:center;padding:3px 10px;margin:0 6px;
+  font-size:11px;font-weight:600;letter-spacing:.02em;
+  background:rgba(255,255,255,0.04);border-radius:999px;
+  border:1px solid rgba(255,255,255,0.06);
+  font-family:'Chakra Petch',sans-serif;
+}
+.ticker-pill.schweiz{color:#A855F7}
+.ticker-pill.global{color:#71717A}
+@keyframes ticker-scroll{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+
+/* ── FOLLOWER AREA CHART ── */
+#follower-chart-wrap{width:100%;height:50px;margin-top:4px}
+#follower-chart-wrap svg{width:100%;height:50px;display:block}
+
+/* ── SPARKLINE ── */
+#sparkline-tweets svg{display:block}
 
 footer{
   text-align:center;padding:14px;font-size:10px;color:var(--dim);
@@ -408,6 +463,10 @@ footer{
   </div>
 </header>
 
+<div class="ticker-strip" id="ticker-strip" style="display:none">
+  <div class="ticker-track" id="ticker-track"></div>
+</div>
+
 <div class="main">
 
   <!-- TOP ROW: left stats + middle chart + right queue/slots -->
@@ -432,12 +491,15 @@ footer{
       </div>
 
       <!-- Heute analysiert -->
-      <div class="scard blue">
-        <div class="scard-icon">🔍</div>
-        <div class="scard-body">
-          <div class="scard-num" id="t-new">—</div>
-          <div class="scard-lbl">Heute analysiert</div>
+      <div class="scard blue" style="flex-direction:column;align-items:flex-start">
+        <div style="display:flex;align-items:center;gap:14px;width:100%">
+          <div class="scard-icon">🔍</div>
+          <div class="scard-body">
+            <div class="scard-num" id="t-new">—</div>
+            <div class="scard-lbl">Heute analysiert</div>
+          </div>
         </div>
+        <div id="sparkline-tweets" style="width:100%;margin-top:6px"></div>
       </div>
 
       <!-- Heute Tweets -->
@@ -462,7 +524,22 @@ footer{
             <div class="sec-lbl" style="margin-top:2px">Follower</div>
           </div>
         </div>
-        <div>
+        <!-- Follower area chart (shown when ≥2 data points) -->
+        <div id="follower-chart-wrap" style="display:none">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+            <span class="sec-lbl">Verlauf — 30 Tage</span>
+          </div>
+          <svg id="follower-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 50" preserveAspectRatio="none" style="width:100%;height:50px;display:block">
+            <defs>
+              <linearGradient id="fgrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#A855F7" stop-opacity="0.45"/>
+                <stop offset="100%" stop-color="#A855F7" stop-opacity="0.02"/>
+              </linearGradient>
+            </defs>
+          </svg>
+        </div>
+        <!-- Fallback: goal progress bar -->
+        <div id="follower-goal-wrap">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
             <span class="sec-lbl">Ziel</span>
             <span id="f-goal-display" onclick="editGoal()" style="font-size:11px;font-weight:700;color:var(--green);cursor:pointer;border-bottom:1px dashed rgba(34,197,94,.35);font-family:'JetBrains Mono',monospace" title="Klicken zum Ändern">—</span>
@@ -572,7 +649,7 @@ footer{
 
 </div>
 
-<div class="toast" id="toast"></div>
+<div id="toast-container"></div>
 <button id="global-refresh-btn" onclick="globalRefresh()">
   <span id="global-refresh-icon">↻</span> Aktualisieren
 </button>
@@ -698,6 +775,8 @@ async function loadMonthChart(){
   const total=data.reduce((a,b)=>a+b,0);
   document.getElementById('chart-total').textContent=total+' Tweets gesamt';
   initChart(labels,data);
+  // 7-day sparkline
+  renderSparkline(data.slice(-7));
 
   // Category breakdown
   const cats=d.categories||[];
@@ -796,7 +875,7 @@ async function loadQueue(){
   document.getElementById('queue-cnt').textContent=rows.length;
   const el=document.getElementById('queue-list');
   if(!rows.length){
-    el.innerHTML='<div class="empty">Keine Artikel in der Warteschlange</div>';
+    el.innerHTML='<div class="empty-state"><div class="empty-icon">⏳</div><div class="empty-title">Warteschlange leer</div><div class="empty-desc">Alle Artikel wurden verarbeitet</div></div>';
     return;
   }
   el.innerHTML=rows.map((r,i)=>{
@@ -806,6 +885,8 @@ async function loadQueue(){
     const score=r.viral_score||0;
     const hasScore=score>0;
     const sc=score>=80?'#f87171':score>=60?'var(--green)':score>=40?'#fbbf24':'#818cf8';
+    const shareText=encodeURIComponent(r.post_text||r.title||'');
+    const shareUrl=`https://twitter.com/intent/tweet?text=${shareText}`;
     return`<div class="tweet-row" onclick="openItemModal(queueItems[${i}])" style="cursor:pointer">
       <div class="tw-top">
         <span style="font-size:13px">${icon}</span>
@@ -813,6 +894,7 @@ async function loadQueue(){
         <span style="font-size:10px;font-weight:700;color:var(--yellow);background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.2);padding:2px 7px;border-radius:999px;font-family:'JetBrains Mono',monospace">#${i+1}</span>
         ${hasScore?`<span style="font-size:10px;font-weight:700;color:${sc};font-family:'JetBrains Mono',monospace;padding:2px 7px;border-radius:999px;background:${sc}18;border:1px solid ${sc}33">⚡${score}</span>`:''}
         <span class="tw-date">${age}</span>
+        <button class="x-share-btn" onclick="event.stopPropagation();window.open('${shareUrl}','_blank')" title="Auf X teilen">𝕏</button>
       </div>
       ${hasScore?`<div style="height:2px;background:rgba(255,255,255,0.06);border-radius:2px;overflow:hidden;margin-bottom:6px"><div style="width:${score}%;height:100%;background:${sc};border-radius:2px"></div></div>`:''}
       <div style="font-size:12px;font-weight:600;color:var(--text2);line-height:1.4">${esc(r.title||'')}</div>
@@ -836,6 +918,10 @@ async function loadSlots(){
   const grid=document.getElementById('slots-grid');
   const postedCount=slots.filter(s=>s.status==='posted').length;
   document.getElementById('slots-posted-cnt').textContent=postedCount;
+  if(!slots.length){
+    grid.innerHTML='<div class="empty-state"><div class="empty-icon">🎯</div><div class="empty-title">Noch keine Slots</div><div class="empty-desc">Posts erscheinen hier zur Sendezeit</div></div>';
+    return;
+  }
   grid.innerHTML=slots.map(s=>{
     if(s.status==='empty'){
       return`<div class="slot empty-slot">
@@ -857,9 +943,12 @@ async function loadSlots(){
       <div style="width:${score}%;height:100%;background:${scoreColor};border-radius:2px;transition:width .5s"></div>
     </div>`:'';
     const si=slots.indexOf(s);
+    const shareText=encodeURIComponent(s.post_text||s.title||'');
+    const shareUrl=`https://twitter.com/intent/tweet?text=${shareText}`;
     return`<div class="slot ${slotCls}" onclick="openItemModal(slotItems[${si}])" style="cursor:pointer">
       <div class="slot-top">
         <span class="slot-num">${icon} ${esc(s.source_id||'')}</span>
+        <button class="x-share-btn" onclick="event.stopPropagation();window.open('${shareUrl}','_blank')" title="Auf X teilen">𝕏</button>
         <span class="slot-status ${statusCls}" style="margin-left:auto">${statusTxt}</span>
       </div>
       <div class="slot-title">${esc(s.title||'')}</div>
@@ -919,8 +1008,16 @@ async function loadStats(){
 // ── Log ────────────────────────────────────────────────────────────────────
 async function loadLog(){
   const d=await api('/api/log');
+  const box=document.getElementById('log-box');
+  const lines=d.lines||[];
+  const hasContent=lines.length>0&&!(lines.length===1&&lines[0]==='Log file not found');
+  if(!hasContent){
+    box.innerHTML='<div class="empty-state"><div class="empty-icon">📋</div><div class="empty-title">Kein Log</div><div class="empty-desc">Bot noch nicht gestartet</div></div>';
+    return;
+  }
+  box.innerHTML='<pre id="log-pre"></pre>';
   const pre=document.getElementById('log-pre');
-  pre.innerHTML=d.lines.map(l=>{
+  pre.innerHTML=lines.map(l=>{
     let c='ll';
     if(/ERROR/.test(l))c='le';
     else if(/WARNING/.test(l))c='lw';
@@ -928,7 +1025,7 @@ async function loadLog(){
     else if(/Posted tweet|posting/i.test(l))c='lp';
     return`<span class="${c}">${esc(l)}</span>`;
   }).join('\n');
-  if(document.getElementById('log-scroll').checked){const b=document.getElementById('log-box');b.scrollTop=b.scrollHeight}
+  if(document.getElementById('log-scroll').checked){box.scrollTop=box.scrollHeight}
 }
 
 // ── SSE (with auto-reconnect) ──────────────────────────────────────────────
@@ -1116,13 +1213,95 @@ async function syncViews(){
   }
 }
 
-// ── Toast ──────────────────────────────────────────────────────────────────
-let toastTimer;
-function showToast(msg, type=''){
-  const t=document.getElementById('toast');
-  t.textContent=msg; t.className='toast show'+(type?' '+type:'');
-  clearTimeout(toastTimer);
-  toastTimer=setTimeout(()=>t.className='toast',3500);
+// ── Toast Stack ────────────────────────────────────────────────────────────
+function showToast(msg, type='info'){
+  const ICONS={ok:'✓',error:'✗',info:'ℹ'};
+  const container=document.getElementById('toast-container');
+  const item=document.createElement('div');
+  item.className=`toast-item ${type}`;
+  item.innerHTML=`<span class="toast-icon">${ICONS[type]||'ℹ'}</span><span class="toast-msg">${esc(msg)}</span><button class="toast-close" onclick="this.parentElement.remove()">✕</button>`;
+  container.appendChild(item);
+  const dismiss=()=>{
+    item.classList.add('fade-out');
+    setTimeout(()=>item.remove(),320);
+  };
+  setTimeout(dismiss,4000);
+}
+
+// ── Follower History Chart ─────────────────────────────────────────────────
+async function loadFollowerChart(){
+  try{
+    const rows=await api('/api/followers/history');
+    if(!rows||rows.length<2){
+      document.getElementById('follower-chart-wrap').style.display='none';
+      document.getElementById('follower-goal-wrap').style.display='';
+      return;
+    }
+    document.getElementById('follower-chart-wrap').style.display='';
+    document.getElementById('follower-goal-wrap').style.display='none';
+    const counts=rows.map(r=>r.count);
+    const minC=Math.min(...counts),maxC=Math.max(...counts,minC+1);
+    const W=200,H=50,pad=2;
+    const pts=counts.map((c,i)=>{
+      const x=pad+(i/(counts.length-1))*(W-pad*2);
+      const y=H-pad-((c-minC)/(maxC-minC))*(H-pad*2);
+      return[x,y];
+    });
+    const line=pts.map((p,i)=>(i===0?`M${p[0]},${p[1]}`:`L${p[0]},${p[1]}`)).join(' ');
+    const area=`${line} L${pts[pts.length-1][0]},${H} L${pts[0][0]},${H} Z`;
+    const svg=document.getElementById('follower-svg');
+    // preserve defs
+    const defs=svg.querySelector('defs');
+    svg.innerHTML='';
+    if(defs)svg.appendChild(defs);
+    const pathArea=document.createElementNS('http://www.w3.org/2000/svg','path');
+    pathArea.setAttribute('d',area);pathArea.setAttribute('fill','url(#fgrad)');
+    const pathLine=document.createElementNS('http://www.w3.org/2000/svg','path');
+    pathLine.setAttribute('d',line);pathLine.setAttribute('stroke','#A855F7');
+    pathLine.setAttribute('stroke-width','1.5');pathLine.setAttribute('fill','none');
+    svg.appendChild(pathArea);svg.appendChild(pathLine);
+  }catch(e){
+    document.getElementById('follower-chart-wrap').style.display='none';
+    document.getElementById('follower-goal-wrap').style.display='';
+  }
+}
+
+// ── Sparkline (7-day tweets) ───────────────────────────────────────────────
+function renderSparkline(data7){
+  const el=document.getElementById('sparkline-tweets');
+  if(!el||!data7||data7.length<2)return;
+  const W=80,H=24,pad=2;
+  const max=Math.max(...data7,1);
+  const pts=data7.map((v,i)=>{
+    const x=pad+(i/(data7.length-1))*(W-pad*2);
+    const y=H-pad-(v/max)*(H-pad*2);
+    return[x,y];
+  });
+  const line=pts.map((p,i)=>(i===0?`M${p[0]},${p[1]}`:`L${p[0]},${p[1]}`)).join(' ');
+  el.innerHTML=`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">
+    <path d="${line}" stroke="#6366F1" stroke-width="1.5" fill="none" stroke-linejoin="round" stroke-linecap="round"/>
+  </svg>`;
+}
+
+// ── Ticker ─────────────────────────────────────────────────────────────────
+async function loadTicker(){
+  try{
+    const d=await api('/api/trends');
+    const topics=d.topics||[];
+    if(!topics.length)return;
+    const strip=document.getElementById('ticker-strip');
+    const track=document.getElementById('ticker-track');
+    const makePill=t=>{
+      const isChweiz=/\[SCHWEIZ\]/i.test(t);
+      const label=t.replace(/^\[(SCHWEIZ|GLOBAL)\]\s*/i,'');
+      const cls=isChweiz?'schweiz':'global';
+      return`<span class="ticker-pill ${cls}">${esc(label)}</span>`;
+    };
+    const html=topics.map(makePill).join('');
+    // duplicate for seamless loop
+    track.innerHTML=html+html;
+    strip.style.display='flex';
+  }catch(e){}
 }
 
 // ── Global Refresh ─────────────────────────────────────────────────────────
@@ -1132,19 +1311,19 @@ async function globalRefresh(){
   if(btn.disabled)return;
   btn.disabled=true;
   icon.style.animation='spin .8s linear infinite';
-  showToast('Aktualisiert...');
+  showToast('Aktualisiert...','info');
   try{
     const r=await fetch(BASE+'/api/sync-views',{method:'POST'});
     const d=await r.json();
     await Promise.all([refreshAll(), refreshFollowers()]);
     if(d.ok){
       const nv=d.new_views||0;
-      showToast(nv>0?`✓ +${nv.toLocaleString('de-CH')} neue Views`:'✓ Keine neuen Views','ok');
+      showToast(nv>0?`+${nv.toLocaleString('de-CH')} neue Views`:'Keine neuen Views','ok');
     } else {
-      showToast('⚠ Views: '+(d.error||'Fehler'),'err');
+      showToast('Views: '+(d.error||'Fehler'),'error');
     }
   }catch(e){
-    showToast('⚠ Fehler: '+e.message,'err');
+    showToast('Fehler: '+e.message,'error');
   }
   icon.style.animation='';
   btn.disabled=false;
@@ -1163,9 +1342,13 @@ async function refreshAll(){
 document.addEventListener('DOMContentLoaded',()=>{
   refreshAll();
   refreshFollowers();
+  loadFollowerChart();
+  loadTicker();
   updateGoalUI();
   startSSE();
   setInterval(refreshFollowers, 300000); // every 5min
+  setInterval(loadFollowerChart, 300000); // chart with followers
+  setInterval(loadTicker, 900000); // ticker every 15min
   setInterval(loadStats, 20000);   // stats every 20s
   setInterval(loadSources, 30000); // sources every 30s
   setInterval(refreshAll, 120000); // full refresh every 2min

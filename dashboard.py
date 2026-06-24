@@ -436,6 +436,7 @@ def api_sync_views():
 @require_auth
 def api_followers():
     import tweepy
+    import database as _db
     try:
         client = tweepy.Client(
             bearer_token=os.getenv("X_BEARER_TOKEN", ""),
@@ -448,14 +449,41 @@ def api_followers():
         me = client.get_me(user_fields=["public_metrics"], user_auth=True)
         if me.data:
             m = me.data.public_metrics
+            count = m.get("followers_count", 0)
+            try:
+                _db.log_follower_count(DB_PATH, count)
+            except Exception:
+                pass
             return jsonify({
-                "followers": m.get("followers_count", 0),
+                "followers": count,
                 "following": m.get("following_count", 0),
                 "tweets": m.get("tweet_count", 0),
             })
         return jsonify({"followers": None})
     except Exception as e:
         return jsonify({"followers": None, "error": str(e)})
+
+
+@app.route("/api/followers/history")
+@require_auth
+def api_followers_history():
+    rows = query_db(
+        "SELECT date, count FROM follower_log "
+        "ORDER BY date DESC LIMIT 30"
+    )
+    rows = list(reversed(rows))
+    return jsonify(rows)
+
+
+@app.route("/api/trends")
+@require_auth
+def api_trends():
+    try:
+        import trends as _trends
+        topics = _trends._cache.get("topics", [])
+        return jsonify({"topics": topics})
+    except Exception:
+        return jsonify({"topics": []})
 
 
 @app.route("/api/slots/today")

@@ -43,6 +43,13 @@ def init_db(db_path: str) -> None:
                 posted INTEGER,
                 errors INTEGER
             );
+
+            CREATE TABLE IF NOT EXISTS follower_log (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                date TEXT UNIQUE,
+                count INTEGER,
+                logged_at TEXT DEFAULT CURRENT_TIMESTAMP
+            );
         """)
     logger.info("Database initialised at %s", db_path)
 
@@ -252,6 +259,16 @@ def update_error(db_path: str, item_id: int, error: str) -> None:
     with _connect(db_path) as conn:
         conn.execute(
             "UPDATE seen_items SET error=? WHERE id=?", (error, item_id)
+        )
+
+
+def log_follower_count(db_path: str, count: int) -> None:
+    from datetime import date
+    today = date.today().isoformat()
+    with _connect(db_path) as conn:
+        conn.execute(
+            "INSERT OR REPLACE INTO follower_log (date, count) VALUES (?, ?)",
+            (today, count),
         )
 
 
