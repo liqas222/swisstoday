@@ -13,11 +13,12 @@ logger = logging.getLogger(__name__)
 SWISS_TZ = ZoneInfo("Europe/Zurich")
 MAX_POSTS_PER_DAY = 5
 
-# Peak posting windows: (start_hour, end_hour) Swiss time
+# Peak posting windows: (start_hour, end_hour, max_per_window) Swiss time
+# Spread evenly: 2 morning, 1 midday, 2 evening = 5/day
 PEAK_WINDOWS = [
-    (7, 9),
-    (12, 14),
-    (18, 21),
+    (7, 9,   2),
+    (12, 14, 1),
+    (18, 21, 2),
 ]
 
 
@@ -25,9 +26,13 @@ def _swiss_now() -> datetime:
     return datetime.now(SWISS_TZ)
 
 
-def _is_peak_window() -> bool:
+def _current_window() -> Optional[tuple[int, int, int]]:
+    """Return the active (start, end, max) window, or None if outside all windows."""
     hour = _swiss_now().hour
-    return any(start <= hour < end for start, end in PEAK_WINDOWS)
+    for w in PEAK_WINDOWS:
+        if w[0] <= hour < w[1]:
+            return w
+    return None
 
 
 def _build_client(cfg: Config) -> Optional[tweepy.Client]:
@@ -75,15 +80,28 @@ def post_tweet(client: tweepy.Client, text: str, dry_run: bool, quote_tweet_id: 
         raise
 
 
-def post_batch(cfg: Config, items: list[dict], posted_today: int = 0) -> dict[int, tuple[str, Optional[str]]]:
-    """Returns {item_id: ('ok'|'error', tweet_id_or_error_msg)}"""
-    if not _is_peak_window():
+def post_batch(cfg: Config, items: list[dict], posted_today: int = 0, posted_this_window: int = 0) -> dict[int, tuple[str, Optional[str]]]:
+    """Returns {item_id: ('ok'|'error', tweet_id_or_error_msg)}
+
+    posted_this_window: number of tweets already posted in the current time window.
+    """
+    window = _current_window()
+    if not window:
         h = _swiss_now().hour
         logger.info("Outside peak window (%02d:00 Swiss) — %d items queued", h, len(items))
         return {}
+
+    win_start, win_end, win_max = window
+
     if posted_today >= MAX_POSTS_PER_DAY:
         logger.info("Daily limit (%d) reached — skipping", MAX_POSTS_PER_DAY)
         return {}
+
+    if posted_this_window >= win_max:
+        logger.info("Window limit (%d/%d) reached for %02d-%02dh window — waiting for next window",
+                    posted_this_window, win_max, win_start, win_end)
+        return {}
+
     client = _build_client(cfg)
     results = {}
     for item in items[:1]:  # max 1 per run — best item (already ranked) goes first

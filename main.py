@@ -105,7 +105,8 @@ def _run_pipeline(cfg, anthropic_client):
                         item = {**item, "post_text": "🔄 Update:\n\n" + item["post_text"]}
                 recent_items.append({"title": item["title"], "post_text": item.get("post_text", ""), "tweet_id": item.get("quote_tweet_id")})
                 to_post.append(item)
-        results = publisher.post_batch(cfg, to_post, posted_today=posted_today)
+        posted_this_window = database.get_posted_this_window_count(cfg.db_path)
+        results = publisher.post_batch(cfg, to_post, posted_today=posted_today, posted_this_window=posted_this_window)
         for item_id, (status, payload) in results.items():
             if status == "ok":
                 database.update_posted(cfg.db_path, item_id, payload)

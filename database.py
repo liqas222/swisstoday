@@ -171,6 +171,30 @@ def update_viral_score(db_path: str, item_id: int, viral_score: int) -> None:
         conn.execute("UPDATE seen_items SET viral_score=? WHERE id=?", (viral_score, item_id))
 
 
+def get_posted_this_window_count(db_path: str) -> int:
+    """Count posts made within the current peak window (Swiss time)."""
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+    PEAK_WINDOWS = [(7, 9), (12, 14), (18, 21)]
+    hour = datetime.now(ZoneInfo("Europe/Zurich")).hour
+    window = next(((s, e) for s, e in PEAK_WINDOWS if s <= hour < e), None)
+    if not window:
+        return 0
+    win_start, win_end = window
+    with _connect(db_path) as conn:
+        row = conn.execute(
+            """SELECT COUNT(*) FROM seen_items
+               WHERE posted_at IS NOT NULL
+               AND tweet_id NOT IN ('skipped_history','dry_run','duplicate_topic','archived')
+               AND tweet_id IS NOT NULL
+               AND CAST(strftime('%H', posted_at, '+2 hours') AS INTEGER) >= ?
+               AND CAST(strftime('%H', posted_at, '+2 hours') AS INTEGER) < ?
+               AND date(posted_at, '+2 hours') = date('now', '+2 hours')""",
+            (win_start, win_end),
+        ).fetchone()
+        return row[0] if row else 0
+
+
 def get_posted_today_count(db_path: str) -> int:
     with _connect(db_path) as conn:
         row = conn.execute(
