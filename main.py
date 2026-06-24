@@ -80,11 +80,18 @@ def run_pipeline(cfg, anthropic_client):
         recent_items = database.get_recently_posted_items(cfg.db_path, hours=24)
         to_post = []
         for item in unposted:
-            if ai_processor.is_duplicate_topic(anthropic_client, cfg.claude_model, item, recent_items):
-                logger.info("[SKIP duplicate topic] %s", item["title"][:60])
+            status, quote_tweet_id = ai_processor.check_topic_overlap(anthropic_client, cfg.claude_model, item, recent_items)
+            if status == "duplicate":
+                logger.info("[SKIP duplicate] %s", item["title"][:60])
                 database.update_posted(cfg.db_path, item["id"], "duplicate_topic")
             else:
-                recent_items.append({"title": item["title"], "post_text": item.get("post_text", "")})
+                if status == "update" and quote_tweet_id:
+                    logger.info("[UPDATE] %s → quoting %s", item["title"][:60], quote_tweet_id)
+                    item = {**item, "quote_tweet_id": quote_tweet_id}
+                    # Prepend update marker to post text
+                    if item.get("post_text") and not item["post_text"].startswith("🔄"):
+                        item = {**item, "post_text": "🔄 Update:\n\n" + item["post_text"]}
+                recent_items.append({"title": item["title"], "post_text": item.get("post_text", ""), "tweet_id": item.get("quote_tweet_id")})
                 to_post.append(item)
         results = publisher.post_batch(cfg, to_post, posted_today=posted_today)
         for item_id, (status, payload) in results.items():

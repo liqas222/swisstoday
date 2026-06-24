@@ -124,7 +124,7 @@ def update_post_text(db_path: str, item_id: int, post_text: str) -> None:
 def get_recently_posted_items(db_path: str, hours: int = 24) -> list[dict]:
     with _connect(db_path) as conn:
         rows = conn.execute(
-            """SELECT title, post_text, url FROM seen_items
+            """SELECT title, post_text, url, tweet_id FROM seen_items
                WHERE posted_at IS NOT NULL
                AND tweet_id NOT IN ('skipped_history', 'dry_run', 'duplicate_topic')
                AND posted_at > datetime('now', ? || ' hours')""",

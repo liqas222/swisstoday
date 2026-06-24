@@ -169,44 +169,64 @@ def score_relevance(client: anthropic.Anthropic, model: str, item: dict, trends:
         return "LOW", "JSON-Parsing-Fehler", "Sonstiges", 0
 
 
-def is_duplicate_topic(client: anthropic.Anthropic, model: str, new_item: dict, recent_items: list[dict]) -> bool:
-    """Returns True if the new article covers the same topic as a recently posted one.
-    Errs on the side of caution — returns True (skip) on API failure."""
+def check_topic_overlap(client: anthropic.Anthropic, model: str, new_item: dict, recent_items: list[dict]) -> tuple[str, Optional[str]]:
+    """Check if new item is duplicate, update, or new topic.
+    Returns (status, quote_tweet_id) where status is 'new'|'duplicate'|'update'.
+    On API failure returns ('duplicate', None) to be safe."""
     if not recent_items:
-        return False
+        return "new", None
 
     new_title = new_item.get("title", "")
     new_text = (new_item.get("post_text") or new_item.get("summary") or "")[:300]
 
+    recent_list = recent_items[-30:]
     recent_str = "\n".join(
-        f"- Titel: {r['title']}\n  Post: {(r.get('post_text') or '')[:150]}"
-        for r in recent_items[-30:]
+        f"[{i}] Titel: {r['title']}\n    Post: {(r.get('post_text') or '')[:150]}"
+        for i, r in enumerate(recent_list)
     )
 
     system = (
-        "Du prüfst ob ein neuer Artikel bereits durch einen anderen Artikel abgedeckt wurde. "
-        "Sei STRENG: Wenn dasselbe Ereignis, dieselbe Entscheidung oder dieselbe Person bereits "
-        "gepostet wurde — auch wenn der Winkel leicht anders ist — ist es ein Duplikat. "
-        "Im Zweifel: duplicate=true. Antworte NUR mit JSON: {\"duplicate\": true|false, \"reason\": \"...\"}"
+        "Du prüfst ob ein neuer Artikel ein Duplikat, ein Update oder ein neues Thema ist.\n"
+        "DUPLIKAT: Exakt dasselbe Ereignis, dieselbe Entscheidung — keine neuen Fakten.\n"
+        "UPDATE: Dasselbe Thema, aber neue Entwicklung (z.B. neue Zahlen, Urteil, Reaktion).\n"
+        "NEU: Anderes Thema oder neues unabhängiges Ereignis.\n"
+        "Antworte NUR mit JSON: {\"status\": \"new\"|\"duplicate\"|\"update\", \"related_index\": null|0..N, \"reason\": \"...\"}\n"
+        "related_index = Index des verwandten Posts aus der Liste (nur bei update/duplicate)."
     )
     user_msg = (
         f"NEUER ARTIKEL:\nTitel: {new_title}\nPost: {new_text}\n\n"
         f"BEREITS GEPOSTET (letzte 24h):\n{recent_str}\n\n"
-        f"Ist der neue Artikel ein Duplikat?"
+        f"Bewerte den neuen Artikel."
     )
 
     raw = _call_claude(client, model, system, user_msg)
     if not raw:
-        logger.warning("Duplicate check API failure — skipping item to be safe: %s", new_title[:60])
-        return True  # safe default: skip rather than post duplicate
+        logger.warning("Topic check API failure — skipping: %s", new_title[:60])
+        return "duplicate", None
     try:
         data = json.loads(_extract_json(raw))
-        is_dup = bool(data.get("duplicate", False))
-        if is_dup:
-            logger.info("[DUPLICATE] %s — reason: %s", new_title[:60], data.get("reason", ""))
-        return is_dup
+        status = data.get("status", "duplicate")
+        reason = data.get("reason", "")
+        related_idx = data.get("related_index")
+        logger.info("[TOPIC CHECK] %s → %s (%s)", new_title[:60], status, reason)
+        quote_tweet_id = None
+        if status in ("update", "duplicate") and related_idx is not None:
+            try:
+                related = recent_list[int(related_idx)]
+                tid = related.get("tweet_id")
+                if tid and tid not in ("skipped_history", "dry_run", "duplicate_topic", "archived"):
+                    quote_tweet_id = tid
+            except (IndexError, TypeError, ValueError):
+                pass
+        return status, quote_tweet_id
     except (json.JSONDecodeError, Exception):
-        return True  # safe default
+        return "duplicate", None
+
+
+def is_duplicate_topic(client: anthropic.Anthropic, model: str, new_item: dict, recent_items: list[dict]) -> bool:
+    """Legacy wrapper — use check_topic_overlap for full update/quote support."""
+    status, _ = check_topic_overlap(client, model, new_item, recent_items)
+    return status == "duplicate"
 
 
 def rank_items_by_potential(client: anthropic.Anthropic, model: str, items: list[dict]) -> list[dict]:
