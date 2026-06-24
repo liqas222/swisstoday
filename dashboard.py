@@ -498,16 +498,23 @@ def api_stream():
                     headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
 
 
+class _StripPrefix:
+    def __init__(self, wsgi_app, prefix):
+        self.app = wsgi_app
+        self.prefix = prefix.rstrip("/")
+
+    def __call__(self, environ, start_response):
+        path = environ.get("PATH_INFO", "")
+        if path.startswith(self.prefix):
+            environ["PATH_INFO"] = path[len(self.prefix):] or "/"
+            environ["SCRIPT_NAME"] = environ.get("SCRIPT_NAME", "") + self.prefix
+        return self.app(environ, start_response)
+
+
+if BASE_PATH:
+    app.wsgi_app = _StripPrefix(app.wsgi_app, BASE_PATH)
+
+
 if __name__ == "__main__":
     _migrate_db()
-    if BASE_PATH:
-        from werkzeug.middleware.dispatcher import DispatcherMiddleware
-        from werkzeug.wrappers import Response as _WR
-        from werkzeug.serving import run_simple
-        wrapped = DispatcherMiddleware(
-            _WR("Not Found", status="404 NOT FOUND"),
-            {BASE_PATH: app}
-        )
-        run_simple("0.0.0.0", 8081, wrapped, use_reloader=False, use_debugger=False, threaded=True)
-    else:
-        app.run(host="0.0.0.0", port=8081, debug=False, threaded=True)
+    app.run(host="0.0.0.0", port=8081, debug=False, threaded=True)
