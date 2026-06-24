@@ -500,4 +500,14 @@ def api_stream():
 
 if __name__ == "__main__":
     _migrate_db()
-    app.run(host="0.0.0.0", port=8081, debug=False, threaded=True)
+    if BASE_PATH:
+        from werkzeug.middleware.dispatcher import DispatcherMiddleware
+        from werkzeug.wrappers import Response as _WR
+        from werkzeug.serving import run_simple
+        wrapped = DispatcherMiddleware(
+            _WR("Not Found", status="404 NOT FOUND"),
+            {BASE_PATH: app}
+        )
+        run_simple("0.0.0.0", 8081, wrapped, use_reloader=False, use_debugger=False, threaded=True)
+    else:
+        app.run(host="0.0.0.0", port=8081, debug=False, threaded=True)
