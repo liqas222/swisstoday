@@ -49,11 +49,14 @@ Hinweis: Alles zu Banken, SNB, FINMA, Zinsen, Krediten → Finanzen
 Antworte NUR mit validem JSON:
 {"relevance": "HIGH" | "LOW", "reason": "kurze Begründung auf Deutsch (max 80 Zeichen)", "category": "eine der obigen Kategorien", "viral_score": 1-100}
 
-viral_score (1-100): Wie viral/reichweitenstark ist dieser Post auf X?
-- 80-100: Betrifft fast alle (SNB-Zinsentscheid, Volksabstimmung, Grosskatastrophe)
-- 60-79: Betrifft viele (Steueränderung, grosse Verhaftung, Unternehmenskonkurs)
-- 40-59: Nischenpublikum (Behördenentscheid, Gesetzesänderung für Spezialisten)
-- 1-39: Wenig Reichweite (technische Vorschriften, interne Verwaltung)"""
+viral_score (1-100) — Wie viral ist dieser Post auf X? Sei PRÄZISE, nicht immer 50-75:
+- 85-100: Thema ist GERADE auf X im Trend (Schweiz-Trend = +20 Bonus), betrifft fast alle direkt
+- 65-84: Grosses Thema, viele betroffen (Steuererhöhung, SNB-Entscheid, grosse Verhaftung)
+- 45-64: Relevantes Thema für eine grössere Gruppe (neue Gesetze, Unternehmenstransaktionen)
+- 25-44: Nischenthema, wenige betroffen (technische Vorschriften, kleinere Entscheide)
+- 1-24: Kaum Interesse ausserhalb von Spezialisten (interne Verwaltung, Routine)
+
+WICHTIG: Vergib unterschiedliche Scores! Nicht alle Posts sind gleich wichtig."""
 
 POST_SYSTEM = """Du erstellst X-Posts (Twitter) auf Deutsch für den Account @SwissIntelNews.
 Zielgruppe: Unternehmer, Gründer, Investoren, Anwälte, Expats in der Schweiz.
@@ -145,12 +148,15 @@ def _extract_json(raw: str) -> str:
     return raw
 
 
-def score_relevance(client: anthropic.Anthropic, model: str, item: dict) -> tuple[str, str, str, int]:
+def score_relevance(client: anthropic.Anthropic, model: str, item: dict, trends: list[str] | None = None) -> tuple[str, str, str, int]:
     title = item.get("title", "").strip()
     summary = item.get("summary", "").strip()
     if not title and not summary:
         return "LOW", "Kein Inhalt verfügbar", "Sonstiges", 0
-    user_msg = f"Titel: {title}\n\nZusammenfassung: {summary[:500]}\n\nQuelle: {item.get('source_id', '')}"
+    trends_block = ""
+    if trends:
+        trends_block = f"\n\nAKTUELLE X-TRENDS (Schweiz zuerst):\n" + "\n".join(f"- {t}" for t in trends[:25])
+    user_msg = f"Titel: {title}\n\nZusammenfassung: {summary[:500]}\n\nQuelle: {item.get('source_id', '')}{trends_block}"
     raw = _call_claude(client, model, SCORE_SYSTEM, user_msg)
     if not raw:
         return "LOW", "API-Fehler bei Bewertung", "Sonstiges", 0

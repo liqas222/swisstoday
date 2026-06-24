@@ -10,6 +10,7 @@ import ai_processor
 import database
 import monitor
 import publisher
+import trends as trends_module
 from config import load_config
 
 logger = logging.getLogger(__name__)
@@ -35,9 +36,14 @@ def run_pipeline(cfg, anthropic_client):
     stats["new_items"] = len(new_items)
     logger.info("New items this run: %d", len(new_items))
 
+    # Fetch trending topics once per run
+    current_trends = trends_module.get_trending_topics(cfg)
+    if current_trends:
+        logger.info("Trends loaded: %d topics", len(current_trends))
+
     # 3. Score relevance for each new item
     for item in new_items:
-        relevance, reason, category, viral_score = ai_processor.score_relevance(anthropic_client, cfg.claude_model, item)
+        relevance, reason, category, viral_score = ai_processor.score_relevance(anthropic_client, cfg.claude_model, item, trends=current_trends)
         database.update_relevance(cfg.db_path, item["id"], relevance, reason, category, viral_score)
         item["relevance"] = relevance
         logger.info("[%s] %s → %s (%s)", item["source_id"], item["title"][:60], relevance, reason)
@@ -51,7 +57,7 @@ def run_pipeline(cfg, anthropic_client):
     # 3b. Re-score viral_score for any queue items that are missing it
     unscored = database.get_unscored_queue_items(cfg.db_path)
     for item in unscored[:10]:  # max 10 per run to limit API cost
-        _, _, _, viral_score = ai_processor.score_relevance(anthropic_client, cfg.claude_model, item)
+        _, _, _, viral_score = ai_processor.score_relevance(anthropic_client, cfg.claude_model, item, trends=current_trends)
         if viral_score:
             database.update_viral_score(cfg.db_path, item["id"], viral_score)
             logger.info("[RE-SCORE] %s → viral=%d", item["title"][:50], viral_score)
