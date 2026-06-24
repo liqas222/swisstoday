@@ -205,10 +205,10 @@ def api_sources_today():
 @require_auth
 def api_queue():
     rows = query_db(
-        "SELECT id, source_id, title, url, post_text, category, fetched_at "
+        "SELECT id, source_id, title, url, post_text, category, viral_score, fetched_at "
         "FROM seen_items WHERE relevance='HIGH' AND posted_at IS NULL "
         "AND error IS NULL AND post_text IS NOT NULL "
-        "ORDER BY id ASC"
+        "ORDER BY COALESCE(viral_score,0) DESC, id ASC"
     )
     return jsonify(rows)
 
