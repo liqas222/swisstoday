@@ -124,12 +124,25 @@ def _call_claude(client: anthropic.Anthropic, model: str, system: str, user_msg:
 
 
 def _extract_json(raw: str) -> str:
-    """Strip markdown code fences if present."""
+    """Extract first JSON object or array from raw text, stripping markdown fences."""
     raw = raw.strip()
     if raw.startswith("```"):
         lines = raw.splitlines()
         raw = "\n".join(lines[1:-1] if lines[-1].strip() == "```" else lines[1:])
-    return raw.strip()
+    raw = raw.strip()
+    # Find first { or [ and matching closing bracket
+    for start_char, end_char in [('{', '}'), ('[', ']')]:
+        idx = raw.find(start_char)
+        if idx != -1:
+            depth = 0
+            for i, c in enumerate(raw[idx:], idx):
+                if c == start_char:
+                    depth += 1
+                elif c == end_char:
+                    depth -= 1
+                    if depth == 0:
+                        return raw[idx:i+1]
+    return raw
 
 
 def score_relevance(client: anthropic.Anthropic, model: str, item: dict) -> tuple[str, str, str, int]:
