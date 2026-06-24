@@ -967,6 +967,52 @@ async function loadViews(){
 // ── Queue ──────────────────────────────────────────────────────────────────
 const CAT_ICONS={'Finanzen':'🏦','Steuern':'🧾','Wirtschaft':'📈','Politik':'🏛️','Kriminalität':'🔒','Recht':'⚖️','Einwanderung':'🌍','Gesundheit':'🏥','Energie':'⚡','Sonstiges':'📌'};
 let queueItems=[];
+// ── Queue slot scheduling helpers ────────────────────────────────────────────
+// Must match publisher.py PEAK_WINDOWS + MAX_POSTS_PER_DAY
+const PEAK_WINDOWS=[{s:7,e:9,max:2},{s:12,e:14,max:1},{s:18,e:21,max:2}];
+const MAX_PER_DAY=5;
+
+function _swissHour(){
+  // Approximate Swiss time (UTC+1 winter / UTC+2 summer)
+  const now=new Date();
+  const off=now.toLocaleString('de-CH',{timeZone:'Europe/Zurich',hour:'numeric',hour12:false});
+  return parseInt(off,10);
+}
+
+function assignSlots(queueRows,postedToday,postedThisWindow){
+  // Returns array of {row, windowLabel, timeLabel, soonest} parallel to queueRows
+  const hour=_swissHour();
+
+  // Build ordered remaining capacity per window starting from now
+  const slots=[];
+  let skipCurrent=postedThisWindow; // already used capacity in active window
+  for(let pass=0;pass<2;pass++){           // up to next-day windows if queue is long
+    for(const w of PEAK_WINDOWS){
+      const isActive=hour>=w.s&&hour<w.e;
+      const isPast=pass===0&&hour>=w.e;
+      if(isPast)continue;
+      const used=isActive?skipCurrent:0;
+      const avail=w.max-used;
+      for(let k=0;k<avail;k++){
+        slots.push({w,pass,isActive});
+      }
+      if(isActive)skipCurrent=0; // only subtract once
+    }
+    if(postedToday>=MAX_PER_DAY)break;
+  }
+
+  return queueRows.map((row,i)=>{
+    if(i>=MAX_PER_DAY)return{row,windowLabel:'🗄 Archiv',timeLabel:'> 24h',soonest:false};
+    const slot=slots[i];
+    if(!slot)return{row,windowLabel:'—',timeLabel:'—',soonest:false};
+    const {w,pass,isActive}=slot;
+    const day=pass===0?'heute':'morgen';
+    const winLabel=`${w.s}–${w.e} Uhr`;
+    const label=pass===0&&isActive?`⏱ Jetzt (${winLabel})`:`🕐 ${day} ${winLabel}`;
+    return{row,windowLabel:label,timeLabel:winLabel,soonest:i===0};
+  });
+}
+
 async function loadQueue(){
   const rows=await api('/api/items/queue');
   queueItems=rows;
@@ -976,26 +1022,35 @@ async function loadQueue(){
     el.innerHTML='<div class="empty-state"><div class="empty-icon">⏳</div><div class="empty-title">Warteschlange leer</div><div class="empty-desc">Alle Artikel wurden verarbeitet</div></div>';
     return;
   }
-  el.innerHTML=rows.map((r,i)=>{
+  // Get today stats for slot calculation
+  let postedToday=0,postedThisWindow=0;
+  try{
+    const st=await api('/api/stats');
+    postedToday=st.today_posted||0;
+  }catch(e){}
+
+  const assigned=assignSlots(rows,postedToday,postedThisWindow);
+
+  el.innerHTML=assigned.map(({row:r,windowLabel,soonest},i)=>{
     const c=srcColor(r.source_id);
     const icon=CAT_ICONS[r.category]||'📌';
-    const age=r.fetched_at?fmt(r.fetched_at):'—';
     const score=r.viral_score||0;
     const hasScore=score>0;
     const sc=score>=80?'#f87171':score>=60?'var(--green)':score>=40?'#fbbf24':'#818cf8';
     const shareText=encodeURIComponent(r.post_text||r.title||'');
     const shareUrl=`https://twitter.com/intent/tweet?text=${shareText}`;
+    const slotColor=soonest?'var(--green)':windowLabel.includes('Archiv')?'var(--dim)':'var(--yellow)';
     return`<div class="tweet-row" onclick="openItemModal(queueItems[${i}])" style="cursor:pointer">
       <div class="tw-top">
         <span style="font-size:13px">${icon}</span>
         <span class="src-tag" style="background:${c}18;color:${c};border:1px solid ${c}33;font-size:10px;padding:2px 8px;border-radius:999px">${esc(r.source_id)}</span>
         <span style="font-size:10px;font-weight:700;color:var(--yellow);background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.2);padding:2px 7px;border-radius:999px;font-family:'JetBrains Mono',monospace">#${i+1}</span>
         ${hasScore?`<span style="font-size:10px;font-weight:700;color:${sc};font-family:'JetBrains Mono',monospace;padding:2px 7px;border-radius:999px;background:${sc}18;border:1px solid ${sc}33">⚡${score}</span>`:''}
-        <span class="tw-date">${age}</span>
         <button class="x-share-btn" onclick="event.stopPropagation();window.open('${shareUrl}','_blank')" title="Auf X teilen">𝕏</button>
       </div>
-      ${hasScore?`<div style="height:2px;background:rgba(255,255,255,0.06);border-radius:2px;overflow:hidden;margin-bottom:6px"><div style="width:${score}%;height:100%;background:${sc};border-radius:2px"></div></div>`:''}
-      <div style="font-size:12px;font-weight:600;color:var(--text2);line-height:1.4">${esc(r.title||'')}</div>
+      ${hasScore?`<div style="height:2px;background:rgba(255,255,255,0.06);border-radius:2px;overflow:hidden;margin-bottom:4px"><div style="width:${score}%;height:100%;background:${sc};border-radius:2px"></div></div>`:''}
+      <div style="font-size:12px;font-weight:600;color:var(--text2);line-height:1.4;margin-bottom:6px">${esc(r.title||'')}</div>
+      <div style="font-size:10px;font-weight:600;color:${slotColor};display:flex;align-items:center;gap:4px">${windowLabel}</div>
     </div>`;
   }).join('');
 }
