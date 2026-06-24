@@ -167,9 +167,10 @@ def get_today_slots(db_path: str, max_slots: int = 5) -> list[dict]:
                WHERE posted_at IS NOT NULL
                AND tweet_id NOT IN ('skipped_history','dry_run','duplicate_topic','archived')
                AND date(posted_at, '+2 hours') = date('now', '+2 hours')
-               ORDER BY posted_at ASC"""
+               ORDER BY posted_at DESC LIMIT ?""",
+            (max_slots,),
         ).fetchall()
-        posted = [dict(r) for r in posted]
+        posted = list(reversed([dict(r) for r in posted]))
 
         remaining = max_slots - len(posted)
         pending = []
