@@ -803,6 +803,7 @@ footer{
     <div class="mrow">
       <a id="m-art" class="mlink" href="#" target="_blank">🔗 Artikel öffnen</a>
       <a id="m-tweet" class="xbtn" href="#" target="_blank" style="display:none">𝕏 Tweet ansehen</a>
+      <button id="m-img-btn" class="img-preview-btn" style="display:none;font-size:12px;padding:6px 14px" onclick="openImgLightbox(_modalItemId,document.getElementById('m-title').textContent)">🖼 Bild-Vorschau</button>
     </div>
   </div>
 </div>
@@ -1308,6 +1309,7 @@ function toggleSrc(){
 }
 
 // ── Modal ──────────────────────────────────────────────────────────────────
+let _modalItemId=null;
 function openItemModal(r){
   document.getElementById('m-title').textContent=r.title||'Tweet';
   document.getElementById('m-src').textContent=r.source_id||'—';
@@ -1316,10 +1318,13 @@ function openItemModal(r){
   const artLink=document.getElementById('m-art');
   artLink.href=r.url||'#';
   artLink.style.display=r.url?'inline':'none';
-  const btn=document.getElementById('m-tweet');
+  const tweetBtn=document.getElementById('m-tweet');
   if(r.tweet_id&&!['skipped_history','dry_run','duplicate_topic','archived'].includes(r.tweet_id)){
-    btn.href=`https://x.com/i/web/status/${r.tweet_id}`;btn.style.display='inline-flex';
-  }else btn.style.display='none';
+    tweetBtn.href=`https://x.com/i/web/status/${r.tweet_id}`;tweetBtn.style.display='inline-flex';
+  }else tweetBtn.style.display='none';
+  _modalItemId=r.id||null;
+  const imgBtn=document.getElementById('m-img-btn');
+  if(imgBtn)imgBtn.style.display=_modalItemId?'inline-flex':'none';
   document.getElementById('modal').classList.add('open');
 }
 function openModal(idx){
