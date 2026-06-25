@@ -184,10 +184,14 @@ def _resolve_google_news(url: str, headers: dict) -> str:
                 headers={**headers, "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8"},
                 data=body, timeout=10, cookies=_GOOGLE_COOKIES,
             )
-            m = re.search(r'(https?://[^"\\]+)', resp.text.split('garturlres')[-1] if 'garturlres' in resp.text else resp.text)
+            # Google JSON-escapes slashes as \/ — unescape before extracting URL
+            clean = resp.text.replace("\\/", "/")
+            chunk = clean.split("garturlres")[-1] if "garturlres" in clean else clean
+            m = re.search(r'(https?://[^\s"\'<>]+)', chunk)
             if m and "google.com" not in m.group(1):
-                logger.debug("Google News batchexecute resolved: %s", m.group(1)[:80])
-                return m.group(1)
+                resolved_url = m.group(1).rstrip("\\,])")
+                logger.debug("Google News batchexecute resolved: %s", resolved_url[:80])
+                return resolved_url
     except Exception as e:
         logger.debug("Google News batchexecute failed: %s", e)
 
