@@ -29,6 +29,11 @@ CATEGORY_COLORS = {
     "Immobilien":   (180, 30, 30),
     "Arbeit":       (200, 25, 25),
     "Startup":      (210, 35, 35),
+    "Umwelt":       (34, 197, 94),
+    "Gesundheit":   (6, 182, 212),
+    "Energie":      (245, 158, 11),
+    "Politik":      (168, 85, 247),
+    "Kriminalität": (239, 68, 68),
 }
 DEFAULT_CAT_COLOR = (204, 10, 10)
 
@@ -256,18 +261,17 @@ def generate_post_image(item: dict) -> bytes:
     BY = H - 58
     draw.rectangle([28, BY-10, W-28, BY-9], fill=(22, 23, 30))
 
-    # Source left
-    draw.text((36, BY), source, font=f_src, fill=C_DIM)
+    # Brand handle left
+    draw.text((36, BY), "@schweizintel", font=f_brand, fill=C_MUTED)
 
-    # Red dot separator
-    draw.ellipse([36 + draw.textbbox((0,0), source, font=f_src)[2] + 10,
-                  BY+7, 36 + draw.textbbox((0,0), source, font=f_src)[2] + 14,
-                  BY+11], fill=C_RED)
+    # Red dot center
+    dot_x = 36 + draw.textbbox((0,0), "@schweizintel", font=f_brand)[2] + 12
+    draw.ellipse([dot_x, BY+7, dot_x+4, BY+11], fill=C_RED)
 
-    # Brand right
-    brand = "@schweizintel"
-    bw = draw.textbbox((0,0), brand, font=f_brand)[2]
-    draw.text((W - bw - 28, BY), brand, font=f_brand, fill=C_MUTED)
+    # URL right
+    url_text = "schweizintel.ch"
+    uw = draw.textbbox((0,0), url_text, font=f_src)[2]
+    draw.text((W - uw - 28, BY), url_text, font=f_src, fill=C_DIM)
 
     buf = io.BytesIO()
     img.save(buf, format="PNG", optimize=True)

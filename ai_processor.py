@@ -42,7 +42,9 @@ HIGH wenn konkretes Ereignis in der Schweiz:
 - Politischer Skandal mit konkreten Folgen
 
 Kategorien (wähle die passendste):
-Finanzen, Steuern, Wirtschaft, Politik, Kriminalität, Recht, Einwanderung, Gesundheit, Energie, Sonstiges
+Finanzen, Steuern, Wirtschaft, Politik, Kriminalität, Recht, Einwanderung, Gesundheit, Energie, Umwelt, Sonstiges
+
+Hinweis Umwelt: Naturkatastrophen, Hochwasser, Überschwemmungen, Erdrutsche, Klimaereignisse, Umweltverschmutzung → Umwelt
 
 Hinweis: Alles zu Banken, SNB, FINMA, Zinsen, Krediten → Finanzen
 
