@@ -169,167 +169,24 @@ def _fetch_og_image(url: str):
 
 def generate_post_image(item: dict) -> bytes:
     try:
-        from PIL import Image, ImageDraw
+        from PIL import Image
     except ImportError:
         logger.error("Pillow not installed")
         return b""
 
-    title    = (item.get("title") or "").strip()
-    category = (item.get("category") or "").strip()
-    source   = (item.get("source_id") or "").strip().upper()
-    cat_col  = CATEGORY_COLORS.get(category, DEFAULT_CAT_COLOR)
+    photo = _fetch_og_image(item.get("url") or "")
+    if not photo:
+        return b""
 
-    # ── Try to fetch article photo ──────────────────────────────────────────
-    article_img = _fetch_og_image(item.get("url") or "")
-
-    img  = Image.new("RGB", (W, H), C_BG)
-    draw = ImageDraw.Draw(img)
-
-    if article_img:
-        # Scale and crop to fill right 60% of canvas
-        from PIL import ImageFilter
-        aw, ah = article_img.size
-        # Fit to canvas height, crop to width
-        scale = H / ah
-        nw = int(aw * scale)
-        article_img = article_img.resize((max(nw, W), H), Image.LANCZOS)
-        # Crop right portion
-        crop_x = max(0, article_img.width - W)
-        article_img = article_img.crop((crop_x, 0, crop_x + W, H))
-        img.paste(article_img, (0, 0))
-        # Strong dark gradient overlay left → right so text is readable
-        from PIL import Image as PILImage2
-        grad = PILImage2.new("RGB", (W, H), C_BG)
-        gd = ImageDraw.Draw(grad)
-        for x in range(W):
-            t = max(0.0, 1.0 - (x - 200) / 500)
-            a = int(255 * min(1.0, t * 1.3))
-            if a > 0:
-                gd.line([(x, 0), (x, H)], fill=tuple(int(C_BG[i] * a / 255) for i in range(3)))
-        img = PILImage2.blend(img, grad, alpha=0.82)
-    else:
-        # Fallback: generated background
-        _draw_mountain_silhouette(draw, ox=W-460, oy=H-300, scale=1.0)
-        _draw_network_dots(draw)
-
-    draw = ImageDraw.Draw(img)
-
-    # ── Dark vignette overlay on left (so text is readable) ────────────────
-    for x in range(700):
-        t = max(0.0, 1.0 - x / 700)
-        opacity = int(200 * t)
-        col = tuple(int(C_BG[i] * opacity / 255 + draw._image.getpixel((x, H//2))[i] * (1 - opacity/255)) for i in range(3))
-    # Simple dark overlay rectangle left 2/3
-    overlay = Image.new("RGB", (W, H), C_BG)
-    ov_draw = ImageDraw.Draw(overlay)
-    # Gradient left → transparent
-    for x in range(W):
-        t = min(1.0, max(0.0, 1.0 - (x - 400) / 400))
-        alpha = int(220 * t)
-        if alpha > 0:
-            ov_draw.line([(x, 0), (x, H)], fill=C_BG)
-    img = Image.blend(img, overlay, alpha=0.72)
-    draw = ImageDraw.Draw(img)
-
-    # ── Subtle red glow top-left ────────────────────────────────────────────
-    from PIL import Image as PILImage
-    glow = PILImage.new("RGB", (W, H), C_BG)
-    gd = ImageDraw.Draw(glow)
-    for r in range(300, 0, -6):
-        a = int(22 * (1 - r/300))
-        col = (
-            min(255, C_BG[0] + int((C_RED[0]-C_BG[0]) * a / 255)),
-            min(255, C_BG[1] + int((C_RED[1]-C_BG[1]) * a / 255)),
-            min(255, C_BG[2] + int((C_RED[2]-C_BG[2]) * a / 255)),
-        )
-        gd.ellipse([-r+100, -r+60, r+100, r+60], fill=col)
-    img = PILImage.blend(img, glow, alpha=0.5)
-    draw = ImageDraw.Draw(img)
-
-    # ── Left red accent bar ─────────────────────────────────────────────────
-    draw.rectangle([0, 0, 4, H], fill=C_RED)
-
-    # ── Bottom accent bar: dark red ─────────────────────────────────────────
-    for x in range(W):
-        t = x / W
-        r = int(120 * (1-t) + 80 * t)
-        draw.line([(x, H-4), (x, H)], fill=(r, 8, 8))
-
-    # ── Fonts ───────────────────────────────────────────────────────────────
-    f_logo  = _load_font(FONT_BOLD, 19)
-    f_cat   = _load_font(FONT_BOLD, 17)
-    f_title = _load_font(FONT_BOLD, 54)
-    f_title_s = _load_font(FONT_BOLD, 44)
-    f_src   = _load_font(FONT_REG, 19)
-    f_brand = _load_font(FONT_BOLD, 19)
-
-    # ── Top: "Si" logo mark + brand name ───────────────────────────────────
-    # Circle logo
-    cx, cy, cr = 42, 44, 20
-    draw.ellipse([cx-cr, cy-cr, cx+cr, cy+cr], fill=C_GREY)
-    draw.ellipse([cx-cr, cy-cr, cx+cr, cy+cr], outline=C_RED, width=1)
-    si_bb = draw.textbbox((0,0), "Si", font=f_logo)
-    si_w, si_h = si_bb[2]-si_bb[0], si_bb[3]-si_bb[1]
-    draw.text((cx - si_w//2, cy - si_h//2 - 1), "Si", font=f_logo, fill=C_WHITE)
-    # Brand name
-    draw.text((72, 34), "SCHWEIZ INTEL", font=f_logo, fill=C_WHITE)
-
-    # ── Category badge top-right ────────────────────────────────────────────
-    if category:
-        cat_text = category.upper()
-        cb = draw.textbbox((0,0), cat_text, font=f_cat)
-        cw = cb[2]-cb[0]+26
-        ch = cb[3]-cb[1]+12
-        cx2 = W - cw - 28
-        cy2 = 24
-        _draw_rounded_rect(draw, (cx2, cy2, cx2+cw, cy2+ch), 6,
-                           fill=tuple(int(c*0.18) for c in cat_col))
-        draw.rectangle([cx2, cy2, cx2+3, cy2+ch], fill=cat_col)
-        draw.text((cx2+14, cy2+6), cat_text, font=f_cat, fill=cat_col)
-
-    # ── Divider ─────────────────────────────────────────────────────────────
-    draw.rectangle([28, 80, W//2 + 80, 82], fill=(28, 30, 38))
-    draw.rectangle([28, 80, 80, 82], fill=C_RED)
-
-    # ── Title ───────────────────────────────────────────────────────────────
-    TX, TY, TW = 36, 110, W - 100
-    MAX_LINES = 3
-    lines = _wrap_text(title, f_title, TW, draw)
-    font_used = f_title
-    if len(lines) > MAX_LINES:
-        lines = _wrap_text(title, f_title_s, TW, draw)
-        font_used = f_title_s
-    if len(lines) > MAX_LINES:
-        lines = lines[:MAX_LINES]
-        while lines[-1]:
-            test = lines[-1] + "…"
-            if draw.textbbox((0,0), test, font=font_used)[2] <= TW:
-                lines[-1] = test; break
-            lines[-1] = lines[-1][:-1].rstrip()
-
-    lh = draw.textbbox((0,0), "Ag", font=font_used)[3] + 14
-    for i, line in enumerate(lines):
-        # Subtle red shadow for first line
-        if i == 0:
-            draw.text((TX+1, TY+1), line, font=font_used, fill=(40, 5, 5))
-        draw.text((TX, TY + i*lh), line, font=font_used, fill=C_WHITE)
-
-    # ── Bottom section ───────────────────────────────────────────────────────
-    BY = H - 58
-    draw.rectangle([28, BY-10, W-28, BY-9], fill=(22, 23, 30))
-
-    # Brand handle left
-    draw.text((36, BY), "@schweizintel", font=f_brand, fill=C_MUTED)
-
-    # Red dot center
-    dot_x = 36 + draw.textbbox((0,0), "@schweizintel", font=f_brand)[2] + 12
-    draw.ellipse([dot_x, BY+7, dot_x+4, BY+11], fill=C_RED)
-
-    # URL right
-    url_text = "schweizintel.ch"
-    uw = draw.textbbox((0,0), url_text, font=f_src)[2]
-    draw.text((W - uw - 28, BY), url_text, font=f_src, fill=C_DIM)
+    # Resize and center-crop to 1200×628
+    ow, oh = photo.size
+    scale = max(W / ow, H / oh)
+    nw, nh = int(ow * scale), int(oh * scale)
+    photo = photo.resize((nw, nh), Image.LANCZOS)
+    x0 = (nw - W) // 2
+    y0 = (nh - H) // 2
+    photo = photo.crop((x0, y0, x0 + W, y0 + H))
 
     buf = io.BytesIO()
-    img.save(buf, format="PNG", optimize=True)
+    photo.save(buf, format="PNG", optimize=True)
     return buf.getvalue()
