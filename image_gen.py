@@ -151,7 +151,7 @@ def _fetch_og_image(url: str):
         return None
     import re, requests
     from urllib.parse import urlparse
-    headers = {"User-Agent": "Mozilla/5.0 (compatible; SwissIntelBot/1.0)"}
+    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"}
 
     # If URL is already a direct image, download it
     if re.search(r'\.(jpg|jpeg|png|webp)(\?|$)', url, re.IGNORECASE):
@@ -163,7 +163,12 @@ def _fetch_og_image(url: str):
 
     # Otherwise fetch the article page and extract og:image
     try:
-        r = requests.get(url, timeout=8, headers=headers)
+        # Follow all redirects (Google News → actual article)
+        r = requests.get(url, timeout=10, headers=headers, allow_redirects=True)
+        # Use final URL after redirects
+        final_url = r.url
+        if final_url != url:
+            logger.debug("Redirected: %s → %s", url[:60], final_url[:60])
         html = r.text
         # Try all common og:image patterns
         patterns = [
@@ -190,7 +195,7 @@ def _fetch_og_image(url: str):
         logger.debug("Fetching og:image: %s", img_url)
         return _download_image(img_url, headers)
     except Exception as e:
-        logger.debug("og:image fetch failed for %s: %s", url, e)
+        logger.warning("og:image fetch failed for %s: %s", url[:80], e)
         return None
 
 
