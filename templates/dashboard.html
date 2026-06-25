@@ -702,21 +702,21 @@ footer{
       <div class="breakdown-wrap" id="src-breakdown"></div>
     </div>
 
-    <!-- Panel 2: Queue + Slots (right) -->
+    <!-- Panel 2: Slots + Queue (right) -->
     <div class="right-col">
-      <div class="tweets-card" style="max-height:500px;overflow:hidden;display:flex;flex-direction:column">
-        <div class="panel-hdr">
-          <h2>Warteschlange <span class="cnt" id="queue-cnt">0</span></h2>
-        </div>
-        <div id="queue-list" class="tweet-list" style="flex:1;overflow-y:auto"></div>
-      </div>
-
       <!-- TAGES-SLOTS -->
       <div class="slots-card">
         <div class="panel-hdr">
           <h2>Post-Slots heute <span class="cnt" id="slots-posted-cnt">0</span><span style="font-size:10px;color:var(--dim);font-weight:400;margin-left:4px">/ 5</span></h2>
         </div>
         <div class="slots-grid" id="slots-grid"></div>
+      </div>
+
+      <div class="tweets-card" style="max-height:500px;overflow:hidden;display:flex;flex-direction:column">
+        <div class="panel-hdr">
+          <h2>Warteschlange <span class="cnt" id="queue-cnt">0</span></h2>
+        </div>
+        <div id="queue-list" class="tweet-list" style="flex:1;overflow-y:auto"></div>
       </div>
     </div>
 
@@ -775,8 +775,9 @@ footer{
 <footer id="footer">SwissIntel · <span id="ft">Aktualisiert: —</span></footer>
 
 <!-- IMAGE LIGHTBOX -->
-<div class="img-lightbox" id="img-lightbox" onclick="if(event.target===this||event.target.classList.contains('img-lightbox'))closeImgLightbox()">
-  <img id="img-lightbox-img" src="" alt="Post-Vorschau">
+<div class="img-lightbox" id="img-lightbox" onclick="if(event.target===this)closeImgLightbox()">
+  <img id="img-lightbox-img" src="" alt="Post-Vorschau" onerror="this.style.display='none';document.getElementById('img-lightbox-err').style.display='block'">
+  <div id="img-lightbox-err" style="display:none;color:var(--red);font-size:13px;padding:16px;background:rgba(239,68,68,0.1);border-radius:8px;border:1px solid rgba(239,68,68,0.2)">Bild konnte nicht geladen werden</div>
   <div class="img-lightbox-caption" id="img-lightbox-caption"></div>
   <button class="img-lightbox-close" onclick="closeImgLightbox()">✕ Schliessen</button>
 </div>
@@ -998,7 +999,10 @@ let queueItems=[];
 function openImgLightbox(itemId,title){
   const lb=document.getElementById('img-lightbox');
   const img=document.getElementById('img-lightbox-img');
+  const err=document.getElementById('img-lightbox-err');
   document.getElementById('img-lightbox-caption').textContent=title||'Post-Vorschau';
+  img.style.display='';
+  if(err)err.style.display='none';
   img.src='';
   img.src=BASE+'/api/preview-image/'+itemId+'?t='+Date.now();
   lb.classList.add('open');
