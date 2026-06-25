@@ -136,34 +136,61 @@ def _draw_rounded_rect(draw, xy, radius, fill, outline=None):
         draw.rounded_rectangle([x0, y0, x1, y1], radius=r, outline=outline, width=1)
 
 
+def _download_image(img_url: str, headers: dict):
+    import requests
+    from PIL import Image as PILImage
+    import io as _io
+    r = requests.get(img_url, timeout=8, headers=headers)
+    r.raise_for_status()
+    return PILImage.open(_io.BytesIO(r.content)).convert("RGB")
+
+
 def _fetch_og_image(url: str):
-    """Try to fetch og:image from article URL. Returns PIL Image or None."""
+    """Fetch article photo: direct image URL or og:image from article page."""
     if not url:
         return None
-    try:
-        import requests
-        from PIL import Image as PILImage
-        import io as _io
-        headers = {"User-Agent": "Mozilla/5.0"}
-        r = requests.get(url, timeout=6, headers=headers)
-        # Find og:image meta tag
-        import re
-        match = re.search(r'<meta[^>]+(?:property=["\']og:image["\']|name=["\']og:image["\'])[^>]+content=["\']([^"\']+)["\']', r.text, re.IGNORECASE)
-        if not match:
-            match = re.search(r'<meta[^>]+content=["\']([^"\']+)["\'][^>]+property=["\']og:image["\']', r.text, re.IGNORECASE)
-        if not match:
+    import re, requests
+    from urllib.parse import urlparse
+    headers = {"User-Agent": "Mozilla/5.0 (compatible; SwissIntelBot/1.0)"}
+
+    # If URL is already a direct image, download it
+    if re.search(r'\.(jpg|jpeg|png|webp)(\?|$)', url, re.IGNORECASE):
+        try:
+            return _download_image(url, headers)
+        except Exception as e:
+            logger.debug("Direct image download failed: %s", e)
             return None
-        img_url = match.group(1)
+
+    # Otherwise fetch the article page and extract og:image
+    try:
+        r = requests.get(url, timeout=8, headers=headers)
+        html = r.text
+        # Try all common og:image patterns
+        patterns = [
+            r'<meta[^>]+property=["\']og:image["\'][^>]+content=["\']([^"\']+)["\']',
+            r'<meta[^>]+content=["\']([^"\']+)["\'][^>]+property=["\']og:image["\']',
+            r'<meta[^>]+name=["\']og:image["\'][^>]+content=["\']([^"\']+)["\']',
+            r'"og:image"[^>]*content="([^"]+)"',
+            r'"image"\s*:\s*"(https?://[^"]+\.(?:jpg|jpeg|png|webp)[^"]*)"',
+        ]
+        img_url = None
+        for pat in patterns:
+            m = re.search(pat, html, re.IGNORECASE)
+            if m:
+                img_url = m.group(1)
+                break
+        if not img_url:
+            logger.debug("No og:image found for %s", url)
+            return None
         if img_url.startswith("//"):
             img_url = "https:" + img_url
         elif img_url.startswith("/"):
-            from urllib.parse import urlparse
             p = urlparse(url)
             img_url = f"{p.scheme}://{p.netloc}{img_url}"
-        r2 = requests.get(img_url, timeout=6, headers=headers)
-        return PILImage.open(_io.BytesIO(r2.content)).convert("RGB")
+        logger.debug("Fetching og:image: %s", img_url)
+        return _download_image(img_url, headers)
     except Exception as e:
-        logger.debug("og:image fetch failed: %s", e)
+        logger.debug("og:image fetch failed for %s: %s", url, e)
         return None
 
 
