@@ -1071,45 +1071,73 @@ async function loadSlots(){
   const grid=document.getElementById('slots-grid');
   const postedCount=slots.filter(s=>s.status==='posted').length;
   document.getElementById('slots-posted-cnt').textContent=postedCount;
-  if(!slots.length){
-    grid.innerHTML='<div class="empty-state"><div class="empty-icon">🎯</div><div class="empty-title">Noch keine Slots</div><div class="empty-desc">Posts erscheinen hier zur Sendezeit</div></div>';
-    return;
+
+  // Window definitions matching publisher.py
+  const WINDOWS=[
+    {label:'07:00 – 09:00',icon:'🌅',slots:[0,1]},
+    {label:'12:00 – 14:00',icon:'☀️', slots:[2]},
+    {label:'18:00 – 21:00',icon:'🌆',slots:[3,4]},
+  ];
+
+  // Swiss hour approximation
+  const swissDate=new Date().toLocaleString('de-CH',{timeZone:'Europe/Zurich',hour:'numeric',minute:'numeric',hour12:false});
+  const [swissH,swissM]=swissDate.split(':').map(Number);
+
+  function windowState(s,e){
+    if(swissH>=e) return 'past';
+    if(swissH>=s) return 'active';
+    return 'future';
   }
-  grid.innerHTML=slots.map(s=>{
-    if(s.status==='empty'){
-      return`<div class="slot empty-slot">
-        <div class="slot-top"><span class="slot-num">Slot ${s.slot}</span></div>
-        <span class="slot-status status-empty">Leer</span>
-        <div class="slot-src" style="margin-top:auto;opacity:.4">Kein Artikel</div>
+
+  grid.innerHTML=WINDOWS.map(w=>{
+    const [ws,we]=w.label.split(' – ').map(t=>parseInt(t));
+    const state=windowState(ws,we);
+    const borderColor=state==='active'?'rgba(99,102,241,0.4)':state==='past'?'rgba(255,255,255,0.04)':'rgba(255,255,255,0.07)';
+    const headerBg=state==='active'?'rgba(99,102,241,0.08)':state==='past'?'rgba(255,255,255,0.02)':'rgba(255,255,255,0.03)';
+    const stateDot=state==='active'?`<span style="width:6px;height:6px;border-radius:50%;background:var(--indigo);box-shadow:0 0 6px var(--indigo);display:inline-block;animation:blink 1.8s infinite"></span>`:
+                   state==='past'?`<span style="width:6px;height:6px;border-radius:50%;background:var(--dim);display:inline-block"></span>`:
+                   `<span style="width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,0.2);display:inline-block"></span>`;
+    const stateLabel=state==='active'?'<span style="font-size:9px;color:var(--indigo);font-weight:700;letter-spacing:.1em">JETZT AKTIV</span>':
+                     state==='past'?'<span style="font-size:9px;color:var(--dim);letter-spacing:.1em">ABGESCHLOSSEN</span>':
+                     '<span style="font-size:9px;color:rgba(255,255,255,0.3);letter-spacing:.1em">GEPLANT</span>';
+
+    const slotCards=w.slots.map(idx=>{
+      const s=slots[idx];
+      if(!s||s.status==='empty'){
+        return`<div style="background:rgba(255,255,255,0.02);border:1px dashed rgba(255,255,255,0.07);border-radius:8px;padding:10px 12px;display:flex;align-items:center;gap:10px;opacity:.45">
+          <span style="font-size:16px;opacity:.4">○</span>
+          <span style="font-size:11px;color:var(--dim)">Slot ${idx+1} — leer</span>
+        </div>`;
+      }
+      const isPending=s.status==='pending';
+      const icon=CAT_ICONS[s.category]||'📌';
+      const score=s.viral_score||0;
+      const sc=score>=80?'#f87171':score>=60?'var(--green)':score>=40?'#fbbf24':'#818cf8';
+      const c=srcColor(s.source_id);
+      const si=slots.indexOf(s);
+      const shareText=encodeURIComponent(s.post_text||s.title||'');
+      const shareUrl=`https://twitter.com/intent/tweet?text=${shareText}`;
+      return`<div onclick="openItemModal(slotItems[${si}])" style="cursor:pointer;background:var(--surface2);border:1px solid ${isPending?'rgba(245,158,11,0.2)':'rgba(34,197,94,0.15)'};border-left:3px solid ${isPending?'var(--yellow)':'var(--green)'};border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:6px;transition:border-color .15s" onmouseover="this.style.borderColor='var(--border-hi)'" onmouseout="this.style.borderColor='${isPending?'rgba(245,158,11,0.2)':'rgba(34,197,94,0.15)'}'">
+        <div style="display:flex;align-items:center;gap:6px">
+          <span style="font-size:12px">${icon}</span>
+          <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:${isPending?'var(--yellow)':'var(--green)'}">${isPending?'⏳ Wartend':'✓ Gepostet'}</span>
+          ${score?`<span style="font-size:9px;font-weight:700;font-family:'JetBrains Mono',monospace;color:${sc};margin-left:auto">⚡${score}</span>`:''}
+          <button class="x-share-btn" onclick="event.stopPropagation();window.open('${shareUrl}','_blank')" title="Auf X teilen" style="display:inline-flex;margin-left:auto">𝕏</button>
+        </div>
+        <div style="font-size:11px;font-weight:600;color:var(--text2);line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${esc(s.title||'')}</div>
+        ${score?`<div style="height:2px;background:rgba(255,255,255,0.05);border-radius:2px"><div style="width:${score}%;height:100%;background:${sc};border-radius:2px"></div></div>`:''}
+        <div style="font-size:9px;color:var(--dim);font-weight:600;text-transform:uppercase;letter-spacing:.1em">${esc(s.source_id||'')}</div>
       </div>`;
-    }
-    const isPending=s.status==='pending';
-    const statusCls=isPending?'status-pending':'status-posted';
-    const statusTxt=isPending?'⏳ Wartend':'✓ Gepostet';
-    const slotCls=isPending?'pending':'posted';
-    const icon=CAT_ICONS[s.category]||'📌';
-    const preview=(s.post_text||'').slice(0,160);
-    const score=s.viral_score||0;
-    const hasScore=score>0;
-    const scoreColor=score>=80?'#f87171':score>=60?'var(--green)':score>=40?'#fbbf24':'#818cf8';
-    const scoreBar=hasScore?`<div style="height:3px;background:rgba(255,255,255,0.06);border-radius:2px;overflow:hidden;margin-top:2px">
-      <div style="width:${score}%;height:100%;background:${scoreColor};border-radius:2px;transition:width .5s"></div>
-    </div>`:'';
-    const si=slots.indexOf(s);
-    const shareText=encodeURIComponent(s.post_text||s.title||'');
-    const shareUrl=`https://twitter.com/intent/tweet?text=${shareText}`;
-    return`<div class="slot ${slotCls}" onclick="openItemModal(slotItems[${si}])" style="cursor:pointer">
-      <div class="slot-top">
-        <span class="slot-num">${icon} ${esc(s.source_id||'')}</span>
-        <button class="x-share-btn" onclick="event.stopPropagation();window.open('${shareUrl}','_blank')" title="Auf X teilen">𝕏</button>
-        <span class="slot-status ${statusCls}" style="margin-left:auto">${statusTxt}</span>
+    }).join('');
+
+    return`<div style="border:1px solid ${borderColor};border-radius:10px;overflow:hidden;margin-bottom:8px">
+      <div style="background:${headerBg};padding:9px 14px;border-bottom:1px solid ${borderColor};display:flex;align-items:center;gap:8px">
+        <span style="font-size:14px">${w.icon}</span>
+        <span style="font-size:12px;font-weight:700;color:var(--text2);font-family:'Chakra Petch',sans-serif">${w.label}</span>
+        ${stateDot}
+        <span style="margin-left:4px">${stateLabel}</span>
       </div>
-      <div class="slot-title">${esc(s.title||'')}</div>
-      ${hasScore?`<div style="display:flex;align-items:center;gap:8px;margin-top:4px">
-        <span style="font-size:9px;font-weight:700;color:${scoreColor};font-family:'JetBrains Mono',monospace;letter-spacing:.06em">VIRAL ${score}/100</span>
-        <div style="flex:1">${scoreBar}</div>
-      </div>`:'<div style="font-size:9px;color:var(--dim);margin-top:4px;letter-spacing:.06em">Score: nächster Run</div>'}
-      ${!isPending?'<span class="slot-lock">🔒</span>':''}
+      <div style="padding:10px;display:flex;flex-direction:column;gap:6px">${slotCards}</div>
     </div>`;
   }).join('');
 }
