@@ -145,6 +145,40 @@ def _download_image(img_url: str, headers: dict):
     return PILImage.open(_io.BytesIO(r.content)).convert("RGB")
 
 
+def _resolve_google_news(url: str, headers: dict) -> str:
+    """Resolve a Google News /rss/articles/<id> link to the real article URL."""
+    import re, json, requests
+    try:
+        # Fetch the Google News article page to get decoding params
+        r = requests.get(url, timeout=10, headers=headers)
+        html = r.text
+        # Modern format: c-wiz element carries data-p (request) and data-n-a-sg / data-n-a-ts
+        m_sig = re.search(r'data-n-a-sg="([^"]+)"', html)
+        m_ts  = re.search(r'data-n-a-ts="([^"]+)"', html)
+        m_id  = re.search(r'data-n-a-id="([^"]+)"', html)
+        if not (m_sig and m_ts):
+            return url
+        # Article id from the URL path
+        art_id = url.split("/articles/")[1].split("?")[0]
+        payload = [
+            "Fbv4je",
+            f'["garturlreq",[["X","X",["X","X"],null,null,1,1,"US:en",null,1,null,null,null,null,null,0,1],"X","X",1,[1,1,1],1,1,null,0,0,null,0],"{art_id}",{m_ts.group(1)},"{m_sig.group(1)}"]',
+        ]
+        body = "f.req=" + requests.utils.quote(json.dumps([[payload]]))
+        resp = requests.post(
+            "https://news.google.com/_/DotsSplashUi/data/batchexecute",
+            headers={**headers, "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8"},
+            data=body, timeout=10,
+        )
+        # Response is anti-JSON-prefixed; find the real URL
+        m = re.search(r'(https?://[^"\\]+)', resp.text.split('garturlres')[-1] if 'garturlres' in resp.text else resp.text)
+        if m:
+            return m.group(1)
+    except Exception as e:
+        logger.debug("Google News resolve failed: %s", e)
+    return url
+
+
 def _fetch_og_image(url: str):
     """Fetch article photo: direct image URL or og:image from article page."""
     if not url:
@@ -161,10 +195,19 @@ def _fetch_og_image(url: str):
             logger.debug("Direct image download failed: %s", e)
             return None
 
+    # Google News links: resolve to the real article URL first
+    if "news.google.com" in url:
+        resolved = _resolve_google_news(url, headers)
+        if resolved and "news.google.com" not in resolved:
+            logger.debug("Google News resolved: %s", resolved[:80])
+            url = resolved
+        else:
+            logger.debug("Could not resolve Google News URL")
+            return None
+
     # Otherwise fetch the article page and extract og:image
     try:
         from urllib.parse import urlparse, parse_qs, unquote
-        # Follow all redirects (Google News → actual article)
         r = requests.get(url, timeout=10, headers=headers, allow_redirects=True)
         final_url = r.url
 
