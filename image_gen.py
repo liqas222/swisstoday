@@ -145,12 +145,16 @@ def _download_image(img_url: str, headers: dict):
     return PILImage.open(_io.BytesIO(r.content)).convert("RGB")
 
 
+_GOOGLE_COOKIES = {"CONSENT": "YES+cb.20210720-07-p0.en+FX+410", "SOCS": "CAISEwgDEgk0ODE3Nzk3MjQaAmVuIAEaBgiA_LyaBg"}
+
+
 def _resolve_google_news(url: str, headers: dict) -> str:
     """Resolve a Google News /rss/articles/<id> link to the real article URL."""
     import re, json, requests
     try:
         # Fetch the Google News article page to get decoding params
-        r = requests.get(url, timeout=10, headers=headers)
+        # Consent cookies bypass the EU consent interstitial
+        r = requests.get(url, timeout=10, headers=headers, cookies=_GOOGLE_COOKIES)
         html = r.text
         # Modern format: c-wiz element carries data-p (request) and data-n-a-sg / data-n-a-ts
         m_sig = re.search(r'data-n-a-sg="([^"]+)"', html)
@@ -168,7 +172,7 @@ def _resolve_google_news(url: str, headers: dict) -> str:
         resp = requests.post(
             "https://news.google.com/_/DotsSplashUi/data/batchexecute",
             headers={**headers, "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8"},
-            data=body, timeout=10,
+            data=body, timeout=10, cookies=_GOOGLE_COOKIES,
         )
         # Response is anti-JSON-prefixed; find the real URL
         m = re.search(r'(https?://[^"\\]+)', resp.text.split('garturlres')[-1] if 'garturlres' in resp.text else resp.text)
