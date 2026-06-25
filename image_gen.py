@@ -256,6 +256,9 @@ def _fetch_og_image(url: str):
         if not img_url:
             logger.debug("No og:image found for %s", url)
             return None
+        # Decode HTML entities (&amp; → &) so query strings stay valid
+        import html as _html
+        img_url = _html.unescape(img_url)
         if img_url.startswith("//"):
             img_url = "https:" + img_url
         elif img_url.startswith("/"):
