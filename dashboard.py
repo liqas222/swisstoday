@@ -657,6 +657,28 @@ def api_slots_today():
     return jsonify(slots)
 
 
+@app.route("/api/preview-image/<int:item_id>")
+@require_auth
+def api_preview_image(item_id):
+    rows = query_db(
+        "SELECT title, category, source_id FROM seen_items WHERE id=?", (item_id,)
+    )
+    if not rows:
+        return "Not found", 404
+    try:
+        import image_gen
+        item = rows[0]
+        data = image_gen.generate_post_image(item)
+        if not data:
+            return "Image generation failed", 500
+        from flask import Response
+        return Response(data, mimetype="image/png",
+                        headers={"Cache-Control": "public, max-age=300"})
+    except Exception as e:
+        app.logger.error("preview-image error: %s", e)
+        return str(e), 500
+
+
 @app.route("/api/health")
 def api_health():
     return jsonify({"ok": True})

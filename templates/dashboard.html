@@ -312,6 +312,26 @@ tr:hover td{background:rgba(255,255,255,0.02)}
 .log-body pre{font-family:'JetBrains Mono',monospace;font-size:10.5px;white-space:pre-wrap;word-break:break-all;line-height:1.7}
 .ll{color:rgba(113,113,122,0.7)}.lw{color:var(--yellow)}.le{color:var(--red)}.lh{color:var(--green);font-weight:600}.lp{color:var(--indigo)}
 
+/* ── IMAGE PREVIEW ── */
+.img-preview-btn{
+  display:inline-flex;align-items:center;gap:4px;
+  font-size:10px;font-weight:600;color:var(--dim);
+  background:rgba(255,255,255,0.04);border:1px solid var(--border);
+  border-radius:6px;padding:3px 8px;cursor:pointer;
+  transition:background .15s,color .15s,border-color .15s;white-space:nowrap;
+}
+.img-preview-btn:hover{background:rgba(168,85,247,0.12);color:var(--purple);border-color:rgba(168,85,247,0.3)}
+.img-lightbox{
+  display:none;position:fixed;inset:0;z-index:600;
+  background:rgba(0,0,0,0.88);backdrop-filter:blur(8px);
+  align-items:center;justify-content:center;padding:20px;
+}
+.img-lightbox.open{display:flex;flex-direction:column;gap:12px}
+.img-lightbox img{max-width:min(900px,95vw);max-height:75vh;border-radius:12px;border:1px solid rgba(255,255,255,0.1);box-shadow:0 30px 80px rgba(0,0,0,.8)}
+.img-lightbox-close{background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);color:#fff;border-radius:8px;padding:8px 20px;cursor:pointer;font-size:13px;font-weight:600;font-family:'Chakra Petch',sans-serif}
+.img-lightbox-close:hover{background:rgba(255,255,255,0.14)}
+.img-lightbox-caption{font-size:12px;color:var(--muted);text-align:center;max-width:600px}
+
 /* ── MODAL ── */
 .overlay{display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.75);backdrop-filter:blur(6px);align-items:center;justify-content:center;padding:20px}
 .overlay.open{display:flex}
@@ -754,6 +774,13 @@ footer{
 
 <footer id="footer">SwissIntel · <span id="ft">Aktualisiert: —</span></footer>
 
+<!-- IMAGE LIGHTBOX -->
+<div class="img-lightbox" id="img-lightbox" onclick="if(event.target===this||event.target.classList.contains('img-lightbox'))closeImgLightbox()">
+  <img id="img-lightbox-img" src="" alt="Post-Vorschau">
+  <div class="img-lightbox-caption" id="img-lightbox-caption"></div>
+  <button class="img-lightbox-close" onclick="closeImgLightbox()">✕ Schliessen</button>
+</div>
+
 <!-- TWEET LIST MODAL -->
 <div class="overlay" id="tweet-modal" onclick="if(event.target===this)closeTweetList()">
   <div class="modal" style="max-width:680px">
@@ -967,6 +994,18 @@ async function loadViews(){
 // ── Queue ──────────────────────────────────────────────────────────────────
 const CAT_ICONS={'Finanzen':'🏦','Steuern':'🧾','Wirtschaft':'📈','Politik':'🏛️','Kriminalität':'🔒','Recht':'⚖️','Einwanderung':'🌍','Gesundheit':'🏥','Energie':'⚡','Sonstiges':'📌'};
 let queueItems=[];
+// ── Image Lightbox ────────────────────────────────────────────────────────────
+function openImgLightbox(itemId,title){
+  const lb=document.getElementById('img-lightbox');
+  const img=document.getElementById('img-lightbox-img');
+  document.getElementById('img-lightbox-caption').textContent=title||'Post-Vorschau';
+  img.src='';
+  img.src=BASE+'/api/preview-image/'+itemId+'?t='+Date.now();
+  lb.classList.add('open');
+}
+function closeImgLightbox(){document.getElementById('img-lightbox').classList.remove('open')}
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeImgLightbox()});
+
 // ── Queue slot scheduling helpers ────────────────────────────────────────────
 // Must match publisher.py PEAK_WINDOWS + MAX_POSTS_PER_DAY
 const PEAK_WINDOWS=[{s:7,e:9,max:2},{s:12,e:14,max:1},{s:18,e:21,max:2}];
@@ -1050,7 +1089,10 @@ async function loadQueue(){
       </div>
       ${hasScore?`<div style="height:2px;background:rgba(255,255,255,0.06);border-radius:2px;overflow:hidden;margin-bottom:4px"><div style="width:${score}%;height:100%;background:${sc};border-radius:2px"></div></div>`:''}
       <div style="font-size:12px;font-weight:600;color:var(--text2);line-height:1.4;margin-bottom:6px">${esc(r.title||'')}</div>
-      <div style="font-size:10px;font-weight:600;color:${slotColor};display:flex;align-items:center;gap:4px">${windowLabel}</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+        <div style="font-size:10px;font-weight:600;color:${slotColor}">${windowLabel}</div>
+        ${r.id?`<button class="img-preview-btn" onclick="event.stopPropagation();openImgLightbox(${r.id},${JSON.stringify(r.title||'')})">🖼 Vorschau</button>`:''}
+      </div>
     </div>`;
   }).join('');
 }
@@ -1126,7 +1168,10 @@ async function loadSlots(){
         </div>
         <div style="font-size:11px;font-weight:600;color:var(--text2);line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${esc(s.title||'')}</div>
         ${score?`<div style="height:2px;background:rgba(255,255,255,0.05);border-radius:2px"><div style="width:${score}%;height:100%;background:${sc};border-radius:2px"></div></div>`:''}
-        <div style="font-size:9px;color:var(--dim);font-weight:600;text-transform:uppercase;letter-spacing:.1em">${esc(s.source_id||'')}</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:2px">
+          <div style="font-size:9px;color:var(--dim);font-weight:600;text-transform:uppercase;letter-spacing:.1em">${esc(s.source_id||'')}</div>
+          ${s.id?`<button class="img-preview-btn" onclick="event.stopPropagation();openImgLightbox(${s.id},${JSON.stringify(s.title||'')})">🖼 Vorschau</button>`:''}
+        </div>
       </div>`;
     }).join('');
 
