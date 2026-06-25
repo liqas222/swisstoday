@@ -264,19 +264,34 @@ def _fetch_og_image(url: str):
         if final_url != url:
             logger.debug("Final URL: %s", final_url[:80])
         html = r.text
-        # Try all common og:image patterns
+        # Try all common image meta patterns
         patterns = [
+            # og:image (property= first, content= first)
             r'<meta[^>]+property=["\']og:image["\'][^>]+content=["\']([^"\']+)["\']',
             r'<meta[^>]+content=["\']([^"\']+)["\'][^>]+property=["\']og:image["\']',
             r'<meta[^>]+name=["\']og:image["\'][^>]+content=["\']([^"\']+)["\']',
-            r'"og:image"[^>]*content="([^"]+)"',
+            # Twitter card
+            r'<meta[^>]+name=["\']twitter:image["\'][^>]+content=["\']([^"\']+)["\']',
+            r'<meta[^>]+content=["\']([^"\']+)["\'][^>]+name=["\']twitter:image["\']',
+            r'<meta[^>]+property=["\']twitter:image["\'][^>]+content=["\']([^"\']+)["\']',
+            # JSON-LD "image" field
+            r'"image"\s*:\s*\{\s*"@type"\s*:[^}]*"url"\s*:\s*"(https?://[^"]+)"',
             r'"image"\s*:\s*"(https?://[^"]+\.(?:jpg|jpeg|png|webp)[^"]*)"',
+            r'"thumbnailUrl"\s*:\s*"(https?://[^"]+)"',
+            # link rel=image_src
+            r'<link[^>]+rel=["\']image_src["\'][^>]+href=["\']([^"\']+)["\']',
+            # itemprop image
+            r'<meta[^>]+itemprop=["\']image["\'][^>]+content=["\']([^"\']+)["\']',
+            r'<img[^>]+itemprop=["\']image["\'][^>]+src=["\']([^"\']+)["\']',
         ]
         img_url = None
         for pat in patterns:
-            m = re.search(pat, html, re.IGNORECASE)
+            m = re.search(pat, html, re.IGNORECASE | re.DOTALL)
             if m:
-                img_url = m.group(1)
+                candidate = m.group(1).strip()
+                if candidate.startswith("data:") or len(candidate) < 10:
+                    continue
+                img_url = candidate
                 break
         if not img_url:
             logger.debug("No og:image found for %s", url)
