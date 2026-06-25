@@ -150,36 +150,61 @@ _GOOGLE_COOKIES = {"CONSENT": "YES+cb.20210720-07-p0.en+FX+410", "SOCS": "CAISEw
 
 def _resolve_google_news(url: str, headers: dict) -> str:
     """Resolve a Google News /rss/articles/<id> link to the real article URL."""
-    import re, json, requests
+    import re, json, requests, base64
+
+    art_id = url.split("/articles/")[1].split("?")[0]
+
+    # Method 1: base64-decode the article ID — the real URL is embedded inside
     try:
-        # Fetch the Google News article page to get decoding params
-        # Consent cookies bypass the EU consent interstitial
+        padded = art_id + "=" * ((4 - len(art_id) % 4) % 4)
+        decoded = base64.urlsafe_b64decode(padded)
+        idx = decoded.find(b"http")
+        if idx >= 0:
+            candidate = decoded[idx:].split(b"\x00")[0].split(b" ")[0].decode("utf-8", errors="ignore")
+            if candidate.startswith("http") and "google.com" not in candidate:
+                logger.debug("Google News base64 decoded: %s", candidate[:80])
+                return candidate
+    except Exception as e:
+        logger.debug("Google News base64 decode failed: %s", e)
+
+    # Method 2: batchexecute API
+    try:
         r = requests.get(url, timeout=10, headers=headers, cookies=_GOOGLE_COOKIES)
         html = r.text
-        # Modern format: c-wiz element carries data-p (request) and data-n-a-sg / data-n-a-ts
         m_sig = re.search(r'data-n-a-sg="([^"]+)"', html)
         m_ts  = re.search(r'data-n-a-ts="([^"]+)"', html)
-        m_id  = re.search(r'data-n-a-id="([^"]+)"', html)
-        if not (m_sig and m_ts):
-            return url
-        # Article id from the URL path
-        art_id = url.split("/articles/")[1].split("?")[0]
-        payload = [
-            "Fbv4je",
-            f'["garturlreq",[["X","X",["X","X"],null,null,1,1,"US:en",null,1,null,null,null,null,null,0,1],"X","X",1,[1,1,1],1,1,null,0,0,null,0],"{art_id}",{m_ts.group(1)},"{m_sig.group(1)}"]',
-        ]
-        body = "f.req=" + requests.utils.quote(json.dumps([[payload]]))
-        resp = requests.post(
-            "https://news.google.com/_/DotsSplashUi/data/batchexecute",
-            headers={**headers, "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8"},
-            data=body, timeout=10, cookies=_GOOGLE_COOKIES,
-        )
-        # Response is anti-JSON-prefixed; find the real URL
-        m = re.search(r'(https?://[^"\\]+)', resp.text.split('garturlres')[-1] if 'garturlres' in resp.text else resp.text)
-        if m:
-            return m.group(1)
+        if m_sig and m_ts:
+            payload = [
+                "Fbv4je",
+                f'["garturlreq",[["X","X",["X","X"],null,null,1,1,"US:en",null,1,null,null,null,null,null,0,1],"X","X",1,[1,1,1],1,1,null,0,0,null,0],"{art_id}",{m_ts.group(1)},"{m_sig.group(1)}"]',
+            ]
+            body = "f.req=" + requests.utils.quote(json.dumps([[payload]]))
+            resp = requests.post(
+                "https://news.google.com/_/DotsSplashUi/data/batchexecute",
+                headers={**headers, "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8"},
+                data=body, timeout=10, cookies=_GOOGLE_COOKIES,
+            )
+            m = re.search(r'(https?://[^"\\]+)', resp.text.split('garturlres')[-1] if 'garturlres' in resp.text else resp.text)
+            if m and "google.com" not in m.group(1):
+                logger.debug("Google News batchexecute resolved: %s", m.group(1)[:80])
+                return m.group(1)
     except Exception as e:
-        logger.debug("Google News resolve failed: %s", e)
+        logger.debug("Google News batchexecute failed: %s", e)
+
+    # Method 3: follow redirect from the non-rss article page
+    try:
+        direct = url.replace("/rss/articles/", "/articles/")
+        r = requests.get(direct, timeout=10, headers=headers, cookies=_GOOGLE_COOKIES, allow_redirects=True)
+        if "google.com" not in r.url and r.url.startswith("http"):
+            logger.debug("Google News redirect resolved: %s", r.url[:80])
+            return r.url
+        # Check for a JS/meta redirect in the page
+        m = re.search(r'<meta[^>]+http-equiv=["\']refresh["\'][^>]+url=([^"\'>\s]+)', r.text, re.IGNORECASE)
+        if m and "google.com" not in m.group(1):
+            return m.group(1).strip('"\'')
+    except Exception as e:
+        logger.debug("Google News redirect follow failed: %s", e)
+
     return url
 
 
