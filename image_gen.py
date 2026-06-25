@@ -163,12 +163,23 @@ def _fetch_og_image(url: str):
 
     # Otherwise fetch the article page and extract og:image
     try:
+        from urllib.parse import urlparse, parse_qs, unquote
         # Follow all redirects (Google News → actual article)
         r = requests.get(url, timeout=10, headers=headers, allow_redirects=True)
-        # Use final URL after redirects
         final_url = r.url
+
+        # Google consent redirect — extract real article URL from ?continue= param
+        if "consent.google.com" in final_url:
+            qs = parse_qs(urlparse(final_url).query)
+            real = qs.get("continue", qs.get("q", [None]))[0]
+            if real:
+                real = unquote(real)
+                logger.debug("Bypassing consent, fetching: %s", real[:80])
+                r = requests.get(real, timeout=10, headers=headers, allow_redirects=True)
+                final_url = r.url
+
         if final_url != url:
-            logger.debug("Redirected: %s → %s", url[:60], final_url[:60])
+            logger.debug("Final URL: %s", final_url[:80])
         html = r.text
         # Try all common og:image patterns
         patterns = [
