@@ -167,6 +167,103 @@ def _fetch_og_image(url: str):
         return None
 
 
+def _generate_branded(item: dict) -> bytes:
+    """Fallback: noir/red branded image with title, no source line."""
+    from PIL import Image, ImageDraw
+    title    = (item.get("title") or "").strip()
+    category = (item.get("category") or "").strip()
+    cat_col  = CATEGORY_COLORS.get(category, DEFAULT_CAT_COLOR)
+
+    img  = Image.new("RGB", (W, H), C_BG)
+    draw = ImageDraw.Draw(img)
+
+    _draw_mountain_silhouette(draw, ox=W-460, oy=H-300, scale=1.0)
+    _draw_network_dots(draw)
+
+    # Dark overlay left 2/3
+    overlay = Image.new("RGB", (W, H), C_BG)
+    ov = ImageDraw.Draw(overlay)
+    for x in range(W):
+        t = min(1.0, max(0.0, 1.0 - (x - 400) / 400))
+        if int(220 * t) > 0:
+            ov.line([(x, 0), (x, H)], fill=C_BG)
+    img = Image.blend(img, overlay, alpha=0.72)
+    draw = ImageDraw.Draw(img)
+
+    # Red glow top-left
+    from PIL import Image as _PI
+    glow = _PI.new("RGB", (W, H), C_BG)
+    gd   = ImageDraw.Draw(glow)
+    for r in range(300, 0, -6):
+        a = int(22 * (1 - r/300))
+        col = (min(255, C_BG[0]+int((C_RED[0]-C_BG[0])*a/255)),
+               min(255, C_BG[1]+int((C_RED[1]-C_BG[1])*a/255)),
+               min(255, C_BG[2]+int((C_RED[2]-C_BG[2])*a/255)))
+        gd.ellipse([-r+100, -r+60, r+100, r+60], fill=col)
+    img = _PI.blend(img, glow, alpha=0.5)
+    draw = ImageDraw.Draw(img)
+
+    # Left red bar
+    draw.rectangle([0, 0, 4, H], fill=C_RED)
+
+    # Bottom red gradient bar
+    for x in range(W):
+        t = x / W
+        draw.line([(x, H-4), (x, H)], fill=(int(120*(1-t)+80*t), 8, 8))
+
+    f_logo    = _load_font(FONT_BOLD, 19)
+    f_cat     = _load_font(FONT_BOLD, 17)
+    f_title   = _load_font(FONT_BOLD, 54)
+    f_title_s = _load_font(FONT_BOLD, 44)
+
+    # Si logo + brand
+    cx, cy, cr = 42, 44, 20
+    draw.ellipse([cx-cr, cy-cr, cx+cr, cy+cr], fill=C_GREY)
+    draw.ellipse([cx-cr, cy-cr, cx+cr, cy+cr], outline=C_RED, width=1)
+    bb = draw.textbbox((0,0), "Si", font=f_logo)
+    draw.text((cx-(bb[2]-bb[0])//2, cy-(bb[3]-bb[1])//2-1), "Si", font=f_logo, fill=C_WHITE)
+    draw.text((72, 34), "SCHWEIZ INTEL", font=f_logo, fill=C_WHITE)
+
+    # Category badge
+    if category:
+        cat_text = category.upper()
+        cb = draw.textbbox((0,0), cat_text, font=f_cat)
+        cw, ch = cb[2]-cb[0]+26, cb[3]-cb[1]+12
+        cx2, cy2 = W-cw-28, 24
+        _draw_rounded_rect(draw, (cx2, cy2, cx2+cw, cy2+ch), 6,
+                           fill=tuple(int(c*0.18) for c in cat_col))
+        draw.rectangle([cx2, cy2, cx2+3, cy2+ch], fill=cat_col)
+        draw.text((cx2+14, cy2+6), cat_text, font=f_cat, fill=cat_col)
+
+    # Divider
+    draw.rectangle([28, 80, W//2+80, 82], fill=(28, 30, 38))
+    draw.rectangle([28, 80, 80, 82], fill=C_RED)
+
+    # Title
+    TX, TY, TW, MAX_LINES = 36, 110, W-100, 3
+    lines = _wrap_text(title, f_title, TW, draw)
+    font_used = f_title
+    if len(lines) > MAX_LINES:
+        lines = _wrap_text(title, f_title_s, TW, draw)
+        font_used = f_title_s
+    if len(lines) > MAX_LINES:
+        lines = lines[:MAX_LINES]
+        while lines[-1]:
+            test = lines[-1] + "…"
+            if draw.textbbox((0,0), test, font=font_used)[2] <= TW:
+                lines[-1] = test; break
+            lines[-1] = lines[-1][:-1].rstrip()
+    lh = draw.textbbox((0,0), "Ag", font=font_used)[3] + 14
+    for i, line in enumerate(lines):
+        if i == 0:
+            draw.text((TX+1, TY+1), line, font=font_used, fill=(40, 5, 5))
+        draw.text((TX, TY+i*lh), line, font=font_used, fill=C_WHITE)
+
+    buf = io.BytesIO()
+    img.save(buf, format="PNG", optimize=True)
+    return buf.getvalue()
+
+
 def generate_post_image(item: dict) -> bytes:
     try:
         from PIL import Image
@@ -175,18 +272,18 @@ def generate_post_image(item: dict) -> bytes:
         return b""
 
     photo = _fetch_og_image(item.get("url") or "")
-    if not photo:
-        return b""
+    if photo:
+        # Just the photo, center-cropped to 1200×628
+        ow, oh = photo.size
+        scale = max(W / ow, H / oh)
+        nw, nh = int(ow * scale), int(oh * scale)
+        photo = photo.resize((nw, nh), Image.LANCZOS)
+        x0 = (nw - W) // 2
+        y0 = (nh - H) // 2
+        photo = photo.crop((x0, y0, x0 + W, y0 + H))
+        buf = io.BytesIO()
+        photo.save(buf, format="PNG", optimize=True)
+        return buf.getvalue()
 
-    # Resize and center-crop to 1200×628
-    ow, oh = photo.size
-    scale = max(W / ow, H / oh)
-    nw, nh = int(ow * scale), int(oh * scale)
-    photo = photo.resize((nw, nh), Image.LANCZOS)
-    x0 = (nw - W) // 2
-    y0 = (nh - H) // 2
-    photo = photo.crop((x0, y0, x0 + W, y0 + H))
-
-    buf = io.BytesIO()
-    photo.save(buf, format="PNG", optimize=True)
-    return buf.getvalue()
+    # No photo available → branded fallback with title
+    return _generate_branded(item)
