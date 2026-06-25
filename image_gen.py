@@ -136,6 +136,37 @@ def _draw_rounded_rect(draw, xy, radius, fill, outline=None):
         draw.rounded_rectangle([x0, y0, x1, y1], radius=r, outline=outline, width=1)
 
 
+def _fetch_og_image(url: str):
+    """Try to fetch og:image from article URL. Returns PIL Image or None."""
+    if not url:
+        return None
+    try:
+        import requests
+        from PIL import Image as PILImage
+        import io as _io
+        headers = {"User-Agent": "Mozilla/5.0"}
+        r = requests.get(url, timeout=6, headers=headers)
+        # Find og:image meta tag
+        import re
+        match = re.search(r'<meta[^>]+(?:property=["\']og:image["\']|name=["\']og:image["\'])[^>]+content=["\']([^"\']+)["\']', r.text, re.IGNORECASE)
+        if not match:
+            match = re.search(r'<meta[^>]+content=["\']([^"\']+)["\'][^>]+property=["\']og:image["\']', r.text, re.IGNORECASE)
+        if not match:
+            return None
+        img_url = match.group(1)
+        if img_url.startswith("//"):
+            img_url = "https:" + img_url
+        elif img_url.startswith("/"):
+            from urllib.parse import urlparse
+            p = urlparse(url)
+            img_url = f"{p.scheme}://{p.netloc}{img_url}"
+        r2 = requests.get(img_url, timeout=6, headers=headers)
+        return PILImage.open(_io.BytesIO(r2.content)).convert("RGB")
+    except Exception as e:
+        logger.debug("og:image fetch failed: %s", e)
+        return None
+
+
 def generate_post_image(item: dict) -> bytes:
     try:
         from PIL import Image, ImageDraw
@@ -148,14 +179,40 @@ def generate_post_image(item: dict) -> bytes:
     source   = (item.get("source_id") or "").strip().upper()
     cat_col  = CATEGORY_COLORS.get(category, DEFAULT_CAT_COLOR)
 
+    # ── Try to fetch article photo ──────────────────────────────────────────
+    article_img = _fetch_og_image(item.get("url") or "")
+
     img  = Image.new("RGB", (W, H), C_BG)
     draw = ImageDraw.Draw(img)
 
-    # ── Background: faint mountain silhouette (right side) ─────────────────
-    _draw_mountain_silhouette(draw, ox=W-460, oy=H-300, scale=1.0)
+    if article_img:
+        # Scale and crop to fill right 60% of canvas
+        from PIL import ImageFilter
+        aw, ah = article_img.size
+        # Fit to canvas height, crop to width
+        scale = H / ah
+        nw = int(aw * scale)
+        article_img = article_img.resize((max(nw, W), H), Image.LANCZOS)
+        # Crop right portion
+        crop_x = max(0, article_img.width - W)
+        article_img = article_img.crop((crop_x, 0, crop_x + W, H))
+        img.paste(article_img, (0, 0))
+        # Strong dark gradient overlay left → right so text is readable
+        from PIL import Image as PILImage2
+        grad = PILImage2.new("RGB", (W, H), C_BG)
+        gd = ImageDraw.Draw(grad)
+        for x in range(W):
+            t = max(0.0, 1.0 - (x - 200) / 500)
+            a = int(255 * min(1.0, t * 1.3))
+            if a > 0:
+                gd.line([(x, 0), (x, H)], fill=tuple(int(C_BG[i] * a / 255) for i in range(3)))
+        img = PILImage2.blend(img, grad, alpha=0.82)
+    else:
+        # Fallback: generated background
+        _draw_mountain_silhouette(draw, ox=W-460, oy=H-300, scale=1.0)
+        _draw_network_dots(draw)
 
-    # ── Network dots (subtle) ───────────────────────────────────────────────
-    _draw_network_dots(draw)
+    draw = ImageDraw.Draw(img)
 
     # ── Dark vignette overlay on left (so text is readable) ────────────────
     for x in range(700):

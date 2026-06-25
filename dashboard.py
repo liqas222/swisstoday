@@ -661,7 +661,7 @@ def api_slots_today():
 @require_auth
 def api_preview_image(item_id):
     rows = query_db(
-        "SELECT title, category, source_id FROM seen_items WHERE id=?", (item_id,)
+        "SELECT title, category, source_id, url FROM seen_items WHERE id=?", (item_id,)
     )
     if not rows:
         return "Not found", 404
