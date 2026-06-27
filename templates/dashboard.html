@@ -242,40 +242,6 @@ tr:hover td{background:rgba(255,255,255,0.02)}
 .mini-bar{height:3px;background:rgba(255,255,255,0.06);border-radius:2px;overflow:hidden}
 .mini-fill{height:100%;border-radius:2px}
 
-/* ── SLOTS ── */
-.slots-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden}
-.slots-grid{display:flex;flex-direction:column;gap:0}
-.slot{
-  padding:12px 14px 14px;border-bottom:1px solid var(--border);
-  display:flex;flex-direction:column;gap:6px;position:relative;
-  transition:background .15s;
-}
-.slot:last-child{border-bottom:none}
-.slot:hover{background:rgba(255,255,255,0.02)}
-.slot-top{display:flex;align-items:center;justify-content:space-between}
-.slot-num{font-size:10px;font-weight:600;color:var(--dim);letter-spacing:.16em;text-transform:uppercase}
-.viral-badge{
-  font-size:10px;font-weight:700;padding:2px 8px;border-radius:999px;
-  font-family:'JetBrains Mono',monospace;letter-spacing:.03em;
-}
-.viral-low{background:rgba(99,102,241,0.12);color:var(--indigo);border:1px solid rgba(99,102,241,0.25)}
-.viral-mid{background:rgba(245,158,11,0.12);color:var(--yellow);border:1px solid rgba(245,158,11,0.25)}
-.viral-high{background:rgba(34,197,94,0.12);color:var(--green);border:1px solid rgba(34,197,94,0.25)}
-.viral-hot{background:rgba(239,68,68,0.12);color:var(--red);border:1px solid rgba(239,68,68,0.25)}
-.slot-status{
-  font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;
-  padding:2px 8px;border-radius:999px;align-self:flex-start;
-}
-.status-posted{background:rgba(34,197,94,0.1);color:var(--green);border:1px solid rgba(34,197,94,0.2)}
-.status-pending{background:rgba(245,158,11,0.1);color:var(--yellow);border:1px solid rgba(245,158,11,0.2)}
-.status-empty{background:rgba(113,113,122,0.1);color:var(--dim);border:1px solid var(--border)}
-.slot-title{font-size:11px;font-weight:600;color:var(--text2);line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.slot-preview{font-size:10.5px;color:var(--muted);line-height:1.55;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;white-space:pre-wrap}
-.slot-src{font-size:9px;color:var(--dim);margin-top:auto;font-weight:600;text-transform:uppercase;letter-spacing:.1em}
-.slot.posted{border-top:2px solid var(--green)}
-.slot.pending{border-top:2px solid var(--yellow)}
-.slot.empty-slot{border-top:2px solid var(--border);opacity:.45}
-.slot-lock{position:absolute;bottom:12px;right:12px;font-size:14px;opacity:.4}
 
 /* ── INSIGHTS ── */
 .insights-card{
@@ -311,26 +277,6 @@ tr:hover td{background:rgba(255,255,255,0.02)}
 .log-body{background:#050810;height:160px;overflow-y:auto;padding:10px 14px}
 .log-body pre{font-family:'JetBrains Mono',monospace;font-size:10.5px;white-space:pre-wrap;word-break:break-all;line-height:1.7}
 .ll{color:rgba(113,113,122,0.7)}.lw{color:var(--yellow)}.le{color:var(--red)}.lh{color:var(--green);font-weight:600}.lp{color:var(--indigo)}
-
-/* ── IMAGE PREVIEW ── */
-.img-preview-btn{
-  display:inline-flex;align-items:center;gap:4px;
-  font-size:10px;font-weight:600;color:var(--dim);
-  background:rgba(255,255,255,0.04);border:1px solid var(--border);
-  border-radius:6px;padding:3px 8px;cursor:pointer;
-  transition:background .15s,color .15s,border-color .15s;white-space:nowrap;
-}
-.img-preview-btn:hover{background:rgba(168,85,247,0.12);color:var(--purple);border-color:rgba(168,85,247,0.3)}
-.img-lightbox{
-  display:none;position:fixed;inset:0;z-index:600;
-  background:rgba(0,0,0,0.88);backdrop-filter:blur(8px);
-  align-items:center;justify-content:center;padding:20px;
-}
-.img-lightbox.open{display:flex;flex-direction:column;gap:12px}
-.img-lightbox img{max-width:min(900px,95vw);max-height:75vh;border-radius:12px;border:1px solid rgba(255,255,255,0.1);box-shadow:0 30px 80px rgba(0,0,0,.8)}
-.img-lightbox-close{background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);color:#fff;border-radius:8px;padding:8px 20px;cursor:pointer;font-size:13px;font-weight:600;font-family:'Chakra Petch',sans-serif}
-.img-lightbox-close:hover{background:rgba(255,255,255,0.14)}
-.img-lightbox-caption{font-size:12px;color:var(--muted);text-align:center;max-width:600px}
 
 /* ── MODAL ── */
 .overlay{display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.75);backdrop-filter:blur(6px);align-items:center;justify-content:center;padding:20px}
@@ -702,21 +648,13 @@ footer{
       <div class="breakdown-wrap" id="src-breakdown"></div>
     </div>
 
-    <!-- Panel 2: Slots + Queue (right) -->
+    <!-- Panel 2: Queue (right) -->
     <div class="right-col">
-      <!-- TAGES-SLOTS -->
-      <div class="slots-card">
-        <div class="panel-hdr">
-          <h2>Post-Slots heute <span class="cnt" id="slots-posted-cnt">0</span><span style="font-size:10px;color:var(--dim);font-weight:400;margin-left:4px">/ 5</span></h2>
-        </div>
-        <div class="slots-grid" id="slots-grid"></div>
-      </div>
-
-      <div class="tweets-card" style="max-height:500px;overflow:hidden;display:flex;flex-direction:column">
+      <div class="tweets-card" style="max-height:760px;overflow:hidden;display:flex;flex-direction:column">
         <div class="panel-hdr">
           <h2>Warteschlange <span class="cnt" id="queue-cnt">0</span></h2>
         </div>
-        <div id="queue-list" class="tweet-list" style="flex:1;overflow-y:auto"></div>
+        <div id="queue-list" class="tweet-list" style="flex:1;max-height:none;overflow-y:auto"></div>
       </div>
     </div>
 
@@ -774,14 +712,6 @@ footer{
 
 <footer id="footer">SwissIntel · <span id="ft">Aktualisiert: —</span></footer>
 
-<!-- IMAGE LIGHTBOX -->
-<div class="img-lightbox" id="img-lightbox" onclick="if(event.target===this)closeImgLightbox()">
-  <img id="img-lightbox-img" src="" alt="Post-Vorschau" onerror="this.style.display='none';document.getElementById('img-lightbox-err').style.display='block'">
-  <div id="img-lightbox-err" style="display:none;color:var(--red);font-size:13px;padding:16px;background:rgba(239,68,68,0.1);border-radius:8px;border:1px solid rgba(239,68,68,0.2)">Bild konnte nicht geladen werden</div>
-  <div class="img-lightbox-caption" id="img-lightbox-caption"></div>
-  <button class="img-lightbox-close" onclick="closeImgLightbox()">✕ Schliessen</button>
-</div>
-
 <!-- TWEET LIST MODAL -->
 <div class="overlay" id="tweet-modal" onclick="if(event.target===this)closeTweetList()">
   <div class="modal" style="max-width:680px">
@@ -803,7 +733,6 @@ footer{
     <div class="mrow">
       <a id="m-art" class="mlink" href="#" target="_blank">🔗 Artikel öffnen</a>
       <a id="m-tweet" class="xbtn" href="#" target="_blank" style="display:none">𝕏 Tweet ansehen</a>
-      <button id="m-img-btn" class="img-preview-btn" style="display:none;font-size:12px;padding:6px 14px" onclick="openImgLightbox(_modalItemId,document.getElementById('m-title').textContent)">🖼 Bild-Vorschau</button>
     </div>
   </div>
 </div>
@@ -996,66 +925,6 @@ async function loadViews(){
 // ── Queue ──────────────────────────────────────────────────────────────────
 const CAT_ICONS={'Finanzen':'🏦','Steuern':'🧾','Wirtschaft':'📈','Politik':'🏛️','Kriminalität':'🔒','Recht':'⚖️','Einwanderung':'🌍','Gesundheit':'🏥','Energie':'⚡','Umwelt':'🌿','Sonstiges':'📌'};
 let queueItems=[];
-// ── Image Lightbox ────────────────────────────────────────────────────────────
-function openImgLightbox(itemId,title){
-  const lb=document.getElementById('img-lightbox');
-  const img=document.getElementById('img-lightbox-img');
-  const err=document.getElementById('img-lightbox-err');
-  document.getElementById('img-lightbox-caption').textContent=title||'Post-Vorschau';
-  img.style.display='';
-  if(err)err.style.display='none';
-  img.src='';
-  img.src=BASE+'/api/preview-image/'+itemId+'?t='+Date.now();
-  lb.classList.add('open');
-}
-function closeImgLightbox(){document.getElementById('img-lightbox').classList.remove('open')}
-document.addEventListener('keydown',e=>{if(e.key==='Escape')closeImgLightbox()});
-
-// ── Queue slot scheduling helpers ────────────────────────────────────────────
-// Must match publisher.py PEAK_WINDOWS + MAX_POSTS_PER_DAY
-const PEAK_WINDOWS=[{s:7,e:9,max:2},{s:12,e:14,max:1},{s:18,e:21,max:2}];
-const MAX_PER_DAY=5;
-
-function _swissHour(){
-  // Approximate Swiss time (UTC+1 winter / UTC+2 summer)
-  const now=new Date();
-  const off=now.toLocaleString('de-CH',{timeZone:'Europe/Zurich',hour:'numeric',hour12:false});
-  return parseInt(off,10);
-}
-
-function assignSlots(queueRows,postedToday,postedThisWindow){
-  // Returns array of {row, windowLabel, timeLabel, soonest} parallel to queueRows
-  const hour=_swissHour();
-
-  // Build ordered remaining capacity per window starting from now
-  const slots=[];
-  let skipCurrent=postedThisWindow; // already used capacity in active window
-  for(let pass=0;pass<2;pass++){           // up to next-day windows if queue is long
-    for(const w of PEAK_WINDOWS){
-      const isActive=hour>=w.s&&hour<w.e;
-      const isPast=pass===0&&hour>=w.e;
-      if(isPast)continue;
-      const used=isActive?skipCurrent:0;
-      const avail=w.max-used;
-      for(let k=0;k<avail;k++){
-        slots.push({w,pass,isActive});
-      }
-      if(isActive)skipCurrent=0; // only subtract once
-    }
-    if(postedToday>=MAX_PER_DAY)break;
-  }
-
-  return queueRows.map((row,i)=>{
-    if(i>=MAX_PER_DAY)return{row,windowLabel:'🗄 Archiv',timeLabel:'> 24h',soonest:false};
-    const slot=slots[i];
-    if(!slot)return{row,windowLabel:'—',timeLabel:'—',soonest:false};
-    const {w,pass,isActive}=slot;
-    const day=pass===0?'heute':'morgen';
-    const winLabel=`${w.s}–${w.e} Uhr`;
-    const label=pass===0&&isActive?`⏱ Jetzt (${winLabel})`:`🕐 ${day} ${winLabel}`;
-    return{row,windowLabel:label,timeLabel:winLabel,soonest:i===0};
-  });
-}
 
 async function loadQueue(){
   const rows=await api('/api/items/queue');
@@ -1066,16 +935,8 @@ async function loadQueue(){
     el.innerHTML='<div class="empty-state"><div class="empty-icon">⏳</div><div class="empty-title">Warteschlange leer</div><div class="empty-desc">Alle Artikel wurden verarbeitet</div></div>';
     return;
   }
-  // Get today stats for slot calculation
-  let postedToday=0,postedThisWindow=0;
-  try{
-    const st=await api('/api/stats');
-    postedToday=st.today_posted||0;
-  }catch(e){}
 
-  const assigned=assignSlots(rows,postedToday,postedThisWindow);
-
-  el.innerHTML=assigned.map(({row:r,windowLabel,soonest},i)=>{
+  el.innerHTML=rows.map((r,i)=>{
     const c=srcColor(r.source_id);
     const icon=CAT_ICONS[r.category]||'📌';
     const score=r.viral_score||0;
@@ -1083,7 +944,6 @@ async function loadQueue(){
     const sc=score>=80?'#f87171':score>=60?'var(--green)':score>=40?'#fbbf24':'#818cf8';
     const shareText=encodeURIComponent(r.post_text||r.title||'');
     const shareUrl=`https://twitter.com/intent/tweet?text=${shareText}`;
-    const slotColor=soonest?'var(--green)':windowLabel.includes('Archiv')?'var(--dim)':'var(--yellow)';
     return`<div class="tweet-row" onclick="openItemModal(queueItems[${i}])" style="cursor:pointer">
       <div class="tw-top">
         <span style="font-size:13px">${icon}</span>
@@ -1093,101 +953,7 @@ async function loadQueue(){
         <button class="x-share-btn" onclick="event.stopPropagation();window.open('${shareUrl}','_blank')" title="Auf X teilen">𝕏</button>
       </div>
       ${hasScore?`<div style="height:2px;background:rgba(255,255,255,0.06);border-radius:2px;overflow:hidden;margin-bottom:4px"><div style="width:${score}%;height:100%;background:${sc};border-radius:2px"></div></div>`:''}
-      <div style="font-size:12px;font-weight:600;color:var(--text2);line-height:1.4;margin-bottom:6px">${esc(r.title||'')}</div>
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
-        <div style="font-size:10px;font-weight:600;color:${slotColor}">${windowLabel}</div>
-        ${r.id?`<button class="img-preview-btn" onclick="event.stopPropagation();openImgLightbox(${r.id},${JSON.stringify(r.title||'')})">🖼 Vorschau</button>`:''}
-      </div>
-    </div>`;
-  }).join('');
-}
-
-// ── Slots ──────────────────────────────────────────────────────────────────
-let slotItems=[];
-function viralBadge(score){
-  if(!score)return'';
-  let cls='viral-low',lbl='';
-  if(score>=80){cls='viral-hot';lbl='🔥'}
-  else if(score>=60){cls='viral-high';lbl='⚡'}
-  else if(score>=40){cls='viral-mid';lbl=''}
-  return`<span class="viral-badge ${cls}">${lbl}${score}</span>`;
-}
-async function loadSlots(){
-  const slots=await api('/api/slots/today');
-  slotItems=slots;
-  const grid=document.getElementById('slots-grid');
-  const postedCount=slots.filter(s=>s.status==='posted').length;
-  document.getElementById('slots-posted-cnt').textContent=postedCount;
-
-  // Window definitions matching publisher.py
-  const WINDOWS=[
-    {label:'07:00 – 09:00',icon:'🌅',slots:[0,1]},
-    {label:'12:00 – 14:00',icon:'☀️', slots:[2]},
-    {label:'18:00 – 21:00',icon:'🌆',slots:[3,4]},
-  ];
-
-  // Swiss hour approximation
-  const swissDate=new Date().toLocaleString('de-CH',{timeZone:'Europe/Zurich',hour:'numeric',minute:'numeric',hour12:false});
-  const [swissH,swissM]=swissDate.split(':').map(Number);
-
-  function windowState(s,e){
-    if(swissH>=e) return 'past';
-    if(swissH>=s) return 'active';
-    return 'future';
-  }
-
-  grid.innerHTML=WINDOWS.map(w=>{
-    const [ws,we]=w.label.split(' – ').map(t=>parseInt(t));
-    const state=windowState(ws,we);
-    const borderColor=state==='active'?'rgba(99,102,241,0.4)':state==='past'?'rgba(255,255,255,0.04)':'rgba(255,255,255,0.07)';
-    const headerBg=state==='active'?'rgba(99,102,241,0.08)':state==='past'?'rgba(255,255,255,0.02)':'rgba(255,255,255,0.03)';
-    const stateDot=state==='active'?`<span style="width:6px;height:6px;border-radius:50%;background:var(--indigo);box-shadow:0 0 6px var(--indigo);display:inline-block;animation:blink 1.8s infinite"></span>`:
-                   state==='past'?`<span style="width:6px;height:6px;border-radius:50%;background:var(--dim);display:inline-block"></span>`:
-                   `<span style="width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,0.2);display:inline-block"></span>`;
-    const stateLabel=state==='active'?'<span style="font-size:9px;color:var(--indigo);font-weight:700;letter-spacing:.1em">JETZT AKTIV</span>':
-                     state==='past'?'<span style="font-size:9px;color:var(--dim);letter-spacing:.1em">ABGESCHLOSSEN</span>':
-                     '<span style="font-size:9px;color:rgba(255,255,255,0.3);letter-spacing:.1em">GEPLANT</span>';
-
-    const slotCards=w.slots.map(idx=>{
-      const s=slots[idx];
-      if(!s||s.status==='empty'){
-        return`<div style="background:rgba(255,255,255,0.02);border:1px dashed rgba(255,255,255,0.07);border-radius:8px;padding:10px 12px;display:flex;align-items:center;gap:10px;opacity:.45">
-          <span style="font-size:16px;opacity:.4">○</span>
-          <span style="font-size:11px;color:var(--dim)">Slot ${idx+1} — leer</span>
-        </div>`;
-      }
-      const isPending=s.status==='pending';
-      const icon=CAT_ICONS[s.category]||'📌';
-      const score=s.viral_score||0;
-      const sc=score>=80?'#f87171':score>=60?'var(--green)':score>=40?'#fbbf24':'#818cf8';
-      const c=srcColor(s.source_id);
-      const si=slots.indexOf(s);
-      const shareText=encodeURIComponent(s.post_text||s.title||'');
-      const shareUrl=`https://twitter.com/intent/tweet?text=${shareText}`;
-      return`<div onclick="openItemModal(slotItems[${si}])" style="cursor:pointer;background:var(--surface2);border:1px solid ${isPending?'rgba(245,158,11,0.2)':'rgba(34,197,94,0.15)'};border-left:3px solid ${isPending?'var(--yellow)':'var(--green)'};border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:6px;transition:border-color .15s" onmouseover="this.style.borderColor='var(--border-hi)'" onmouseout="this.style.borderColor='${isPending?'rgba(245,158,11,0.2)':'rgba(34,197,94,0.15)'}'">
-        <div style="display:flex;align-items:center;gap:6px">
-          <span style="font-size:12px">${icon}</span>
-          <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:${isPending?'var(--yellow)':'var(--green)'}">${isPending?'⏳ Wartend':'✓ Gepostet'}</span>
-          ${score?`<span style="font-size:9px;font-weight:700;font-family:'JetBrains Mono',monospace;color:${sc};margin-left:auto">⚡${score}</span>`:''}
-          <button class="x-share-btn" onclick="event.stopPropagation();window.open('${shareUrl}','_blank')" title="Auf X teilen" style="display:inline-flex;margin-left:auto">𝕏</button>
-        </div>
-        <div style="font-size:11px;font-weight:600;color:var(--text2);line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${esc(s.title||'')}</div>
-        ${score?`<div style="height:2px;background:rgba(255,255,255,0.05);border-radius:2px"><div style="width:${score}%;height:100%;background:${sc};border-radius:2px"></div></div>`:''}
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:2px">
-          <div style="font-size:9px;color:var(--dim);font-weight:600;text-transform:uppercase;letter-spacing:.1em">${esc(s.source_id||'')}</div>
-          ${s.id?`<button class="img-preview-btn" onclick="event.stopPropagation();openImgLightbox(${s.id},${JSON.stringify(s.title||'')})">🖼 Vorschau</button>`:''}
-        </div>
-      </div>`;
-    }).join('');
-
-    return`<div style="border:1px solid ${borderColor};border-radius:10px;overflow:hidden;margin-bottom:8px">
-      <div style="background:${headerBg};padding:9px 14px;border-bottom:1px solid ${borderColor};display:flex;align-items:center;gap:8px">
-        <span style="font-size:14px">${w.icon}</span>
-        <span style="font-size:12px;font-weight:700;color:var(--text2);font-family:'Chakra Petch',sans-serif">${w.label}</span>
-        ${stateDot}
-        <span style="margin-left:4px">${stateLabel}</span>
-      </div>
-      <div style="padding:10px;display:flex;flex-direction:column;gap:6px">${slotCards}</div>
+      <div style="font-size:12px;font-weight:600;color:var(--text2);line-height:1.4">${esc(r.title||'')}</div>
     </div>`;
   }).join('');
 }
@@ -1271,7 +1037,7 @@ function startSSE(){
     if(/Pipeline run started/.test(e.data)){isRunning=true;updateRadar();}
     if(/Run complete/.test(e.data)){
       isRunning=false;lastRunTs=Date.now();updateRadar();
-      setTimeout(()=>{loadStats();loadPosted();loadSources();loadMonthChart();loadViews();loadSlots()},2000);
+      setTimeout(()=>{loadStats();loadPosted();loadSources();loadMonthChart();loadViews();loadQueue()},2000);
     }
     const pre=document.getElementById('log-pre');
     if(pre&&e.data.trim()){
@@ -1309,7 +1075,6 @@ function toggleSrc(){
 }
 
 // ── Modal ──────────────────────────────────────────────────────────────────
-let _modalItemId=null;
 function openItemModal(r){
   document.getElementById('m-title').textContent=r.title||'Tweet';
   document.getElementById('m-src').textContent=r.source_id||'—';
@@ -1322,9 +1087,6 @@ function openItemModal(r){
   if(r.tweet_id&&!['skipped_history','dry_run','duplicate_topic','archived'].includes(r.tweet_id)){
     tweetBtn.href=`https://x.com/i/web/status/${r.tweet_id}`;tweetBtn.style.display='inline-flex';
   }else tweetBtn.style.display='none';
-  _modalItemId=r.id||null;
-  const imgBtn=document.getElementById('m-img-btn');
-  if(imgBtn)imgBtn.style.display=_modalItemId?'inline-flex':'none';
   document.getElementById('modal').classList.add('open');
 }
 function openModal(idx){
@@ -1616,7 +1378,7 @@ async function loadAchievements(){
 // ── Main ───────────────────────────────────────────────────────────────────
 async function refreshAll(){
   try{
-    await Promise.all([loadStats(),loadPosted(),loadSources(),loadLog(),loadQueue(),loadSlots()]);
+    await Promise.all([loadStats(),loadPosted(),loadSources(),loadLog(),loadQueue()]);
     loadHighlights();
     loadAchievements();
     loadMonthChart();
