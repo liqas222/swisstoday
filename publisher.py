@@ -141,16 +141,8 @@ def post_batch(cfg: Config, items: list[dict], posted_today: int = 0, posted_thi
         text          = item["post_text"]
         quote_tweet_id = item.get("quote_tweet_id")
 
-        # Generate and upload image
+        # Post text-only — no images
         media_id = None
-        if not cfg.dry_run and api_v1:
-            try:
-                import image_gen
-                image_bytes = image_gen.generate_post_image(item)
-                if image_bytes:
-                    media_id = _upload_image(api_v1, image_bytes)
-            except Exception as e:
-                logger.warning("Image generation failed (posting without image): %s", e)
 
         try:
             tweet_id = post_tweet(client, text, cfg.dry_run,
