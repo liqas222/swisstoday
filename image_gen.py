@@ -315,6 +315,97 @@ def _fetch_og_image(url: str):
         return None
 
 
+# German stopwords to strip when building an image search query from a title
+_STOPWORDS = {
+    "der", "die", "das", "den", "dem", "des", "ein", "eine", "einen", "einem",
+    "und", "oder", "aber", "auch", "mit", "von", "vom", "zu", "zur", "zum",
+    "im", "in", "an", "am", "auf", "für", "ist", "sind", "wird", "werden",
+    "hat", "haben", "wegen", "über", "unter", "nach", "vor", "bei", "aus",
+    "als", "wie", "so", "noch", "schon", "mehr", "neue", "neuer", "neues",
+    "swi", "swissinfo", "ch", "srf", "blick", "nzz", "watson", "tagesanzeiger",
+}
+
+# Map category → an English stock-photo search term for better hits
+_CAT_QUERY = {
+    "Umwelt": "nature environment switzerland",
+    "Gesundheit": "health medical hospital",
+    "Energie": "energy power electricity",
+    "Politik": "politics government parliament",
+    "Kriminalität": "police crime law",
+    "Steuern": "tax finance money",
+    "Finanzen": "finance money banking",
+    "Wirtschaft": "business economy switzerland",
+    "Recht": "law justice court",
+    "Einwanderung": "immigration people border",
+    "Immobilien": "real estate house building",
+    "Arbeit": "work office employees",
+}
+
+
+def _stock_query(item: dict) -> str:
+    """Build a concise search query from the article title + category."""
+    import re
+    title = (item.get("title") or "")
+    # Drop trailing " - Source" segment
+    title = re.split(r"\s[-–|]\s", title)[0]
+    words = re.findall(r"[A-Za-zÀ-ÿ]{4,}", title)
+    keep = [w for w in words if w.lower() not in _STOPWORDS][:4]
+    if keep:
+        return " ".join(keep)
+    # Fallback to category hint
+    return _CAT_QUERY.get((item.get("category") or "").strip(), "switzerland news")
+
+
+def _fetch_stock_image(item: dict):
+    """Find a free-to-use (Creative-Commons) photo matching the topic via Openverse."""
+    import requests
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept": "application/json",
+    }
+    # Try title-based query first, then category fallback
+    queries = [_stock_query(item)]
+    cat_q = _CAT_QUERY.get((item.get("category") or "").strip())
+    if cat_q and cat_q not in queries:
+        queries.append(cat_q)
+    queries.append("switzerland")
+
+    for q in queries:
+        try:
+            r = requests.get(
+                "https://api.openverse.org/v1/images/",
+                params={
+                    "q": q,
+                    "license_type": "all",
+                    "size": "large",
+                    "mature": "false",
+                    "page_size": 10,
+                },
+                headers=headers, timeout=10,
+            )
+            if r.status_code != 200:
+                logger.debug("Openverse %s for query '%s'", r.status_code, q)
+                continue
+            results = r.json().get("results", [])
+            for res in results:
+                img_url = res.get("url") or res.get("thumbnail")
+                if not img_url:
+                    continue
+                try:
+                    img = _download_image(img_url, headers)
+                    # Skip tiny / icon-like images
+                    if img.size[0] >= 600 and img.size[1] >= 400:
+                        logger.debug("Stock image '%s': %s", q, img_url[:80])
+                        return img
+                except Exception as e:
+                    logger.debug("Stock download failed: %s", e)
+                    continue
+        except Exception as e:
+            logger.debug("Openverse query '%s' failed: %s", q, e)
+            continue
+    return None
+
+
 def _generate_branded(item: dict) -> bytes:
     """Fallback: noir/red branded image with title, no source line."""
     from PIL import Image, ImageDraw
@@ -419,7 +510,8 @@ def generate_post_image(item: dict) -> bytes:
         logger.error("Pillow not installed")
         return b""
 
-    photo = _fetch_og_image(item.get("url") or "")
+    # Topic-matched free-to-use stock photo (no source watermarks)
+    photo = _fetch_stock_image(item)
     if photo:
         # Just the photo, center-cropped to 1200×628
         ow, oh = photo.size

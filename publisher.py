@@ -11,14 +11,12 @@ from config import Config
 logger = logging.getLogger(__name__)
 
 SWISS_TZ = ZoneInfo("Europe/Zurich")
-MAX_POSTS_PER_DAY = 5
+# 24/7, unlimited posting — every HIGH-relevance item goes out immediately.
+MAX_POSTS_PER_DAY = 9999
 
-# Peak posting windows: (start_hour, end_hour, max_per_window) Swiss time
-# Spread evenly: 2 morning, 1 midday, 2 evening = 5/day
+# No restricted peak windows — post around the clock.
 PEAK_WINDOWS = [
-    (7, 9,   2),
-    (12, 14, 1),
-    (18, 21, 2),
+    (0, 24, 9999),
 ]
 
 
@@ -138,7 +136,7 @@ def post_batch(cfg: Config, items: list[dict], posted_today: int = 0, posted_thi
     api_v1   = _build_api_v1(cfg)
     results  = {}
 
-    for item in items[:1]:  # max 1 per run — best item (already ranked) goes first
+    for item in items:  # 24/7 unlimited — post all ranked HIGH items this run
         item_id       = item["id"]
         text          = item["post_text"]
         quote_tweet_id = item.get("quote_tweet_id")
