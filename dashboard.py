@@ -397,8 +397,9 @@ def api_sync_views():
         rows = conn.execute(
             "SELECT id, tweet_id FROM seen_items "
             "WHERE posted_at IS NOT NULL "
-            "AND tweet_id NOT IN ('skipped_history','dry_run','duplicate_topic') "
-            "AND tweet_id IS NOT NULL ORDER BY posted_at DESC LIMIT 500"
+            "AND tweet_id IS NOT NULL "
+            "AND tweet_id GLOB '[0-9]*' "  # only real numeric tweet IDs (skip sentinels)
+            "ORDER BY posted_at DESC LIMIT 500"
         ).fetchall()
         if not rows:
             conn.close()
