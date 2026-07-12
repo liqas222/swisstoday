@@ -28,18 +28,14 @@ def fetch_views(client: tweepy.Client, tweet_ids: list[str]) -> dict[str, int]:
             )
             if resp.data:
                 for tweet in resp.data:
-                    views = None
-                    # Try non_public_metrics first (own tweets, needs user auth)
-                    if tweet.non_public_metrics:
-                        views = tweet.non_public_metrics.get("impression_count")
-                    # Fall back to organic_metrics
-                    if views is None and tweet.organic_metrics:
-                        views = tweet.organic_metrics.get("impression_count")
-                    # Fall back to public_metrics impression_count
-                    if views is None and tweet.public_metrics:
-                        views = tweet.public_metrics.get("impression_count")
-                    if views is not None:
-                        results[str(tweet.id)] = views
+                    # impression_count can live in any of the three metric
+                    # blocks depending on API tier; take the highest non-zero.
+                    counts = []
+                    for m in (tweet.public_metrics, tweet.non_public_metrics, tweet.organic_metrics):
+                        if m and m.get("impression_count") is not None:
+                            counts.append(m["impression_count"])
+                    if counts:
+                        results[str(tweet.id)] = max(counts)
             if resp.errors:
                 for err in resp.errors:
                     logger.warning("Tweet error: %s", err)

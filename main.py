@@ -162,17 +162,14 @@ def sync_views(cfg):
                 )
                 if resp.data:
                     for tweet in resp.data:
-                        views = None
-                        if tweet.non_public_metrics:
-                            views = tweet.non_public_metrics.get("impression_count")
-                        if views is None and tweet.organic_metrics:
-                            views = tweet.organic_metrics.get("impression_count")
-                        if views is None and tweet.public_metrics:
-                            views = tweet.public_metrics.get("impression_count")
-                        if views is not None:
+                        counts = []
+                        for m in (tweet.public_metrics, tweet.non_public_metrics, tweet.organic_metrics):
+                            if m and m.get("impression_count") is not None:
+                                counts.append(m["impression_count"])
+                        if counts:
                             db_id = id_map.get(str(tweet.id))
                             if db_id:
-                                conn.execute("UPDATE seen_items SET views=? WHERE id=?", (views, db_id))
+                                conn.execute("UPDATE seen_items SET views=? WHERE id=?", (max(counts), db_id))
                                 updated += 1
             except tweepy.TooManyRequests:
                 logger.warning("Views sync: rate limit hit, skipping rest")
