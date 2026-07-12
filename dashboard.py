@@ -140,36 +140,51 @@ def api_posted():
     return jsonify(rows)
 
 
+def _range_days():
+    """Parse ?days= query param, clamped to a sane range (default 30)."""
+    try:
+        d = int(request.args.get("days", 30))
+    except (TypeError, ValueError):
+        d = 30
+    return max(1, min(d, 366))
+
+
 @app.route("/api/chart")
 @require_auth
 def api_chart():
+    days = _range_days()
+    win = f"-{days} days"
     daily = query_db(
         "SELECT date(posted_at, '+2 hours') as day, COUNT(*) as count "
         "FROM seen_items WHERE posted_at IS NOT NULL "
         "AND (tweet_id IS NULL OR tweet_id NOT IN ('skipped_history','dry_run','duplicate_topic')) "
-        "AND posted_at > datetime('now', '-30 days') "
-        "GROUP BY day ORDER BY day"
+        "AND posted_at > datetime('now', ?) "
+        "GROUP BY day ORDER BY day",
+        (win,)
     )
     cats = query_db(
         "SELECT COALESCE(category,'Sonstiges') as category, COUNT(*) as count "
         "FROM seen_items WHERE posted_at IS NOT NULL "
         "AND (tweet_id IS NULL OR tweet_id NOT IN ('skipped_history','dry_run','duplicate_topic')) "
-        "AND posted_at > datetime('now', '-30 days') "
-        "GROUP BY COALESCE(category,'Sonstiges') ORDER BY count DESC"
+        "AND posted_at > datetime('now', ?) "
+        "GROUP BY COALESCE(category,'Sonstiges') ORDER BY count DESC",
+        (win,)
     )
     srcs = query_db(
         "SELECT source_id, COUNT(*) as count "
         "FROM seen_items WHERE posted_at IS NOT NULL "
         "AND (tweet_id IS NULL OR tweet_id NOT IN ('skipped_history','dry_run','duplicate_topic')) "
-        "AND posted_at > datetime('now', '-30 days') "
-        "GROUP BY source_id ORDER BY count DESC"
+        "AND posted_at > datetime('now', ?) "
+        "GROUP BY source_id ORDER BY count DESC",
+        (win,)
     )
     daily_views = query_db(
         "SELECT date(posted_at, '+2 hours') as day, COALESCE(SUM(views),0) as views "
         "FROM seen_items WHERE posted_at IS NOT NULL AND views IS NOT NULL "
         "AND (tweet_id IS NULL OR tweet_id NOT IN ('skipped_history','dry_run','duplicate_topic')) "
-        "AND posted_at > datetime('now', '-30 days') "
-        "GROUP BY day ORDER BY day"
+        "AND posted_at > datetime('now', ?) "
+        "GROUP BY day ORDER BY day",
+        (win,)
     )
     return jsonify({"daily": daily, "categories": cats, "sources": srcs, "daily_views": daily_views})
 
@@ -274,14 +289,16 @@ def api_log():
 @app.route("/api/views")
 @require_auth
 def api_views():
+    win = f"-{_range_days()} days"
     by_cat = query_db(
         "SELECT COALESCE(category,'Sonstiges') as category, "
         "SUM(views) as total_views, COUNT(*) as tweet_count, "
         "ROUND(AVG(views)) as avg_views "
         "FROM seen_items WHERE posted_at IS NOT NULL AND views IS NOT NULL "
         "AND (tweet_id IS NULL OR tweet_id NOT IN ('skipped_history','dry_run','duplicate_topic')) "
-        "AND posted_at > datetime('now', '-30 days') "
-        "GROUP BY COALESCE(category,'Sonstiges') ORDER BY total_views DESC"
+        "AND posted_at > datetime('now', ?) "
+        "GROUP BY COALESCE(category,'Sonstiges') ORDER BY total_views DESC",
+        (win,)
     )
     return jsonify(by_cat)
 

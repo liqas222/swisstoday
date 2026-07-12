@@ -163,6 +163,30 @@ body{
 .chart-card{
   background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;
 }
+/* ── RANGE FILTER BUTTONS ── */
+.range-bar{
+  display:flex;align-items:center;gap:6px;flex-wrap:wrap;
+  padding:12px 20px;background:var(--surface2);border-bottom:1px solid var(--border);
+}
+.range-bar .range-lbl{
+  font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.16em;color:var(--dim);margin-right:4px;
+}
+.range-btn{
+  font-family:'Chakra Petch',sans-serif;font-size:11px;font-weight:600;letter-spacing:.02em;
+  padding:5px 12px;border-radius:999px;cursor:pointer;
+  background:rgba(255,255,255,0.04);border:1px solid var(--border);color:var(--muted);
+  transition:background .15s,color .15s,border-color .15s;
+}
+.range-btn:hover{background:rgba(255,255,255,0.08);color:var(--text2)}
+.range-btn.active{
+  background:rgba(168,85,247,0.14);color:#fff;border-color:transparent;position:relative;
+}
+.range-btn.active::before{
+  content:'';position:absolute;inset:-1px;border-radius:999px;
+  background:linear-gradient(90deg,#6366F1,#A855F7,#EC4899);
+  -webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);
+  -webkit-mask-composite:xor;mask-composite:exclude;padding:1px;
+}
 .chart-hdr{
   background:var(--surface2);padding:14px 20px;border-bottom:1px solid var(--border);
   display:flex;align-items:center;justify-content:space-between;
@@ -631,14 +655,22 @@ footer{
 
     <!-- Panel 1: Charts (full width) -->
     <div class="chart-card" style="grid-column:1 / -1">
+      <div class="range-bar" id="range-bar">
+        <span class="range-lbl">Zeitraum</span>
+        <button class="range-btn" data-days="1">Heute</button>
+        <button class="range-btn" data-days="7">Diese Woche</button>
+        <button class="range-btn" data-days="14">Letzte 2 Wochen</button>
+        <button class="range-btn active" data-days="30">Monat</button>
+        <button class="range-btn" data-days="365">Jahr</button>
+      </div>
       <div class="chart-hdr">
-        <h2>Tweets pro Tag — letzter Monat</h2>
+        <h2 id="tweets-chart-lbl">Tweets pro Tag — letzter Monat</h2>
         <span style="font-size:11px;color:var(--muted);font-family:'JetBrains Mono',monospace" id="chart-total">—</span>
       </div>
       <div class="chart-wrap"><div class="bar-chart" id="monthChart"></div></div>
 
       <div class="chart-section-hdr">
-        <span>Views pro Tag — letzter Monat</span>
+        <span id="views-chart-lbl">Views pro Tag — letzter Monat</span>
         <span style="font-size:11px;color:var(--muted);font-family:'JetBrains Mono',monospace" id="views-chart-total">—</span>
       </div>
       <div class="chart-wrap"><div class="bar-chart" id="viewsChart"></div></div>
@@ -806,29 +838,60 @@ function initChart(labels,data){
   }).join('');
 }
 
-async function loadMonthChart(){
-  const d=await api('/api/chart');
+// ── Time-range state ─────────────────────────────────────────────────────────
+let chartDays=30;
+let rangeLabel='letzter Monat';
+const RANGE_LABELS={1:'heute',7:'diese Woche',14:'letzte 2 Wochen',30:'letzter Monat',365:'letztes Jahr'};
+
+// Bucket a {yyyy-mm-dd: value} map into bars for the last `days` days.
+// ≤31 days → one bar per day; larger ranges → weekly buckets.
+function buildBuckets(map,days){
+  const perDay=[];
+  for(let i=days-1;i>=0;i--){
+    const dt=new Date();dt.setDate(dt.getDate()-i);
+    const key=new Date(dt.getTime()+2*3600000).toISOString().slice(0,10);
+    perDay.push({lbl:dt.getDate()+'.'+(dt.getMonth()+1)+'.',val:map[key]||0});
+  }
+  if(days<=31)return{labels:perDay.map(x=>x.lbl),data:perDay.map(x=>x.val)};
   const labels=[],data=[];
+  for(let i=0;i<perDay.length;i+=7){
+    const chunk=perDay.slice(i,i+7);
+    labels.push(chunk[0].lbl);
+    data.push(chunk.reduce((s,x)=>s+x.val,0));
+  }
+  return{labels,data};
+}
+
+function setRange(days){
+  chartDays=days;
+  rangeLabel=RANGE_LABELS[days]||`letzte ${days} Tage`;
+  document.querySelectorAll('#range-bar .range-btn').forEach(b=>{
+    b.classList.toggle('active',+b.dataset.days===days);
+  });
+  loadMonthChart();
+  loadViews();
+}
+
+async function loadMonthChart(){
+  const d=await api('/api/chart?days='+chartDays);
+  const gran=chartDays<=31?'pro Tag':'pro Woche';
+  document.getElementById('tweets-chart-lbl').textContent=`Tweets ${gran} — ${rangeLabel}`;
+  document.getElementById('views-chart-lbl').textContent=`Views ${gran} — ${rangeLabel}`;
+
   const dayMap={};
   (d.daily||[]).forEach(r=>{dayMap[r.day]=r.count});
-  for(let i=29;i>=0;i--){
-    const dt=new Date();dt.setDate(dt.getDate()-i);
-    const swissMs=dt.getTime()+2*3600000;
-    const key=new Date(swissMs).toISOString().slice(0,10);
-    const lbl=(dt.getDate()+'.'+(dt.getMonth()+1)+'.');
-    labels.push(lbl);data.push(dayMap[key]||0);
-  }
+  const {labels,data}=buildBuckets(dayMap,chartDays);
   const total=data.reduce((a,b)=>a+b,0);
   document.getElementById('chart-total').textContent=total+' Tweets gesamt';
   initChart(labels,data);
-  // 7-day sparkline
+  // sparkline over the last few buckets
   renderSparkline(data.slice(-7));
 
   // Category breakdown
   const cats=d.categories||[];
   const maxCat=cats[0]?.count||1;
   const catEl=document.getElementById('cat-breakdown');
-  catEl.innerHTML=`<div class="sec-lbl" style="margin-bottom:6px">Tweets pro Kategorie — letzter Monat</div>`+
+  catEl.innerHTML=`<div class="sec-lbl" style="margin-bottom:6px">Tweets pro Kategorie — ${rangeLabel}</div>`+
     cats.map(({category:cat,count:cnt})=>{
       const icon=CAT_ICONS[cat]||'📌';
       return`<div style="display:flex;align-items:center;gap:10px">
@@ -838,18 +901,12 @@ async function loadMonthChart(){
         </div>
         <span style="font-size:11px;font-weight:700;color:var(--text);width:24px;text-align:right;flex-shrink:0;font-family:'JetBrains Mono',monospace">${cnt}</span>
       </div>`;
-    }).join('');
+    }).join('')||'<div style="font-size:10px;color:var(--dim)">Keine Daten in diesem Zeitraum</div>';
 
-  // Views per day chart
+  // Views per day/week chart
   const dvMap={};
   (d.daily_views||[]).forEach(r=>{dvMap[r.day]=r.views});
-  const vdata=[];
-  for(let i=29;i>=0;i--){
-    const dt=new Date();dt.setDate(dt.getDate()-i);
-    const swissMs=dt.getTime()+2*3600000;
-    const key=new Date(swissMs).toISOString().slice(0,10);
-    vdata.push(dvMap[key]||0);
-  }
+  const {data:vdata}=buildBuckets(dvMap,chartDays);
   const vtotal=vdata.reduce((a,b)=>a+b,0);
   document.getElementById('views-chart-total').textContent=vtotal>0?vtotal.toLocaleString('de-CH')+' Views gesamt':'Keine Views-Daten';
   const vmax=Math.max(...vdata,1);
@@ -869,7 +926,7 @@ async function loadMonthChart(){
   const srcs=d.sources||[];
   const maxSrc=srcs[0]?.count||1;
   const srcEl=document.getElementById('src-breakdown');
-  srcEl.innerHTML=`<div class="sec-lbl" style="margin-bottom:6px">Tweets pro Quelle — letzter Monat</div>`+
+  srcEl.innerHTML=`<div class="sec-lbl" style="margin-bottom:6px">Tweets pro Quelle — ${rangeLabel}</div>`+
     srcs.map(({source_id:src,count:cnt})=>{
       const c=srcColor(src);
       return`<div style="display:flex;align-items:center;gap:10px">
@@ -884,17 +941,17 @@ async function loadMonthChart(){
 
 // ── Views per category ────────────────────────────────────────────────────
 async function loadViews(){
-  const rows=await api('/api/views');
+  const rows=await api('/api/views?days='+chartDays);
   const el=document.getElementById('views-breakdown');
   if(!rows||!rows.length){
-    el.innerHTML='<div style="font-size:10px;color:var(--dim)">Views: Noch keine Daten — <code>python sync_views.py</code> ausführen</div>';
+    el.innerHTML=`<div style="font-size:10px;color:var(--dim)">Keine Views-Daten in diesem Zeitraum</div>`;
     return;
   }
   const maxV=rows[0]?.total_views||1;
   const totalViews=rows.reduce((s,r)=>s+(r.total_views||0),0);
   el.innerHTML=
     `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
-      <div class="sec-lbl">Views pro Kategorie — letzter Monat</div>
+      <div class="sec-lbl">Views pro Kategorie — ${rangeLabel}</div>
       <div style="font-size:11px;font-weight:700;color:var(--muted);font-family:'JetBrains Mono',monospace">${totalViews.toLocaleString('de-CH')} total</div>
     </div>`+
     rows.map(r=>{
@@ -1345,6 +1402,10 @@ async function refreshAll(){
 }
 
 document.addEventListener('DOMContentLoaded',()=>{
+  // Time-range filter buttons
+  document.querySelectorAll('#range-bar .range-btn').forEach(btn=>{
+    btn.addEventListener('click',()=>setRange(+btn.dataset.days));
+  });
   refreshAll();
   refreshFollowers();
   loadFollowerChart();
