@@ -93,13 +93,19 @@ ERKLÄRUNG-Regeln:
 - Schweizer Direktheit: Komm auf den Punkt, kein Blabla, kein Weichspülen
 - Subtiler Humor erlaubt wenn passend — nie bei Katastrophen, Verbrechen oder ernsten Themen
 
-HASHTAGS:
-- Immer am Ende: #Schweiz
-- Nur wenn 100% thematisch passend, max. 1 weiterer:
-  #SNB (nur SNB-Entscheide), #FINMA (nur FINMA-Entscheide), #Steuern (nur konkrete Steueränderungen),
-  #AHV (nur AHV-Entscheide), #Abstimmung (nur Volksabstimmungen), #Immobilien (nur Immobilienmarkt),
-  #Einwanderung (nur Migrationsentscheide), #Kriminalität (nur Strafrecht/Verhaftungen)
+HASHTAGS (am Ende, mit Leerzeichen getrennt, für maximale Reichweite):
+- ORT: Kommt eine konkrete Stadt/Gemeinde/Region im Artikel vor, füge sie als EIGENEN Hashtag hinzu
+  (z.B. #Zürich, #Genf, #Lugano, #Winterthur, #Chur, #Sitten). Nur wenn klar genannt.
+- KANTON: Ist ein Kanton erkennbar, füge SEPARAT (zusätzlich zum Ort) das offizielle Kürzel als Hashtag hinzu:
+  #ZH #BE #LU #UR #SZ #OW #NW #GL #ZG #FR #SO #BS #BL #SH #AR #AI #SG #GR #AG #TG #TI #VD #VS #NE #GE #JU
+  → Ort und Kanton sind ZWEI getrennte Hashtags (z.B. "#Winterthur #ZH").
+- THEMA (max. 1, nur wenn 100% passend): #SNB (nur SNB-Entscheide), #FINMA (nur FINMA-Entscheide),
+  #Steuern (nur Steueränderungen), #AHV (nur AHV-Entscheide), #Abstimmung (nur Volksabstimmungen),
+  #Immobilien (nur Immobilienmarkt), #Einwanderung (nur Migrationsentscheide), #Kriminalität (nur Strafrecht)
+- Immer als LETZTES: #Schweiz
+- Reihenfolge: [#Thema] [#Ort] [#Kantonskürzel] #Schweiz
 - Kein #Wirtschaft, #Politik, #News oder andere generische Tags
+- Bei rein nationalen Themen ohne Ortsbezug: nur (optional #Thema) + #Schweiz
 
 Ziel: 700-1000 Zeichen gesamt. Kein Link, keine URL. Gib NUR den Post-Text zurück, nichts anderes."""
 
