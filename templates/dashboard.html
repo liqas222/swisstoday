@@ -1499,7 +1499,7 @@ function showNextCelebration(){
   if(!celebrateQueue.length)return;
   const b=celebrateQueue[0];
   document.getElementById('celebrate-icon').textContent=b.icon||'🏆';
-  document.getElementById('celebrate-title').textContent=b.title||'Erfolg';
+  document.getElementById('celebrate-title').textContent=b.reached_title||b.title||'Erfolg';
   document.getElementById('celebrate-label').textContent=b.label||'';
   document.getElementById('celebrate-overlay').classList.add('open');
   spawnConfetti();

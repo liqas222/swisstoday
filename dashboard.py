@@ -660,6 +660,9 @@ def api_achievements():
 
     badges = []
 
+    def fmt(n):
+        return f"{n:,}".replace(",", "'")
+
     # Follower milestones
     f_tiers = [10, 50, 100, 250, 500, 1000, 2500, 5000, 10000]
     f_ach, f_next = milestone(followers, f_tiers)
@@ -667,7 +670,8 @@ def api_achievements():
         "id": "followers", "icon": "👥", "label": "Follower",
         "value": followers, "achieved": f_ach, "next": f_next,
         "unlocked": f_ach > 0,
-        "title": f"{f_ach}+ Follower" if f_ach else "Erste Follower",
+        "title": f"Ziel: {fmt(f_next)} Follower",
+        "reached_title": f"{fmt(f_ach)} Follower",
     })
 
     # Total posts milestones
@@ -677,7 +681,8 @@ def api_achievements():
         "id": "posts", "icon": "📢", "label": "Tweets gesamt",
         "value": total_posted, "achieved": p_ach, "next": p_next,
         "unlocked": p_ach > 0,
-        "title": f"{p_ach}+ Tweets" if p_ach else "Erste Tweets",
+        "title": f"Ziel: {fmt(p_next)} Tweets",
+        "reached_title": f"{fmt(p_ach)} Tweets",
     })
 
     # Views in a single day
@@ -687,7 +692,8 @@ def api_achievements():
         "id": "dayviews", "icon": "🔥", "label": "Views an einem Tag",
         "value": max_day_views, "achieved": v_ach, "next": v_next,
         "unlocked": v_ach > 0,
-        "title": f"{v_ach}+ Views/Tag" if v_ach else "Erste Views",
+        "title": f"Ziel: {fmt(v_next)} Views/Tag",
+        "reached_title": f"{fmt(v_ach)} Views/Tag",
     })
 
     # Total views
@@ -697,7 +703,8 @@ def api_achievements():
         "id": "totalviews", "icon": "👁", "label": "Views gesamt",
         "value": total_views, "achieved": tv_ach, "next": tv_next,
         "unlocked": tv_ach > 0,
-        "title": f"{tv_ach}+ Views" if tv_ach else "Erste Views",
+        "title": f"Ziel: {fmt(tv_next)} Views",
+        "reached_title": f"{fmt(tv_ach)} Views",
     })
 
     # Posting streak
@@ -707,7 +714,8 @@ def api_achievements():
         "id": "streak", "icon": "⚡", "label": "Streak",
         "value": streak, "achieved": s_ach, "next": s_next,
         "unlocked": streak >= 1,
-        "title": f"{streak}-Tage-Streak" if streak >= 1 else "Streak starten",
+        "title": f"Ziel: {s_next}-Tage-Streak",
+        "reached_title": f"{s_ach}-Tage-Streak",
     })
 
     return jsonify({"badges": badges})
