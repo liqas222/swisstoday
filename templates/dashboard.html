@@ -487,6 +487,49 @@ footer{
 @media(max-width:900px){.highlights-row{grid-template-columns:1fr}.ach-grid{grid-template-columns:repeat(3,1fr)}}
 @media(max-width:560px){.ach-grid{grid-template-columns:repeat(2,1fr)}}
 
+/* ── ACHIEVEMENT CELEBRATION ── */
+.celebrate-overlay{
+  display:none;position:fixed;inset:0;z-index:700;
+  background:rgba(0,0,0,0.72);backdrop-filter:blur(6px);
+  align-items:center;justify-content:center;padding:20px;
+}
+.celebrate-overlay.open{display:flex}
+.celebrate-card{
+  position:relative;z-index:2;text-align:center;
+  background:linear-gradient(160deg,#1c1533,#11111A);
+  border:1px solid rgba(168,85,247,0.4);border-radius:20px;
+  padding:34px 44px;max-width:420px;
+  box-shadow:0 30px 90px rgba(0,0,0,0.7),0 0 60px rgba(168,85,247,0.25);
+  animation:celebratePop .5s cubic-bezier(.2,1.3,.4,1);
+}
+@keyframes celebratePop{0%{transform:scale(.5);opacity:0}100%{transform:scale(1);opacity:1}}
+.celebrate-icon{
+  font-size:64px;line-height:1;margin-bottom:10px;
+  filter:drop-shadow(0 0 22px rgba(245,158,11,0.6));
+  animation:celebrateFloat 2.6s ease-in-out infinite;
+}
+@keyframes celebrateFloat{0%,100%{transform:translateY(0) rotate(-4deg)}50%{transform:translateY(-9px) rotate(4deg)}}
+.celebrate-kicker{
+  font-size:12px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--yellow);margin-bottom:6px;font-family:'Chakra Petch',sans-serif;
+}
+.celebrate-title{
+  font-size:24px;font-weight:800;letter-spacing:-.5px;color:#fff;margin-bottom:4px;
+  font-family:'Chakra Petch',sans-serif;
+  background:linear-gradient(90deg,#A855F7,#EC4899);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+}
+.celebrate-label{font-size:12px;color:var(--muted);margin-bottom:20px}
+.celebrate-btn{
+  background:linear-gradient(90deg,#6366F1,#A855F7);border:none;color:#fff;
+  border-radius:999px;padding:11px 26px;font-size:13px;font-weight:700;cursor:pointer;
+  font-family:'Chakra Petch',sans-serif;letter-spacing:.02em;
+  box-shadow:0 4px 20px rgba(99,102,241,0.4);transition:opacity .15s,transform .1s;
+}
+.celebrate-btn:hover{opacity:.92;transform:translateY(-1px)}
+.confetti-piece{position:absolute;top:-12px;width:9px;height:9px;border-radius:2px;opacity:.95;animation:confettiFall linear forwards}
+@keyframes confettiFall{to{transform:translateY(110vh) rotate(720deg);opacity:.15}}
+
 /* ── BREAKDOWN ROWS ── */
 .breakdown-wrap{border-top:1px solid var(--border);padding:14px 18px;display:flex;flex-direction:column;gap:6px}
 
@@ -741,6 +784,18 @@ footer{
     <button class="modal-x" onclick="closeTweetList()">✕</button>
     <h3><span id="tl-title">Gepostete Tweets</span> <span id="tl-cnt" style="font-size:13px;color:var(--muted);font-weight:400"></span></h3>
     <div id="tl-list" style="display:flex;flex-direction:column;gap:1px;margin-top:16px;max-height:60vh;overflow-y:auto"></div>
+  </div>
+</div>
+
+<!-- ACHIEVEMENT CELEBRATION -->
+<div class="celebrate-overlay" id="celebrate-overlay" onclick="if(event.target===this)closeCelebration()">
+  <div id="confetti-layer" style="position:absolute;inset:0;overflow:hidden;pointer-events:none"></div>
+  <div class="celebrate-card">
+    <div class="celebrate-icon" id="celebrate-icon">🏆</div>
+    <div class="celebrate-kicker">🎉 Erfolg freigeschaltet!</div>
+    <div class="celebrate-title" id="celebrate-title">—</div>
+    <div class="celebrate-label" id="celebrate-label">—</div>
+    <button class="celebrate-btn" onclick="closeCelebration()">Weiter so! 🚀</button>
   </div>
 </div>
 
@@ -1181,7 +1236,7 @@ function openTweetList(){
 }
 function closeTweetList(){document.getElementById('tweet-modal').classList.remove('open')}
 
-document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeModal();closeTweetList()}});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeModal();closeTweetList();closeCelebration()}});
 
 // ── Insights ───────────────────────────────────────────────────────────────
 async function fetchInsights(){
@@ -1421,6 +1476,43 @@ async function loadHighlights(){
   }catch(e){console.error('highlights',e)}
 }
 
+// ── Achievement celebration ────────────────────────────────────────────────────
+const ACH_KEY='ach_tiers_v1';
+let celebrateQueue=[];
+function spawnConfetti(){
+  const layer=document.getElementById('confetti-layer');
+  const cols=['#6366F1','#A855F7','#EC4899','#F59E0B','#22C55E','#06B6D4','#FCD34D'];
+  let html='';
+  for(let i=0;i<70;i++){
+    const left=Math.round(Math.random()*100);
+    const dur=(2.2+Math.random()*2.2).toFixed(2);
+    const delay=(Math.random()*0.8).toFixed(2);
+    const col=cols[i%cols.length];
+    const w=6+Math.round(Math.random()*7);
+    html+=`<div class="confetti-piece" style="left:${left}%;width:${w}px;height:${w}px;background:${col};animation-duration:${dur}s;animation-delay:${delay}s"></div>`;
+  }
+  layer.innerHTML=html;
+  setTimeout(()=>{layer.innerHTML=''},5200);
+}
+let _celebrateTimer=null;
+function showNextCelebration(){
+  if(!celebrateQueue.length)return;
+  const b=celebrateQueue[0];
+  document.getElementById('celebrate-icon').textContent=b.icon||'🏆';
+  document.getElementById('celebrate-title').textContent=b.title||'Erfolg';
+  document.getElementById('celebrate-label').textContent=b.label||'';
+  document.getElementById('celebrate-overlay').classList.add('open');
+  spawnConfetti();
+  clearTimeout(_celebrateTimer);
+  _celebrateTimer=setTimeout(closeCelebration,9000);
+}
+function closeCelebration(){
+  clearTimeout(_celebrateTimer);
+  document.getElementById('celebrate-overlay').classList.remove('open');
+  celebrateQueue.shift();
+  if(celebrateQueue.length)setTimeout(showNextCelebration,500);
+}
+
 // ── Achievements ──────────────────────────────────────────────────────────────
 async function loadAchievements(){
   try{
@@ -1429,6 +1521,26 @@ async function loadAchievements(){
     const grid=document.getElementById('ach-grid');
     const unlocked=badges.filter(b=>b.unlocked).length;
     document.getElementById('ach-cnt').textContent=`${unlocked}/${badges.length}`;
+
+    // Detect tier advances vs. last-known state and celebrate new unlocks
+    let stored={};
+    try{stored=JSON.parse(localStorage.getItem(ACH_KEY)||'{}')}catch(e){}
+    const isFirst=Object.keys(stored).length===0;
+    const cur={};
+    const newly=[];
+    badges.forEach(b=>{
+      cur[b.id]=b.achieved;
+      if(!isFirst && b.achieved>(stored[b.id]||0)) newly.push(b);
+    });
+    localStorage.setItem(ACH_KEY,JSON.stringify(cur));
+    if(newly.length){
+      const wasEmpty=celebrateQueue.length===0;
+      celebrateQueue.push(...newly);
+      if(wasEmpty && !document.getElementById('celebrate-overlay').classList.contains('open')){
+        showNextCelebration();
+      }
+    }
+
     grid.innerHTML=badges.map(b=>{
       const pct=b.next>0?Math.min(100,Math.round((b.value/b.next)*100)):100;
       return `<div class="ach-badge ${b.unlocked?'unlocked':'locked'}" title="${esc(b.title)}">
