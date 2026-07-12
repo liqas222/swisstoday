@@ -627,7 +627,7 @@ footer{
     <div class="highlight-card hl-purple">
       <div class="hl-icon">⭐</div>
       <div class="hl-body">
-        <div class="hl-lbl">Top-Quelle der Woche</div>
+        <div class="hl-lbl">Top-Quelle</div>
         <div class="hl-val" id="hl-top-src">—</div>
         <div class="hl-sub" id="hl-top-src-sub">Noch keine Daten</div>
       </div>
@@ -662,6 +662,7 @@ footer{
         <button class="range-btn" data-days="14">Letzte 2 Wochen</button>
         <button class="range-btn active" data-days="30">Monat</button>
         <button class="range-btn" data-days="365">Jahr</button>
+        <a id="csv-export" class="range-btn" href="{{ base_path }}/api/export.csv?days=30" style="margin-left:auto;text-decoration:none" title="Als CSV exportieren">⬇ CSV</a>
       </div>
       <div class="chart-hdr">
         <h2 id="tweets-chart-lbl">Tweets pro Tag — letzter Monat</h2>
@@ -738,7 +739,7 @@ footer{
 <div class="overlay" id="tweet-modal" onclick="if(event.target===this)closeTweetList()">
   <div class="modal" style="max-width:680px">
     <button class="modal-x" onclick="closeTweetList()">✕</button>
-    <h3>Gepostete Tweets <span id="tl-cnt" style="font-size:13px;color:var(--muted);font-weight:400"></span></h3>
+    <h3><span id="tl-title">Gepostete Tweets</span> <span id="tl-cnt" style="font-size:13px;color:var(--muted);font-weight:400"></span></h3>
     <div id="tl-list" style="display:flex;flex-direction:column;gap:1px;margin-top:16px;max-height:60vh;overflow-y:auto"></div>
   </div>
 </div>
@@ -868,8 +869,11 @@ function setRange(days){
   document.querySelectorAll('#range-bar .range-btn').forEach(b=>{
     b.classList.toggle('active',+b.dataset.days===days);
   });
+  const exp=document.getElementById('csv-export');
+  if(exp)exp.href=BASE+'/api/export.csv?days='+days;
   loadMonthChart();
   loadViews();
+  loadHighlights();
 }
 
 async function loadMonthChart(){
@@ -894,7 +898,7 @@ async function loadMonthChart(){
   catEl.innerHTML=`<div class="sec-lbl" style="margin-bottom:6px">Tweets pro Kategorie — ${rangeLabel}</div>`+
     cats.map(({category:cat,count:cnt})=>{
       const icon=CAT_ICONS[cat]||'📌';
-      return`<div style="display:flex;align-items:center;gap:10px">
+      return`<div style="display:flex;align-items:center;gap:10px;cursor:pointer;border-radius:6px;padding:2px 4px;margin:0 -4px" onclick="openBreakdown('category',${JSON.stringify(cat)})" onmouseenter="this.style.background='rgba(255,255,255,0.03)'" onmouseleave="this.style.background=''" title="Tweets dieser Kategorie anzeigen">
         <span style="font-size:11px;width:130px;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text2)">${icon} ${esc(cat)}</span>
         <div style="flex:1;height:3px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden">
           <div style="width:${cnt/maxCat*100}%;height:100%;background:linear-gradient(90deg,#6366F1,#A855F7);border-radius:3px;transition:width .5s ease"></div>
@@ -929,7 +933,7 @@ async function loadMonthChart(){
   srcEl.innerHTML=`<div class="sec-lbl" style="margin-bottom:6px">Tweets pro Quelle — ${rangeLabel}</div>`+
     srcs.map(({source_id:src,count:cnt})=>{
       const c=srcColor(src);
-      return`<div style="display:flex;align-items:center;gap:10px">
+      return`<div style="display:flex;align-items:center;gap:10px;cursor:pointer;border-radius:6px;padding:2px 4px;margin:0 -4px" onclick="openBreakdown('source',${JSON.stringify(src)})" onmouseenter="this.style.background='rgba(255,255,255,0.03)'" onmouseleave="this.style.background=''" title="Tweets dieser Quelle anzeigen">
         <span style="font-size:10px;font-weight:700;color:${c};width:130px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex-shrink:0">${esc(src)}</span>
         <div style="flex:1;height:3px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden">
           <div style="width:${cnt/maxSrc*100}%;height:100%;background:${c};border-radius:3px;transition:width .5s ease"></div>
@@ -940,33 +944,48 @@ async function loadMonthChart(){
 }
 
 // ── Views per category ────────────────────────────────────────────────────
-async function loadViews(){
-  const rows=await api('/api/views?days='+chartDays);
+let _viewsRows=[];
+let viewsSort='total'; // 'total' | 'avg'
+function toggleViewsSort(){
+  viewsSort=viewsSort==='total'?'avg':'total';
+  renderViews();
+}
+function renderViews(){
   const el=document.getElementById('views-breakdown');
-  if(!rows||!rows.length){
+  if(!_viewsRows||!_viewsRows.length){
     el.innerHTML=`<div style="font-size:10px;color:var(--dim)">Keine Views-Daten in diesem Zeitraum</div>`;
     return;
   }
-  const maxV=rows[0]?.total_views||1;
+  const rows=[..._viewsRows].sort((a,b)=>
+    viewsSort==='avg'?(b.avg_views||0)-(a.avg_views||0):(b.total_views||0)-(a.total_views||0));
+  const maxKey=viewsSort==='avg'?'avg_views':'total_views';
+  const maxV=Math.max(...rows.map(r=>r[maxKey]||0),1);
   const totalViews=rows.reduce((s,r)=>s+(r.total_views||0),0);
   el.innerHTML=
     `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
       <div class="sec-lbl">Views pro Kategorie — ${rangeLabel}</div>
-      <div style="font-size:11px;font-weight:700;color:var(--muted);font-family:'JetBrains Mono',monospace">${totalViews.toLocaleString('de-CH')} total</div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <button onclick="toggleViewsSort()" style="font-family:'Chakra Petch',sans-serif;font-size:10px;font-weight:600;padding:3px 9px;border-radius:999px;cursor:pointer;background:rgba(168,85,247,0.12);color:var(--purple);border:1px solid rgba(168,85,247,0.25)" title="Sortierung wechseln">↕ ${viewsSort==='avg'?'∅ pro Tweet':'Total'}</button>
+        <div style="font-size:11px;font-weight:700;color:var(--muted);font-family:'JetBrains Mono',monospace">${totalViews.toLocaleString('de-CH')} total</div>
+      </div>
     </div>`+
     rows.map(r=>{
       const icon=CAT_ICONS[r.category]||'📌';
-      const pct=(r.total_views||0)/maxV*100;
+      const pct=(r[maxKey]||0)/maxV*100;
       const avg=r.avg_views?Math.round(r.avg_views).toLocaleString('de-CH'):'—';
-      return`<div style="display:flex;align-items:center;gap:10px">
+      return`<div style="display:flex;align-items:center;gap:10px;cursor:pointer;border-radius:6px;padding:2px 4px;margin:0 -4px" onclick="openBreakdown('category',${JSON.stringify(r.category)})" onmouseenter="this.style.background='rgba(255,255,255,0.03)'" onmouseleave="this.style.background=''" title="Tweets dieser Kategorie anzeigen">
         <span style="font-size:11px;width:130px;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text2)">${icon} ${esc(r.category)}</span>
         <div style="flex:1;height:3px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden">
           <div style="width:${pct}%;height:100%;background:var(--purple);border-radius:3px;transition:width .5s ease"></div>
         </div>
-        <span style="font-size:10px;color:var(--dim);width:50px;text-align:right;flex-shrink:0;font-family:'JetBrains Mono',monospace">∅${avg}</span>
-        <span style="font-size:11px;font-weight:700;color:var(--text);width:50px;text-align:right;flex-shrink:0;font-family:'JetBrains Mono',monospace">${(r.total_views||0).toLocaleString('de-CH')}</span>
+        <span style="font-size:10px;color:${viewsSort==='avg'?'var(--purple)':'var(--dim)'};width:50px;text-align:right;flex-shrink:0;font-family:'JetBrains Mono',monospace">∅${avg}</span>
+        <span style="font-size:11px;font-weight:700;color:${viewsSort==='total'?'var(--text)':'var(--dim)'};width:50px;text-align:right;flex-shrink:0;font-family:'JetBrains Mono',monospace">${(r.total_views||0).toLocaleString('de-CH')}</span>
       </div>`;
     }).join('');
+}
+async function loadViews(){
+  _viewsRows=await api('/api/views?days='+chartDays);
+  renderViews();
 }
 
 // ── Category icons (used by chart breakdown) ─────────────────────────────────
@@ -1109,8 +1128,44 @@ function openModal(idx){
 }
 function closeModal(){document.getElementById('modal').classList.remove('open')}
 
+// Render a list of tweet rows into the shared modal. `items` opens the detail
+// modal via openItemModal on click.
+function renderTweetModalList(items){
+  const el=document.getElementById('tl-list');
+  window._modalListItems=items;
+  el.innerHTML=items.length?items.map((r,i)=>{
+    const c=srcColor(r.source_id);
+    const v=(r.views!=null&&r.views>0)?`<span style="font-size:10px;color:var(--cyan);font-family:'JetBrains Mono',monospace">👁 ${Number(r.views).toLocaleString('de-CH')}</span>`:'';
+    return`<div style="padding:12px 4px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .1s;border-radius:8px" onclick="openItemModal(window._modalListItems[${i}])" onmouseenter="this.style.background='rgba(255,255,255,0.03)'" onmouseleave="this.style.background=''">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+        <span class="src-tag" style="background:${c}18;color:${c};border:1px solid ${c}33;font-size:10px;padding:2px 8px;border-radius:999px">${esc(r.source_id)}</span>
+        ${v}
+        <span style="font-size:10px;color:var(--dim);font-family:'JetBrains Mono',monospace;margin-left:auto">${fmt(r.posted_at)}</span>
+      </div>
+      <div style="font-size:12px;color:var(--text2);line-height:1.6;white-space:pre-wrap;word-break:break-word">${esc(trunc(r.post_text||r.title,200))}</div>
+    </div>`;
+  }).join(''):'<div style="text-align:center;padding:40px;color:var(--dim)">Keine Tweets gefunden</div>';
+  document.getElementById('tweet-modal').classList.add('open');
+}
+
+// Open the filtered tweet list for a clicked category/source breakdown row.
+async function openBreakdown(field,value){
+  document.getElementById('tl-title').textContent=(field==='category'?'Kategorie: ':'Quelle: ')+value;
+  document.getElementById('tl-cnt').textContent='— lädt…';
+  document.getElementById('tl-list').innerHTML='';
+  document.getElementById('tweet-modal').classList.add('open');
+  try{
+    const rows=await api(`/api/items/by?field=${encodeURIComponent(field)}&value=${encodeURIComponent(value)}&days=${chartDays}`);
+    document.getElementById('tl-cnt').textContent=`— ${rows.length} Tweets · ${rangeLabel}`;
+    renderTweetModalList(rows);
+  }catch(e){
+    document.getElementById('tl-cnt').textContent='— Fehler';
+  }
+}
+
 function openTweetList(){
   const el=document.getElementById('tl-list');
+  document.getElementById('tl-title').textContent='Gepostete Tweets';
   document.getElementById('tl-cnt').textContent=`— ${postedItems.length} Tweets`;
   el.innerHTML=postedItems.length?postedItems.map((r,i)=>{
     const c=srcColor(r.source_id);
@@ -1344,7 +1399,7 @@ async function globalRefresh(){
 function fmtNum(n){return(n==null)?'—':Number(n).toLocaleString('de-CH')}
 async function loadHighlights(){
   try{
-    const d=await api('/api/highlights');
+    const d=await api('/api/highlights?days='+chartDays);
     // Best tweet
     const bt=d.best_tweet;
     if(bt){

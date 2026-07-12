@@ -216,14 +216,29 @@ def api_sources_today():
     return jsonify(rows)
 
 
-@app.route("/api/items/queue")
+@app.route("/api/items/by")
 @require_auth
-def api_queue():
+def api_items_by():
+    """Posted tweets filtered by category or source within a time range.
+    Used when a category/source breakdown row is clicked."""
+    win = f"-{_range_days()} days"
+    field = request.args.get("field", "")
+    value = request.args.get("value", "")
+    if field == "category":
+        cond = "COALESCE(category,'Sonstiges')=?"
+    elif field == "source":
+        cond = "source_id=?"
+    else:
+        return jsonify([])
     rows = query_db(
-        "SELECT id, source_id, title, url, post_text, category, viral_score, fetched_at "
-        "FROM seen_items WHERE relevance='HIGH' AND posted_at IS NULL "
-        "AND error IS NULL AND post_text IS NOT NULL "
-        "ORDER BY COALESCE(viral_score,0) DESC, id ASC"
+        "SELECT source_id, title, url, post_text, posted_at, tweet_id, "
+        "COALESCE(category,'Sonstiges') as category, COALESCE(views,0) as views "
+        "FROM seen_items WHERE posted_at IS NOT NULL "
+        "AND (tweet_id IS NULL OR tweet_id NOT IN ('skipped_history','dry_run','duplicate_topic')) "
+        "AND posted_at > datetime('now', ?) "
+        f"AND {cond} "
+        "ORDER BY views DESC, posted_at DESC LIMIT 100",
+        (win, value)
     )
     return jsonify(rows)
 
@@ -258,6 +273,34 @@ def api_sources():
         "FROM seen_items GROUP BY source_id ORDER BY total DESC"
     )
     return jsonify(rows)
+
+
+@app.route("/api/export.csv")
+@require_auth
+def api_export_csv():
+    """Download posted tweets (with views) for the selected range as CSV."""
+    import csv
+    import io as _io
+    win = f"-{_range_days()} days"
+    rows = query_db(
+        "SELECT posted_at, source_id, COALESCE(category,'Sonstiges') as category, "
+        "COALESCE(views,0) as views, tweet_id, title, post_text "
+        "FROM seen_items WHERE posted_at IS NOT NULL "
+        "AND (tweet_id IS NULL OR tweet_id NOT IN ('skipped_history','dry_run','duplicate_topic')) "
+        "AND posted_at > datetime('now', ?) "
+        "ORDER BY posted_at DESC",
+        (win,)
+    )
+    buf = _io.StringIO()
+    w = csv.writer(buf)
+    w.writerow(["posted_at", "source", "category", "views", "tweet_id", "title", "post_text"])
+    for r in rows:
+        w.writerow([r["posted_at"], r["source_id"], r["category"], r["views"],
+                    r["tweet_id"], r["title"], r["post_text"]])
+    resp = make_response(buf.getvalue())
+    resp.headers["Content-Type"] = "text/csv; charset=utf-8"
+    resp.headers["Content-Disposition"] = "attachment; filename=swissintel_export.csv"
+    return resp
 
 
 @app.route("/api/log")
@@ -516,23 +559,27 @@ def api_trends():
 @app.route("/api/highlights")
 @require_auth
 def api_highlights():
-    """Best-of statistics: top tweet, top source this week, best time of day."""
+    """Best-of statistics for the selected range: top tweet, top source, best time of day."""
     EXCL = "('skipped_history','dry_run','duplicate_topic','archived')"
+    win = f"-{_range_days()} days"
 
     best_tweet = query_db(
         f"SELECT title, post_text, views, COALESCE(category,'Sonstiges') as category, "
         f"source_id, tweet_id, posted_at "
         f"FROM seen_items WHERE posted_at IS NOT NULL AND views IS NOT NULL AND views > 0 "
         f"AND tweet_id NOT IN {EXCL} "
-        f"ORDER BY views DESC LIMIT 1"
+        f"AND posted_at > datetime('now', ?) "
+        f"ORDER BY views DESC LIMIT 1",
+        (win,)
     )
 
     top_source_week = query_db(
         f"SELECT source_id, COUNT(*) as posts, COALESCE(SUM(views),0) as views "
         f"FROM seen_items WHERE posted_at IS NOT NULL "
         f"AND tweet_id NOT IN {EXCL} "
-        f"AND posted_at > datetime('now', '-7 days') "
-        f"GROUP BY source_id ORDER BY posts DESC, views DESC LIMIT 1"
+        f"AND posted_at > datetime('now', ?) "
+        f"GROUP BY source_id ORDER BY posts DESC, views DESC LIMIT 1",
+        (win,)
     )
 
     best_hour = query_db(
@@ -540,7 +587,9 @@ def api_highlights():
         f"ROUND(AVG(views)) as avg_views, COUNT(*) as cnt "
         f"FROM seen_items WHERE posted_at IS NOT NULL AND views IS NOT NULL AND views > 0 "
         f"AND tweet_id NOT IN {EXCL} "
-        f"GROUP BY hour HAVING cnt >= 2 ORDER BY avg_views DESC LIMIT 1"
+        f"AND posted_at > datetime('now', ?) "
+        f"GROUP BY hour HAVING cnt >= 2 ORDER BY avg_views DESC LIMIT 1",
+        (win,)
     )
 
     return jsonify({
@@ -662,36 +711,6 @@ def api_achievements():
     })
 
     return jsonify({"badges": badges})
-
-
-@app.route("/api/slots/today")
-@require_auth
-def api_slots_today():
-    import database as _db
-    slots = _db.get_today_slots(DB_PATH, max_slots=5)
-    return jsonify(slots)
-
-
-@app.route("/api/preview-image/<int:item_id>")
-@require_auth
-def api_preview_image(item_id):
-    rows = query_db(
-        "SELECT title, category, source_id, url FROM seen_items WHERE id=?", (item_id,)
-    )
-    if not rows:
-        return "Not found", 404
-    try:
-        import image_gen
-        item = rows[0]
-        data = image_gen.generate_post_image(item)
-        if not data:
-            return "Image generation failed", 500
-        from flask import Response
-        return Response(data, mimetype="image/png",
-                        headers={"Cache-Control": "public, max-age=300"})
-    except Exception as e:
-        app.logger.error("preview-image error: %s", e)
-        return str(e), 500
 
 
 @app.route("/api/health")
