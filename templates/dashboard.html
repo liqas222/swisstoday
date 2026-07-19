@@ -377,34 +377,6 @@ tr:hover td{background:rgba(255,255,255,0.02)}
 .tweet-row:hover .x-share-btn,.slot:hover .x-share-btn{display:inline-flex}
 .x-share-btn:hover{color:var(--purple)}
 
-/* ── TICKER ── */
-.ticker-strip{
-  height:34px;background:rgba(255,255,255,0.02);border-bottom:1px solid rgba(255,255,255,0.06);
-  overflow:hidden;display:flex;align-items:center;position:relative;
-}
-.ticker-badge{
-  flex-shrink:0;height:100%;display:flex;align-items:center;gap:6px;
-  padding:0 14px;position:relative;z-index:2;
-  background:rgba(10,10,15,0.95);border-right:1px solid rgba(168,85,247,0.25);
-  font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;
-  color:var(--purple);font-family:'Chakra Petch',sans-serif;white-space:nowrap;
-}
-.ticker-badge .led{width:6px;height:6px;border-radius:50%;background:var(--purple);box-shadow:0 0 6px var(--purple);animation:blink 1.8s infinite}
-.ticker-track{display:flex;align-items:center;gap:0;white-space:nowrap;animation:ticker-scroll 45s linear infinite}
-.ticker-track:hover{animation-play-state:paused}
-.ticker-pill{
-  display:inline-flex;align-items:center;gap:5px;padding:3px 10px;margin:0 6px;
-  font-size:11px;font-weight:600;letter-spacing:.02em;
-  background:rgba(255,255,255,0.04);border-radius:999px;
-  border:1px solid rgba(255,255,255,0.06);
-  font-family:'Chakra Petch',sans-serif;
-  text-decoration:none;cursor:pointer;transition:background .15s,border-color .15s;
-}
-.ticker-pill:hover{background:rgba(168,85,247,0.12);border-color:rgba(168,85,247,0.35)}
-.ticker-pill.schweiz{color:#A855F7}
-.ticker-pill.global{color:#8b8b95}
-.ticker-pill .tk-flag{font-size:10px;opacity:.85}
-@keyframes ticker-scroll{from{transform:translateX(0)}to{transform:translateX(-50%)}}
 
 /* ── FOLLOWER AREA CHART ── */
 #follower-chart-wrap{width:100%;height:50px;margin-top:4px}
@@ -565,11 +537,6 @@ footer{
     <div class="pill off" id="bot-pill"><span class="led"></span><span id="bot-txt">—</span></div>
   </div>
 </header>
-
-<div class="ticker-strip" id="ticker-strip" style="display:none">
-  <div class="ticker-badge"><span class="led"></span>Trends heute</div>
-  <div class="ticker-track" id="ticker-track"></div>
-</div>
 
 <div class="main">
 
@@ -1416,29 +1383,6 @@ function renderSparkline(data7){
   </svg>`;
 }
 
-// ── Ticker ─────────────────────────────────────────────────────────────────
-async function loadTicker(){
-  try{
-    const d=await api('/api/trends');
-    const topics=d.topics||[];
-    if(!topics.length)return;
-    const strip=document.getElementById('ticker-strip');
-    const track=document.getElementById('ticker-track');
-    const makePill=t=>{
-      const isChweiz=/\[SCHWEIZ\]/i.test(t);
-      const label=t.replace(/^\[(SCHWEIZ|GLOBAL)\]\s*/i,'');
-      const cls=isChweiz?'schweiz':'global';
-      const flag=isChweiz?'🇨🇭':'🌍';
-      const q=encodeURIComponent(label);
-      return`<a class="ticker-pill ${cls}" href="https://x.com/search?q=${q}" target="_blank" rel="noopener"><span class="tk-flag">${flag}</span>${esc(label)}</a>`;
-    };
-    const html=topics.map(makePill).join('');
-    // duplicate for seamless loop
-    track.innerHTML=html+html;
-    strip.style.display='flex';
-  }catch(e){}
-}
-
 // ── Global Refresh ─────────────────────────────────────────────────────────
 async function globalRefresh(){
   const btn=document.getElementById('global-refresh-btn');
@@ -1589,12 +1533,10 @@ document.addEventListener('DOMContentLoaded',()=>{
   refreshAll();
   refreshFollowers();
   loadFollowerChart();
-  loadTicker();
   updateGoalUI();
   startSSE();
   setInterval(refreshFollowers, 300000); // every 5min
   setInterval(loadFollowerChart, 300000); // chart with followers
-  setInterval(loadTicker, 900000); // ticker every 15min
   setInterval(loadStats, 20000);   // stats every 20s
   setInterval(loadSources, 30000); // sources every 30s
   setInterval(refreshAll, 120000); // full refresh every 2min

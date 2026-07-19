@@ -545,20 +545,6 @@ def api_followers_history():
     return jsonify(rows)
 
 
-@app.route("/api/trends")
-@require_auth
-def api_trends():
-    try:
-        import trends as _trends
-        # Fetch directly (module-level 15-min cache) — the bot runs in a
-        # separate process, so its cache is never visible here.
-        topics = _trends.get_trending_topics(None)
-        return jsonify({"topics": topics})
-    except Exception as e:
-        app.logger.warning("trends fetch failed: %s", e)
-        return jsonify({"topics": []})
-
-
 @app.route("/api/highlights")
 @require_auth
 def api_highlights():
