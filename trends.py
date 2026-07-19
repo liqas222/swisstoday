@@ -31,17 +31,22 @@ _HEADERS = {
 
 def _trends24(path: str, limit: int) -> list[str]:
     """Scrape X trends from trends24.in ('' = worldwide, 'switzerland' = CH)."""
-    url = f"https://trends24.in/{path}" if path else "https://trends24.in/"
+    url = f"https://trends24.in/{path}/" if path else "https://trends24.in/"
     r = requests.get(url, headers=_HEADERS, timeout=10)
     r.raise_for_status()
+    r.encoding = "utf-8"  # server omits charset; requests would guess latin-1
     # First trend-card__list block = the most recent hourly snapshot
     m = re.search(r'trend-card__list(.*?)</ol>', r.text, re.DOTALL)
-    block = m.group(1) if m else r.text
-    names = re.findall(r'<a[^>]*>([^<]+)</a>', block)
+    if not m:
+        return []
+    # Only anchors inside list items — skips nav/header links
+    names = re.findall(r'<li[^>]*>\s*<a[^>]*>([^<]+)</a>', m.group(1))
     out = []
     for n in names:
         n = html_mod.unescape(n).strip()
-        if n and n not in out:
+        if not n or len(n) > 60 or "trends24" in n.lower():
+            continue
+        if n not in out:
             out.append(n)
         if len(out) >= limit:
             break
