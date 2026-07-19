@@ -550,9 +550,12 @@ def api_followers_history():
 def api_trends():
     try:
         import trends as _trends
-        topics = _trends._cache.get("topics", [])
+        # Fetch directly (module-level 15-min cache) — the bot runs in a
+        # separate process, so its cache is never visible here.
+        topics = _trends.get_trending_topics(None)
         return jsonify({"topics": topics})
-    except Exception:
+    except Exception as e:
+        app.logger.warning("trends fetch failed: %s", e)
         return jsonify({"topics": []})
 
 
