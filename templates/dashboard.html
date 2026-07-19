@@ -377,6 +377,23 @@ tr:hover td{background:rgba(255,255,255,0.02)}
 .tweet-row:hover .x-share-btn,.slot:hover .x-share-btn{display:inline-flex}
 .x-share-btn:hover{color:var(--purple)}
 
+/* ── TICKER ── */
+.ticker-strip{
+  height:32px;background:rgba(255,255,255,0.02);border-bottom:1px solid rgba(255,255,255,0.06);
+  overflow:hidden;display:flex;align-items:center;position:relative;
+}
+.ticker-track{display:flex;align-items:center;gap:0;white-space:nowrap;animation:ticker-scroll 40s linear infinite}
+.ticker-track:hover{animation-play-state:paused}
+.ticker-pill{
+  display:inline-flex;align-items:center;padding:3px 10px;margin:0 6px;
+  font-size:11px;font-weight:600;letter-spacing:.02em;
+  background:rgba(255,255,255,0.04);border-radius:999px;
+  border:1px solid rgba(255,255,255,0.06);
+  font-family:'Chakra Petch',sans-serif;
+}
+.ticker-pill.schweiz{color:#A855F7}
+.ticker-pill.global{color:#71717A}
+@keyframes ticker-scroll{from{transform:translateX(0)}to{transform:translateX(-50%)}}
 
 /* ── FOLLOWER AREA CHART ── */
 #follower-chart-wrap{width:100%;height:50px;margin-top:4px}
@@ -537,6 +554,10 @@ footer{
     <div class="pill off" id="bot-pill"><span class="led"></span><span id="bot-txt">—</span></div>
   </div>
 </header>
+
+<div class="ticker-strip" id="ticker-strip" style="display:none">
+  <div class="ticker-track" id="ticker-track"></div>
+</div>
 
 <div class="main">
 
@@ -1383,6 +1404,26 @@ function renderSparkline(data7){
   </svg>`;
 }
 
+// ── Ticker ─────────────────────────────────────────────────────────────────
+async function loadTicker(){
+  try{
+    const d=await api('/api/trends');
+    const topics=d.topics||[];
+    if(!topics.length)return;
+    const strip=document.getElementById('ticker-strip');
+    const track=document.getElementById('ticker-track');
+    const makePill=t=>{
+      const isChweiz=/\[SCHWEIZ\]/i.test(t);
+      const label=t.replace(/^\[(SCHWEIZ|GLOBAL)\]\s*/i,'');
+      const cls=isChweiz?'schweiz':'global';
+      return`<span class="ticker-pill ${cls}">${esc(label)}</span>`;
+    };
+    const html=topics.map(makePill).join('');
+    // duplicate for seamless loop
+    track.innerHTML=html+html;
+    strip.style.display='flex';
+  }catch(e){}
+}
 
 // ── Global Refresh ─────────────────────────────────────────────────────────
 async function globalRefresh(){
@@ -1535,10 +1576,12 @@ document.addEventListener('DOMContentLoaded',()=>{
   refreshAll();
   refreshFollowers();
   loadFollowerChart();
+  loadTicker();
   updateGoalUI();
   startSSE();
   setInterval(refreshFollowers, 300000); // every 5min
   setInterval(loadFollowerChart, 300000); // chart with followers
+  setInterval(loadTicker, 900000); // ticker every 15min
   setInterval(loadStats, 20000);   // stats every 20s
   setInterval(loadSources, 30000); // sources every 30s
   setInterval(refreshAll, 120000); // full refresh every 2min

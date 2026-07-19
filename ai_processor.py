@@ -52,12 +52,13 @@ Antworte NUR mit validem JSON:
 {"relevance": "HIGH" | "LOW", "reason": "kurze Begründung auf Deutsch (max 80 Zeichen)", "category": "eine der obigen Kategorien", "viral_score": 1-100}
 
 viral_score (1-100) — Berechne so:
-A) Betroffene Menschen: Trifft es fast alle Schweizer? (25 Punkte) | Viele? (15) | Eine Berufsgruppe? (8) | Wenige Spezialisten? (3)
-B) Emotionale Wirkung: Wut/Freude/Schock? (30 Punkte) | Interesse? (18) | Neutral informativ? (10) | Trocken/technisch? (4)
-C) Aktualität: Heute/diese Woche? (25 Punkte) | Diesen Monat? (15) | Älteres Thema? (6)
-E) Konkretheit: Konkrete Zahl, Datum, Person? (20 Punkte) | Teilweise konkret? (10) | Vage? (4)
+A) Betroffene Menschen: Trifft es fast alle Schweizer? (20 Punkte) | Viele? (12) | Eine Berufsgruppe? (6) | Wenige Spezialisten? (2)
+B) Emotionale Wirkung: Wut/Freude/Schock? (25 Punkte) | Interesse? (15) | Neutral informativ? (8) | Trocken/technisch? (3)
+C) Aktualität: Heute/diese Woche? (20 Punkte) | Diesen Monat? (12) | Älteres Thema? (5)
+D) Trends: Thema steht in den X-TRENDS SCHWEIZ unten? (25 Punkte) | In GLOBAL-Trends? (15) | Kein Trend-Bezug? (0)
+E) Konkretheit: Konkrete Zahl, Datum, Person? (10 Punkte) | Vage? (3)
 
-Addiere A+B+C+E = viral_score (1-100). Rechne es WIRKLICH aus — nicht schätzen!"""
+Addiere A+B+C+D+E = viral_score (1-100). Rechne es WIRKLICH aus — nicht schätzen!"""
 
 POST_SYSTEM = """Du erstellst X-Posts (Twitter) auf Deutsch für den Account @SwissIntelNews.
 Zielgruppe: Unternehmer, Gründer, Investoren, Anwälte, Expats in der Schweiz.
@@ -155,12 +156,15 @@ def _extract_json(raw: str) -> str:
     return raw
 
 
-def score_relevance(client: anthropic.Anthropic, model: str, item: dict) -> tuple[str, str, str, int]:
+def score_relevance(client: anthropic.Anthropic, model: str, item: dict, trends: list[str] | None = None) -> tuple[str, str, str, int]:
     title = item.get("title", "").strip()
     summary = item.get("summary", "").strip()
     if not title and not summary:
         return "LOW", "Kein Inhalt verfügbar", "Sonstiges", 0
-    user_msg = f"Titel: {title}\n\nZusammenfassung: {summary[:500]}\n\nQuelle: {item.get('source_id', '')}"
+    trends_block = ""
+    if trends:
+        trends_block = f"\n\nAKTUELLE X-TRENDS (Schweiz zuerst):\n" + "\n".join(f"- {t}" for t in trends[:25])
+    user_msg = f"Titel: {title}\n\nZusammenfassung: {summary[:500]}\n\nQuelle: {item.get('source_id', '')}{trends_block}"
     raw = _call_claude(client, model, SCORE_SYSTEM, user_msg)
     if not raw:
         return "LOW", "API-Fehler bei Bewertung", "Sonstiges", 0

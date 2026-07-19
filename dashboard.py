@@ -545,6 +545,17 @@ def api_followers_history():
     return jsonify(rows)
 
 
+@app.route("/api/trends")
+@require_auth
+def api_trends():
+    try:
+        import trends as _trends
+        topics = _trends._cache.get("topics", [])
+        return jsonify({"topics": topics})
+    except Exception:
+        return jsonify({"topics": []})
+
+
 @app.route("/api/highlights")
 @require_auth
 def api_highlights():
