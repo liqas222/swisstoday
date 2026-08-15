@@ -1,5 +1,6 @@
 import json
 import logging
+import re
 import time
 from typing import Optional
 
@@ -143,13 +144,18 @@ Zielgruppe: Unternehmer, Gründer, Investoren, Anwälte, Expats in der Schweiz.
 Trenne die Tweets mit einer eigenen Zeile, die exakt so aussieht:
 ===NEXT===
 
-SUBSTANZ-TEST (mach das ZUERST, bevor du irgendetwas schreibst):
-Zähle, wie viele KONKRETE, EIGENSTÄNDIGE Fakten die Quelle liefert — also Zahlen, Beträge,
+SUBSTANZ-TEST (NUR IM KOPF — schreibe davon KEIN EINZIGES WORT in die Antwort):
+Prüfe still, wie viele KONKRETE, EIGENSTÄNDIGE Fakten die Quelle liefert — also Zahlen, Beträge,
 Daten, Fristen, Namen, Orte, Entscheide, Begründungen. Allgemeinwissen zählt NICHT.
 - Weniger als 3 solche Fakten → die Quelle trägt keinen Thread.
   Antworte dann mit GENAU diesem einen Wort und sonst nichts: KEIN_THREAD
-- Ab 3 Fakten → schreibe den Thread nach dem Aufbau unten.
+- Ab 3 Fakten → gib DIREKT den fertigen Thread aus, beginnend mit Tweet 1.
 Ein knapper starker Einzelpost ist immer besser als ein aufgeblasener Thread.
+
+AUSGABEFORMAT — daran halten, sonst ist die Antwort unbrauchbar:
+Deine Antwort beginnt SOFORT mit dem ersten Zeichen von Tweet 1. Keine Einleitung, keine
+Aufzählung deiner Prüfung, keine Überschriften wie "SUBSTANZ-TEST" oder "THREAD", keine
+Trennlinien wie "---", kein Kommentar davor oder danach. Nur die Tweets und ===NEXT===.
 
 {plan}
 
@@ -391,6 +397,31 @@ THREAD_SEP_TOKEN = "===NEXT==="
 
 MAX_THREAD_TWEETS = 7
 
+_DIVIDER_RE = re.compile(r'^\s*[-–—_*=]{3,}\s*$')
+# Blocks that are the model thinking out loud, not tweet content
+_META_RE = re.compile(r'SUBSTANZ|KEIN_THREAD|→\s*THREAD|^\s*✓|^\s*THREAD\s*:?\s*$'
+                      r'|^\s*(TWEET|AUFBAU|LÄNGE)\b', re.I | re.M)
+
+
+def _looks_like_meta(block: str) -> bool:
+    b = block.strip()
+    return bool(_DIVIDER_RE.match(b) or _META_RE.search(b) or re.match(r'^\s*\d+\.\s', b))
+
+
+def _strip_preamble(text: str) -> str:
+    """Remove reasoning the model printed before tweet 1 (substance test,
+    headings, divider lines). The prompt forbids it, but prompts are not
+    guarantees and this text must never reach X."""
+    blocks = re.split(r'\n\s*\n', text.strip())
+    cut = 0
+    for i, b in enumerate(blocks):
+        if _looks_like_meta(b):
+            cut = i + 1
+        else:
+            break  # first real block ends the preamble
+    cleaned = "\n\n".join(blocks[cut:]).strip()
+    return cleaned or text.strip()
+
 
 def generate_thread_detailed(client: anthropic.Anthropic, model: str, item: dict,
                              viral_score: int = 0) -> tuple[Optional[str], str]:
@@ -423,6 +454,10 @@ def generate_thread_detailed(client: anthropic.Anthropic, model: str, item: dict
     if len(parts) < 2:
         logger.warning("Thread response had no separators: %r", raw[:160])
         return None, "bad_format"
+    # Drop any reasoning the model printed before the first tweet
+    parts[0] = _strip_preamble(parts[0])
+    if len(parts) > 2 and _looks_like_meta(parts[0]):
+        parts = parts[1:]  # the whole first block was meta, not a tweet
     parts = parts[:MAX_THREAD_TWEETS]
     # Tweet 1 must end with 👇🧵 side by side — repair it if the model didn't
     if "🧵" not in parts[0]:
