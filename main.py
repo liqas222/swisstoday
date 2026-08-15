@@ -1,4 +1,7 @@
 import logging
+import os
+import subprocess
+import sys
 import time
 from datetime import datetime, timezone
 
@@ -18,10 +21,82 @@ logger = logging.getLogger(__name__)
 THREAD_MIN_SCORE = 50
 
 
+REPO_DIR = os.path.dirname(os.path.abspath(__file__))
+
+
+def _git(*args, timeout=60):
+    """Run a git command in the repo dir; returns stripped stdout ('' on failure)."""
+    r = subprocess.run(["git", *args], cwd=REPO_DIR, capture_output=True,
+                       text=True, timeout=timeout)
+    if r.returncode != 0:
+        raise RuntimeError(f"git {' '.join(args)}: {r.stderr.strip()[:200]}")
+    return r.stdout.strip()
+
+
+def auto_update():
+    """Pull new commits from the tracked branch and restart the services.
+
+    Runs before each pipeline tick so pushes go live without server access.
+    Safety: skips when the working tree is dirty, byte-compiles the new code
+    before restarting, and rolls back if it doesn't compile.
+    Disable by setting AUTO_UPDATE=false in .env.
+    """
+    if os.getenv("AUTO_UPDATE", "true").strip().lower() not in ("1", "true", "yes"):
+        return
+    try:
+        if _git("status", "--porcelain"):
+            logger.warning("Auto-update skipped: uncommitted changes on server")
+            return
+        branch = _git("rev-parse", "--abbrev-ref", "HEAD")
+        if branch == "HEAD":
+            logger.warning("Auto-update skipped: detached HEAD")
+            return
+        _git("fetch", "origin", branch)
+        local = _git("rev-parse", "HEAD")
+        remote = _git("rev-parse", f"origin/{branch}")
+        if local == remote:
+            return
+
+        logger.info("Auto-update: %s → %s (%s)", local[:7], remote[:7], branch)
+        _git("pull", "--ff-only", "origin", branch)
+
+        # Verify the new code compiles before we restart anything
+        py_files = [f for f in os.listdir(REPO_DIR) if f.endswith(".py")]
+        check = subprocess.run([sys.executable, "-m", "py_compile", *py_files],
+                               cwd=REPO_DIR, capture_output=True, text=True, timeout=120)
+        if check.returncode != 0:
+            logger.error("Auto-update: new code does not compile, rolling back:\n%s",
+                         check.stderr.strip()[:500])
+            _git("reset", "--hard", local)
+            return
+
+        # Dashboard is a separate process — restart it so it picks up the changes
+        subprocess.run(["systemctl", "restart", "swissintel-dash"],
+                       capture_output=True, timeout=60)
+
+        # --no-block: systemd queues the restart, so it survives us being killed.
+        # Only exit if systemd actually accepted the job — otherwise we would
+        # quit with nothing bringing us back.
+        r = subprocess.run(["systemctl", "restart", "--no-block", "swissintel-bot"],
+                           capture_output=True, text=True, timeout=30)
+        if r.returncode == 0:
+            logger.info("Auto-update applied — restarting bot")
+            raise SystemExit(0)
+        logger.error("Auto-update: restart failed (%s) — new code applies on next restart",
+                     (r.stderr or "").strip()[:200])
+    except SystemExit:
+        raise
+    except Exception as e:
+        logger.warning("Auto-update failed (continuing with current code): %s", e)
+
+
 def run_pipeline(cfg, anthropic_client):
     """Wrapper that guarantees one pipeline failure never kills the scheduler."""
     try:
+        auto_update()
         _run_pipeline(cfg, anthropic_client)
+    except SystemExit:
+        raise
     except Exception as e:
         logger.exception("Pipeline run crashed (continuing): %s", e)
 
