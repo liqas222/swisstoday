@@ -109,13 +109,51 @@ HASHTAGS (am Ende, mit Leerzeichen getrennt, für maximale Reichweite):
 Ziel: 700-1000 Zeichen gesamt. Kein Link, keine URL. Gib NUR den Post-Text zurück, nichts anderes."""
 
 
-def _call_claude(client: anthropic.Anthropic, model: str, system: str, user_msg: str, max_retries: int = 3) -> Optional[str]:
+THREAD_SYSTEM = """Du erstellst einen X-THREAD aus GENAU 3 Tweets auf Deutsch für den Account @SwissIntelNews.
+Zielgruppe: Unternehmer, Gründer, Investoren, Anwälte, Expats in der Schweiz.
+
+Trenne die 3 Tweets mit einer eigenen Zeile, die exakt so aussieht:
+===NEXT===
+
+TWEET 1 — DER HAKEN (kurz, max. ~220 Zeichen, KEINE Hashtags):
+- EMOJI + knackige Headline (max. 6-8 Wörter, nur Kernaussage, mit Zahl falls vorhanden)
+- 1 Satz Kontext, der neugierig macht
+- Letzte Zeile: ein Cliffhanger mit 👇 am Ende, der auf Tweet 2 verweist.
+- VARIIERE die Formulierung (nicht immer dieselbe!). Passende Beispiele:
+  "👇 Das bedeutet das für dich:" · "👇 Was das konkret heisst:" · "👇 Die wichtigsten Punkte:"
+  · "👇 Das steckt dahinter:" · "👇 Was jetzt wichtig wird:"
+- KEIN Clickbait: Der Cliffhanger muss exakt das halten, was Tweet 2 liefert — nicht übertreiben.
+- Bei ERNSTEN Themen (Tote, Katastrophen, Verbrechen, Unglücke, Gewalt): sachlicher Cliffhanger wie
+  "👇 Die Fakten:" oder "👇 Was bisher bekannt ist:" — NIEMALS reisserisch oder marktschreierisch.
+
+TWEET 2 — DIE FAKTEN (max. ~500 Zeichen, KEINE Hashtags):
+- 3-4 Sätze: Was ist passiert? Was ändert sich konkret (Zahlen, Daten, Fristen)?
+- Menschlich und direkt, kein Nachrichtenagentur-Ton, nur Fakten aus der Quelle, keine Meinungen.
+
+TWEET 3 — EINORDNUNG + HASHTAGS (max. ~450 Zeichen):
+- 1-2 Sätze Einordnung/Konsequenz: was heisst das mittelfristig, worauf achten.
+- Danach die Hashtags nach den Regeln unten.
+- NIEMALS erwähnen für wen es relevant ist ("relevant für...", "betrifft Unternehmer...").
+
+Stil: Schweizer Direktheit, kein Blabla, kein Weichspülen. Subtiler Humor nur bei unkritischen Themen.
+
+HASHTAGS (nur in Tweet 3, ganz am Ende, mit Leerzeichen getrennt):
+- ORT: Konkrete Stadt/Gemeinde als eigener Hashtag, falls im Artikel genannt (#Zürich, #Lugano, #Chur ...).
+- KANTON: SEPARAT das offizielle Kürzel (#ZH #BE #LU #UR #SZ #OW #NW #GL #ZG #FR #SO #BS #BL #SH #AR #AI #SG #GR #AG #TG #TI #VD #VS #NE #GE #JU). Ort und Kanton = ZWEI getrennte Hashtags.
+- THEMA (max. 1, nur wenn 100% passend): #SNB #FINMA #Steuern #AHV #Abstimmung #Immobilien #Einwanderung #Kriminalität
+- Immer als LETZTES: #Schweiz. Keine generischen Tags (#Wirtschaft, #Politik, #News).
+- Reihenfolge: [#Thema] #Ort #Kantonskürzel #Schweiz
+
+Gib NUR die 3 Tweets mit den ===NEXT===-Trennern zurück, nichts anderes. Kein Link, keine URL."""
+
+
+def _call_claude(client: anthropic.Anthropic, model: str, system: str, user_msg: str, max_retries: int = 3, max_tokens: int = 512) -> Optional[str]:
     delays = [5, 15, 45]
     for attempt in range(max_retries):
         try:
             response = client.messages.create(
                 model=model,
-                max_tokens=512,
+                max_tokens=max_tokens,
                 system=system,
                 messages=[{"role": "user", "content": user_msg}],
             )
@@ -276,3 +314,26 @@ def generate_post(client: anthropic.Anthropic, model: str, item: dict) -> Option
         f"Quelle: {item.get('source_id', '')}"
     )
     return _call_claude(client, model, POST_SYSTEM, user_msg)
+
+
+# Marker between tweets in a stored thread (must match publisher.THREAD_SEP_TOKEN)
+THREAD_SEP_TOKEN = "===NEXT==="
+
+
+def generate_thread(client: anthropic.Anthropic, model: str, item: dict) -> Optional[str]:
+    """Generate a 3-tweet X thread for high-score items. Returns the tweets
+    joined by THREAD_SEP_TOKEN, or None on failure (caller falls back to single)."""
+    import re
+    user_msg = (
+        f"Titel: {item['title']}\n\n"
+        f"Zusammenfassung: {item.get('summary', '')[:800]}\n\n"
+        f"Quelle: {item.get('source_id', '')}"
+    )
+    raw = _call_claude(client, model, THREAD_SYSTEM, user_msg, max_tokens=900)
+    if not raw:
+        return None
+    # Split on the ===NEXT=== marker (tolerant of extra = or whitespace)
+    parts = [p.strip() for p in re.split(r'={2,}\s*NEXT\s*={2,}', raw) if p.strip()]
+    if len(parts) < 2:
+        return None  # not a valid thread → fall back to single post
+    return (f"\n{THREAD_SEP_TOKEN}\n").join(parts[:3])

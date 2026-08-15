@@ -1142,11 +1142,17 @@ function toggleSrc(){
 }
 
 // ── Modal ──────────────────────────────────────────────────────────────────
+// Threads are stored as tweets joined by ===NEXT===; show them split by a divider
+function prettyPost(s){
+  if(!s)return'—';
+  const parts=s.split('===NEXT===').map(x=>x.trim()).filter(Boolean);
+  return parts.length>1?parts.map((p,i)=>`${i+1}/${parts.length}  ${p}`).join('\n\n──────────\n\n'):s;
+}
 function openItemModal(r){
   document.getElementById('m-title').textContent=r.title||'Tweet';
   document.getElementById('m-src').textContent=r.source_id||'—';
   document.getElementById('m-time').textContent=fmt(r.posted_at||r.fetched_at||null);
-  document.getElementById('m-post').textContent=r.post_text||'—';
+  document.getElementById('m-post').textContent=prettyPost(r.post_text);
   const artLink=document.getElementById('m-art');
   artLink.href=r.url||'#';
   artLink.style.display=r.url?'inline':'none';
@@ -1176,7 +1182,7 @@ function renderTweetModalList(items){
         ${v}
         <span style="font-size:10px;color:var(--dim);font-family:'JetBrains Mono',monospace;margin-left:auto">${fmt(r.posted_at)}</span>
       </div>
-      <div style="font-size:12px;color:var(--text2);line-height:1.6;white-space:pre-wrap;word-break:break-word">${esc(trunc(r.post_text||r.title,200))}</div>
+      <div style="font-size:12px;color:var(--text2);line-height:1.6;white-space:pre-wrap;word-break:break-word">${esc(trunc((r.post_text||r.title||'').replace(/===NEXT===/g,' · '),200))}</div>
     </div>`;
   }).join(''):'<div style="text-align:center;padding:40px;color:var(--dim)">Keine Tweets gefunden</div>';
   document.getElementById('tweet-modal').classList.add('open');
@@ -1208,7 +1214,7 @@ function openTweetList(){
         <span class="src-tag" style="background:${c}18;color:${c};border:1px solid ${c}33;font-size:10px;padding:2px 8px;border-radius:999px">${esc(r.source_id)}</span>
         <span style="font-size:10px;color:var(--dim);font-family:'JetBrains Mono',monospace;margin-left:auto">${fmt(r.posted_at)}</span>
       </div>
-      <div style="font-size:12px;color:var(--text2);line-height:1.6;white-space:pre-wrap;word-break:break-word">${esc(trunc(r.post_text,200))}</div>
+      <div style="font-size:12px;color:var(--text2);line-height:1.6;white-space:pre-wrap;word-break:break-word">${esc(trunc((r.post_text||'').replace(/===NEXT===/g,' · '),200))}</div>
     </div>`;
   }).join(''):'<div style="text-align:center;padding:40px;color:var(--dim)">Noch keine Tweets heute</div>';
   document.getElementById('tweet-modal').classList.add('open');

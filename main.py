@@ -14,6 +14,9 @@ from config import load_config
 
 logger = logging.getLogger(__name__)
 
+# Items with viral_score >= this are posted as a 3-tweet thread, else single post
+THREAD_MIN_SCORE = 50
+
 
 def run_pipeline(cfg, anthropic_client):
     """Wrapper that guarantees one pipeline failure never kills the scheduler."""
@@ -52,7 +55,16 @@ def _run_pipeline(cfg, anthropic_client):
             logger.info("[%s] %s → %s (%s)", item["source_id"], item["title"][:60], relevance, reason)
             if relevance == "HIGH":
                 stats["high_relevance"] += 1
-                post_text = ai_processor.generate_post(anthropic_client, cfg.claude_model, item)
+                # Strong topics (viral_score >= 50) go out as a 3-tweet thread;
+                # weaker ones as a single post. Falls back to single if the
+                # thread generation fails.
+                post_text = None
+                if viral_score >= THREAD_MIN_SCORE:
+                    post_text = ai_processor.generate_thread(anthropic_client, cfg.claude_model, item)
+                    if post_text:
+                        logger.info("[THREAD] %s (viral=%d)", item["title"][:50], viral_score)
+                if not post_text:
+                    post_text = ai_processor.generate_post(anthropic_client, cfg.claude_model, item)
                 if post_text:
                     database.update_post_text(cfg.db_path, item["id"], post_text)
         except Exception as e:

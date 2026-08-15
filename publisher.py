@@ -110,6 +110,61 @@ def post_tweet(
         raise
 
 
+# Marker between tweets in a stored thread (must match ai_processor.THREAD_SEP_TOKEN)
+THREAD_SEP_TOKEN = "===NEXT==="
+
+
+def post_thread(
+    client: tweepy.Client,
+    tweets: list[str],
+    dry_run: bool,
+    quote_tweet_id: Optional[str] = None,
+) -> Optional[str]:
+    """Post a thread as a reply chain. Returns the FIRST tweet's id (the one we
+    store). If a reply fails after tweet 1 is up, the thread stays partial but
+    the first tweet is still recorded — never re-posted as a duplicate."""
+    if dry_run:
+        logger.info("[DRY RUN] Would post THREAD (%d tweets)%s:\n%s",
+                    len(tweets), f" quoting {quote_tweet_id}" if quote_tweet_id else "",
+                    "\n— — —\n".join(tweets))
+        return "dry_run"
+
+    first_id = None
+    reply_to = None
+    for i, text in enumerate(tweets):
+        kwargs = {"text": text}
+        if i == 0 and quote_tweet_id:
+            kwargs["quote_tweet_id"] = int(quote_tweet_id)
+        if reply_to:
+            kwargs["in_reply_to_tweet_id"] = int(reply_to)
+        try:
+            response = client.create_tweet(**kwargs)
+        except tweepy.TooManyRequests as exc:
+            reset = getattr(exc.response, "headers", {}).get("x-rate-limit-reset")
+            if reset:
+                sleep_for = max(0, int(reset) - int(time.time())) + 5
+                logger.warning("X rate limit hit mid-thread, sleeping %ds", sleep_for)
+                time.sleep(sleep_for)
+                response = client.create_tweet(**kwargs)
+            elif first_id is not None:
+                logger.warning("Thread reply %d/%d rate-limited, stopping (partial thread)", i + 1, len(tweets))
+                break
+            else:
+                raise
+        except Exception as exc:
+            if first_id is not None:
+                logger.warning("Thread reply %d/%d failed (partial thread): %s", i + 1, len(tweets), exc)
+                break
+            raise  # first tweet failed → real error, item will be retried
+        tid = str(response.data["id"])
+        if first_id is None:
+            first_id = tid
+        logger.info("Thread tweet %d/%d posted: %s", i + 1, len(tweets), tid)
+        reply_to = tid
+        time.sleep(1)
+    return first_id
+
+
 def post_batch(cfg: Config, items: list[dict], posted_today: int = 0, posted_this_window: int = 0) -> dict[int, tuple[str, Optional[str]]]:
     """Returns {item_id: ('ok'|'error', tweet_id_or_error_msg)}
 
@@ -138,15 +193,17 @@ def post_batch(cfg: Config, items: list[dict], posted_today: int = 0, posted_thi
 
     for item in items:  # 24/7 unlimited — post all ranked HIGH items this run
         item_id       = item["id"]
-        text          = item["post_text"]
+        text          = item["post_text"] or ""
         quote_tweet_id = item.get("quote_tweet_id")
 
-        # Post text-only — no images
-        media_id = None
+        # A thread is stored as tweets joined by THREAD_SEP_TOKEN
+        tweets = [t.strip() for t in text.split(THREAD_SEP_TOKEN) if t.strip()]
 
         try:
-            tweet_id = post_tweet(client, text, cfg.dry_run,
-                                  quote_tweet_id=quote_tweet_id, media_id=media_id)
+            if len(tweets) > 1:
+                tweet_id = post_thread(client, tweets, cfg.dry_run, quote_tweet_id=quote_tweet_id)
+            else:
+                tweet_id = post_tweet(client, text, cfg.dry_run, quote_tweet_id=quote_tweet_id)
             results[item_id] = ("ok", tweet_id)
         except Exception as exc:
             results[item_id] = ("error", str(exc))
