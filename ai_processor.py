@@ -118,13 +118,15 @@ Trenne die 3 Tweets mit einer eigenen Zeile, die exakt so aussieht:
 TWEET 1 — DER HAKEN (kurz, max. ~220 Zeichen, KEINE Hashtags):
 - EMOJI + knackige Headline (max. 6-8 Wörter, nur Kernaussage, mit Zahl falls vorhanden)
 - 1 Satz Kontext, der neugierig macht
-- Letzte Zeile: ein Cliffhanger mit 👇 am Ende, der auf Tweet 2 verweist.
+- Letzte Zeile: ein Cliffhanger, der auf Tweet 2 verweist. Diese Zeile MUSS mit 👇 beginnen
+  und mit dem Thread-Emoji 🧵 enden — das 🧵 ist PFLICHT und signalisiert, dass ein Thread folgt.
 - VARIIERE die Formulierung (nicht immer dieselbe!). Passende Beispiele:
-  "👇 Das bedeutet das für dich:" · "👇 Was das konkret heisst:" · "👇 Die wichtigsten Punkte:"
-  · "👇 Das steckt dahinter:" · "👇 Was jetzt wichtig wird:"
+  "👇 Das bedeutet das für dich: 🧵" · "👇 Was das konkret heisst: 🧵" · "👇 Die wichtigsten Punkte: 🧵"
+  · "👇 Das steckt dahinter: 🧵" · "👇 Was jetzt wichtig wird: 🧵"
 - KEIN Clickbait: Der Cliffhanger muss exakt das halten, was Tweet 2 liefert — nicht übertreiben.
 - Bei ERNSTEN Themen (Tote, Katastrophen, Verbrechen, Unglücke, Gewalt): sachlicher Cliffhanger wie
-  "👇 Die Fakten:" oder "👇 Was bisher bekannt ist:" — NIEMALS reisserisch oder marktschreierisch.
+  "👇 Die Fakten: 🧵" oder "👇 Was bisher bekannt ist: 🧵" — NIEMALS reisserisch oder marktschreierisch.
+  Das 🧵 bleibt auch hier am Ende stehen.
 
 TWEET 2 — DIE FAKTEN (max. ~500 Zeichen, KEINE Hashtags):
 - 3-4 Sätze: Was ist passiert? Was ändert sich konkret (Zahlen, Daten, Fristen)?
@@ -336,4 +338,10 @@ def generate_thread(client: anthropic.Anthropic, model: str, item: dict) -> Opti
     parts = [p.strip() for p in re.split(r'={2,}\s*NEXT\s*={2,}', raw) if p.strip()]
     if len(parts) < 2:
         return None  # not a valid thread → fall back to single post
-    return (f"\n{THREAD_SEP_TOKEN}\n").join(parts[:3])
+    parts = parts[:3]
+    # The 🧵 marks the post as a thread — append it if the model left it out
+    if "🧵" not in parts[0]:
+        lines = parts[0].rstrip().split("\n")
+        lines[-1] = lines[-1].rstrip() + " 🧵"
+        parts[0] = "\n".join(lines)
+    return (f"\n{THREAD_SEP_TOKEN}\n").join(parts)
