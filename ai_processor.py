@@ -166,7 +166,11 @@ VERBOTEN — daran scheitern die meisten Threads:
 - ALLGEMEINPLÄTZE: Streiche jeden Satz, der genauso für jede andere Meldung dieser Art gelten
   würde. Beispiele für Sätze, die NICHT vorkommen dürfen: "ist Teil der regulären Polizeiarbeit",
   "wirkt präventiv und repressiv", "die Behörden arbeiten eng zusammen", "bleibt ein
-  kontinuierliches Anliegen". Solche Füllsätze sind schlimmer als ein kurzer Thread.
+  kontinuierliches Anliegen", "ein Todesfall ist immer ein Verlust", "die Behörden werden den
+  Fall aufklären". Solche Füllsätze sind schlimmer als ein kurzer Thread.
+- RHETORISCHE FÜLLFRAGEN mitten im Thread: keine aufgeworfenen Fragen, die du gar nicht
+  beantwortest ("Wie werden Kutschen überwacht? Welche Standards gelten?"). Entweder du hast
+  die Antwort aus der Quelle — dann schreib sie hin — oder der Punkt gehört gestrichen.
 - SELBSTABSCHWÄCHUNG im Hook: keine Formulierungen wie "die Details sind noch spärlich",
   "bisher ist wenig bekannt", "genaue Umstände unklar". Das nimmt die Spannung, die der Hook
   aufbauen soll. Schreibe stattdessen, was FESTSTEHT.
@@ -198,8 +202,12 @@ LETZTER TWEET — ABSCHLUSS + HASHTAGS (max. ~450 Zeichen):
   GUT: "Findest du die Erhöhung gerechtfertigt? Und warum?"
   SCHLECHT: "Warst du in letzter Zeit in Bern unterwegs?" — das hat nichts mit der Meldung zu tun.
   Trägt das Thema keine sinnvolle Frage, lass sie weg und ende mit der Einordnung.
-- AUSNAHME: Bei ERNSTEN Themen (Tote, Katastrophen, Verbrechen, Unglücke, Gewalt, Krankheit)
-  KEINE Meinungsfrage — dort endet der Thread sachlich mit der Einordnung.
+- ABSOLUTE AUSNAHME bei ERNSTEN Themen (Todesfälle, tödliche Unfälle, Katastrophen, Verbrechen,
+  Gewalt, schwere Krankheit): Dann stellst du ÜBERHAUPT KEINE Frage — kein Fragezeichen im
+  gesamten letzten Tweet. Weder Meinungsfrage noch rhetorische Frage noch Anteilnahme.
+  VERBOTEN sind Formulierungen wie "Deine Gedanken sind bei den Angehörigen?",
+  "Was denkst du dazu?", "Wie siehst du das?" — mit Toten wird kein Engagement erzeugt.
+  Der Thread endet dort mit einem sachlichen Aussagesatz, danach direkt die Hashtags.
 - Danach die Hashtags nach den Regeln unten.
 - NIEMALS erwähnen für wen es relevant ist ("relevant für...", "betrifft Unternehmer...").
 
@@ -408,6 +416,35 @@ def _looks_like_meta(block: str) -> bool:
     return bool(_DIVIDER_RE.match(b) or _META_RE.search(b) or re.match(r'^\s*\d+\.\s', b))
 
 
+_SERIOUS_RE = re.compile(
+    r'\b(tot|tote[nrs]?|todesfall|todesopfer|gestorben|verstorben|ums leben|leblos|'
+    r'getötet|tötet|tötung|leiche|opfer|verunglückt|tödlich|umgekommen|erschossen|'
+    r'ermordet|mord|totschlag|selbstmord|suizid|amok|attentat)\b', re.I)
+
+
+def _has_fatality(*texts: str) -> bool:
+    return any(_SERIOUS_RE.search(t or "") for t in texts)
+
+
+def _strip_closing_question(text: str) -> str:
+    """Remove a closing question from the last tweet. Engagement bait has no
+    place under a report about people who died."""
+    lines = text.rstrip().split("\n")
+    tail = []  # keep the trailing hashtag block where it is
+    while lines and (not lines[-1].strip()
+                     or re.fullmatch(r'(#\S+\s*)+', lines[-1].strip())):
+        tail.insert(0, lines.pop())
+    body = "\n".join(lines).rstrip()
+    while True:
+        m = re.search(r'(?:^|(?<=[.!?\n]))\s*[^.!?\n]*\?\s*$', body)
+        if not m or m.start() == 0:
+            break
+        body = body[:m.start()].rstrip()
+    if not body:
+        return text  # nothing but a question — leave it rather than post nothing
+    return "\n".join([body] + tail).rstrip()
+
+
 def _strip_preamble(text: str) -> str:
     """Remove reasoning the model printed before tweet 1 (substance test,
     headings, divider lines). The prompt forbids it, but prompts are not
@@ -459,6 +496,12 @@ def generate_thread_detailed(client: anthropic.Anthropic, model: str, item: dict
     if len(parts) > 2 and _looks_like_meta(parts[0]):
         parts = parts[1:]  # the whole first block was meta, not a tweet
     parts = parts[:MAX_THREAD_TWEETS]
+    # Never end a thread about a fatality with a question
+    if _has_fatality(item.get("title", ""), item.get("summary", ""), parts[-1]):
+        cleaned_last = _strip_closing_question(parts[-1])
+        if cleaned_last != parts[-1]:
+            logger.info("Removed closing question from a thread about a fatality")
+            parts[-1] = cleaned_last
     # Tweet 1 must end with 👇🧵 side by side — repair it if the model didn't
     if "🧵" not in parts[0]:
         lines = parts[0].rstrip().split("\n")
