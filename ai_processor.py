@@ -109,44 +109,82 @@ HASHTAGS (am Ende, mit Leerzeichen getrennt, für maximale Reichweite):
 Ziel: 700-1000 Zeichen gesamt. Kein Link, keine URL. Gib NUR den Post-Text zurück, nichts anderes."""
 
 
-THREAD_SYSTEM = """Du erstellst einen X-THREAD aus GENAU 3 Tweets auf Deutsch für den Account @SwissIntelNews.
+_THREAD_SHORT_PLAN = """LÄNGE: 3 bis 4 Tweets — je nachdem, wie viel Substanz die Quelle hergibt.
+Lieber 3 starke Tweets als 4 mit Füllmaterial. Streiche alles, was nur wiederholt.
+
+AUFBAU:
+- Tweet 1: DER HAKEN (siehe unten)
+- Tweet 2: DIE FAKTEN — was ist passiert, was ändert sich konkret (Zahlen, Daten, Fristen)
+- Tweet 3 (optional, nur bei echtem Mehrwert): Hintergrund — warum passiert das, was steckt dahinter
+- LETZTER Tweet: ABSCHLUSS (siehe unten)"""
+
+_THREAD_LONG_PLAN = """LÄNGE: 5 bis 7 Tweets — nutze nur so viele, wie die Quelle WIRKLICH trägt.
+Hat der Artikel zu wenig Material für 7, mach 5. Niemals strecken, niemals Füllmaterial.
+
+AUFBAU (überspringe Punkte, für die die Quelle nichts hergibt):
+- Tweet 1: DER HAKEN (siehe unten)
+- Tweet 2: DIE ZAHLEN — was genau ändert sich, was steigt, was bleibt gleich (konkrete Werte, Daten, Fristen)
+- Tweet 3: DAS WARUM — Hintergrund, Auslöser, Begründung der Verantwortlichen
+- Tweet 4: DIE AUSWIRKUNG — Volumen, Mehreinnahmen/-kosten, wer ist betroffen
+- Tweet 5: BEISPIELRECHNUNG — PFLICHT sobald die Quelle Zahlen hergibt: rechne konkret vor,
+  was das für einen normalen Haushalt / ein KMU bedeutet ("Bei X Franken zahlst du künftig Y mehr").
+  Nur mit Zahlen aus der Quelle plausibel gerechnet — nichts erfinden. Ohne Zahlen: diesen Tweet weglassen.
+- Tweet 6: NÄCHSTE SCHRITTE — wie geht es weiter (Parlament, Referendum, Abstimmung, Inkrafttreten)
+- LETZTER Tweet: ABSCHLUSS (siehe unten)"""
+
+_THREAD_TEMPLATE = """Du erstellst einen X-THREAD auf Deutsch für den Account @SwissIntelNews.
 Zielgruppe: Unternehmer, Gründer, Investoren, Anwälte, Expats in der Schweiz.
 
-Trenne die 3 Tweets mit einer eigenen Zeile, die exakt so aussieht:
+Trenne die Tweets mit einer eigenen Zeile, die exakt so aussieht:
 ===NEXT===
+
+{plan}
 
 TWEET 1 — DER HAKEN (kurz, max. ~220 Zeichen, KEINE Hashtags):
 - EMOJI + knackige Headline (max. 6-8 Wörter, nur Kernaussage, mit Zahl falls vorhanden)
 - 1 Satz Kontext, der neugierig macht
-- Letzte Zeile: ein Cliffhanger, der auf Tweet 2 verweist. Diese Zeile MUSS mit den beiden
-  Emojis 👇🧵 DIREKT NEBENEINANDER am Ende schliessen (ohne Leerzeichen dazwischen) — PFLICHT.
+- Letzte Zeile: ein Cliffhanger, der auf den nächsten Tweet verweist. Diese Zeile MUSS mit den
+  beiden Emojis 👇🧵 DIREKT NEBENEINANDER am Ende schliessen (ohne Leerzeichen dazwischen) — PFLICHT.
 - VARIIERE die Formulierung (nicht immer dieselbe!). Passende Beispiele:
   "Das bedeutet das für dich 👇🧵" · "Was das konkret heisst 👇🧵" · "Die wichtigsten Punkte 👇🧵"
   · "Das steckt dahinter 👇🧵" · "Was jetzt wichtig wird 👇🧵"
-- KEIN Clickbait: Der Cliffhanger muss exakt das halten, was Tweet 2 liefert — nicht übertreiben.
+- KEIN Clickbait: Der Cliffhanger muss exakt das halten, was danach kommt — nicht übertreiben.
 - Bei ERNSTEN Themen (Tote, Katastrophen, Verbrechen, Unglücke, Gewalt): sachlicher Cliffhanger wie
   "Die Fakten 👇🧵" oder "Was bisher bekannt ist 👇🧵" — NIEMALS reisserisch oder marktschreierisch.
   Die beiden Emojis 👇🧵 stehen auch hier am Ende.
 
-TWEET 2 — DIE FAKTEN (max. ~500 Zeichen, KEINE Hashtags):
-- 3-4 Sätze: Was ist passiert? Was ändert sich konkret (Zahlen, Daten, Fristen)?
-- Menschlich und direkt, kein Nachrichtenagentur-Ton, nur Fakten aus der Quelle, keine Meinungen.
+MITTLERE TWEETS (je max. ~500 Zeichen, KEINE Hashtags, KEINE Nummerierung):
+- Jeder Tweet behandelt GENAU EINEN Gedanken aus dem Aufbau oben.
+- Der Sog entsteht durch den INHALT — schreibe KEINE Übergangsfloskeln wie "Weiter 👇",
+  "Mehr dazu", "Lies weiter". Diese Emojis/Hinweise gehören AUSSCHLIESSLICH in Tweet 1.
+- Menschlich und direkt, kein Nachrichtenagentur-Ton. Nur Fakten aus der Quelle, keine Meinungen.
 
-TWEET 3 — EINORDNUNG + HASHTAGS (max. ~450 Zeichen):
-- 1-2 Sätze Einordnung/Konsequenz: was heisst das mittelfristig, worauf achten.
+LETZTER TWEET — ABSCHLUSS + HASHTAGS (max. ~450 Zeichen):
+- 1-2 Sätze Einordnung: was heisst das mittelfristig, worauf sollte man achten.
+- Danach eine ECHTE Frage an die Leser, die zum Antworten einlädt und zum Thema passt
+  (z.B. "Findest du die Erhöhung gerechtfertigt? Und warum?"). Keine Floskelfrage.
+- AUSNAHME: Bei ERNSTEN Themen (Tote, Katastrophen, Verbrechen, Unglücke, Gewalt, Krankheit)
+  KEINE Meinungsfrage — dort endet der Thread sachlich mit der Einordnung.
 - Danach die Hashtags nach den Regeln unten.
 - NIEMALS erwähnen für wen es relevant ist ("relevant für...", "betrifft Unternehmer...").
 
 Stil: Schweizer Direktheit, kein Blabla, kein Weichspülen. Subtiler Humor nur bei unkritischen Themen.
+Nummeriere die Tweets NICHT (kein "1/6", "2/6") — das verrät die Länge und kostet Leser.
 
-HASHTAGS (nur in Tweet 3, ganz am Ende, mit Leerzeichen getrennt):
+HASHTAGS (NUR im letzten Tweet, ganz am Ende, mit Leerzeichen getrennt):
 - ORT: Konkrete Stadt/Gemeinde als eigener Hashtag, falls im Artikel genannt (#Zürich, #Lugano, #Chur ...).
 - KANTON: SEPARAT das offizielle Kürzel (#ZH #BE #LU #UR #SZ #OW #NW #GL #ZG #FR #SO #BS #BL #SH #AR #AI #SG #GR #AG #TG #TI #VD #VS #NE #GE #JU). Ort und Kanton = ZWEI getrennte Hashtags.
 - THEMA (max. 1, nur wenn 100% passend): #SNB #FINMA #Steuern #AHV #Abstimmung #Immobilien #Einwanderung #Kriminalität
 - Immer als LETZTES: #Schweiz. Keine generischen Tags (#Wirtschaft, #Politik, #News).
 - Reihenfolge: [#Thema] #Ort #Kantonskürzel #Schweiz
 
-Gib NUR die 3 Tweets mit den ===NEXT===-Trennern zurück, nichts anderes. Kein Link, keine URL."""
+Gib NUR die Tweets mit den ===NEXT===-Trennern zurück, nichts anderes. Kein Link, keine URL."""
+
+THREAD_SYSTEM_SHORT = _THREAD_TEMPLATE.format(plan=_THREAD_SHORT_PLAN)
+THREAD_SYSTEM_LONG = _THREAD_TEMPLATE.format(plan=_THREAD_LONG_PLAN)
+
+# viral_score at or above this gets the long-form treatment
+THREAD_LONG_MIN_SCORE = 66
 
 
 def _call_claude(client: anthropic.Anthropic, model: str, system: str, user_msg: str, max_retries: int = 3, max_tokens: int = 512) -> Optional[str]:
@@ -322,23 +360,31 @@ def generate_post(client: anthropic.Anthropic, model: str, item: dict) -> Option
 THREAD_SEP_TOKEN = "===NEXT==="
 
 
-def generate_thread(client: anthropic.Anthropic, model: str, item: dict) -> Optional[str]:
-    """Generate a 3-tweet X thread for high-score items. Returns the tweets
+MAX_THREAD_TWEETS = 7
+
+
+def generate_thread(client: anthropic.Anthropic, model: str, item: dict,
+                    viral_score: int = 0) -> Optional[str]:
+    """Generate an X thread. Strong topics (viral_score >= THREAD_LONG_MIN_SCORE)
+    get the 5-7 tweet deep dive, the rest a 3-4 tweet version. Returns the tweets
     joined by THREAD_SEP_TOKEN, or None on failure (caller falls back to single)."""
     import re
+    long_form = viral_score >= THREAD_LONG_MIN_SCORE
+    system = THREAD_SYSTEM_LONG if long_form else THREAD_SYSTEM_SHORT
     user_msg = (
         f"Titel: {item['title']}\n\n"
         f"Zusammenfassung: {item.get('summary', '')[:800]}\n\n"
         f"Quelle: {item.get('source_id', '')}"
     )
-    raw = _call_claude(client, model, THREAD_SYSTEM, user_msg, max_tokens=900)
+    raw = _call_claude(client, model, system, user_msg,
+                       max_tokens=2200 if long_form else 1000)
     if not raw:
         return None
     # Split on the ===NEXT=== marker (tolerant of extra = or whitespace)
     parts = [p.strip() for p in re.split(r'={2,}\s*NEXT\s*={2,}', raw) if p.strip()]
     if len(parts) < 2:
         return None  # not a valid thread → fall back to single post
-    parts = parts[:3]
+    parts = parts[:MAX_THREAD_TWEETS]
     # Tweet 1 must end with 👇🧵 side by side — repair it if the model didn't
     if "🧵" not in parts[0]:
         lines = parts[0].rstrip().split("\n")

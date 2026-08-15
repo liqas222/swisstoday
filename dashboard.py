@@ -742,7 +742,8 @@ def api_test_thread():
     """Generate a 3-tweet thread from the newest HIGH item.
     Preview by default; ?publish=1 actually posts it to X."""
     rows = query_db(
-        "SELECT title, summary, url, source_id, COALESCE(category,'Sonstiges') as category "
+        "SELECT title, summary, url, source_id, COALESCE(viral_score,0) as viral_score, "
+        "COALESCE(category,'Sonstiges') as category "
         "FROM seen_items WHERE relevance='HIGH' AND title IS NOT NULL "
         "ORDER BY id DESC LIMIT 1"
     )
@@ -763,7 +764,7 @@ def api_test_thread():
             "title": item["title"],
             "summary": item.get("summary") or item["title"],
             "source_id": item["source_id"],
-        })
+        }, viral_score=item.get("viral_score") or 0)
     except Exception as e:
         app.logger.error("test-thread generate failed: %s", e)
         return jsonify({"ok": False, "error": f"Generierung fehlgeschlagen: {e}"}), 500

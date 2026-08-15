@@ -135,9 +135,12 @@ def _run_pipeline(cfg, anthropic_client):
                 # thread generation fails.
                 post_text = None
                 if viral_score >= THREAD_MIN_SCORE:
-                    post_text = ai_processor.generate_thread(anthropic_client, cfg.claude_model, item)
+                    post_text = ai_processor.generate_thread(
+                        anthropic_client, cfg.claude_model, item, viral_score)
                     if post_text:
-                        logger.info("[THREAD] %s (viral=%d)", item["title"][:50], viral_score)
+                        n = len(post_text.split(ai_processor.THREAD_SEP_TOKEN))
+                        logger.info("[THREAD] %s (viral=%d, %d Tweets)",
+                                    item["title"][:50], viral_score, n)
                 if not post_text:
                     post_text = ai_processor.generate_post(anthropic_client, cfg.claude_model, item)
                 if post_text:
