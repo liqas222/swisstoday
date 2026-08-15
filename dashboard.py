@@ -747,27 +747,60 @@ def api_achievements():
     return jsonify({"badges": badges})
 
 
+# Fabricated article used only by the demo button, so the thread logic can be
+# inspected regardless of what is currently in the database. NEVER publishable.
+DEMO_ITEM = {
+    "title": "Bundesrat beschliesst Mehrwertsteuer-Erhöhung für die AHV ab 2027",
+    "summary": (
+        "Der Bundesrat hat entschieden, die Mehrwertsteuer per 1. Januar 2027 von 8.1 auf "
+        "8.8 Prozent zu erhöhen. Der reduzierte Satz für Lebensmittel und Medikamente steigt "
+        "von 2.6 auf 2.8 Prozent, der Sondersatz für Beherbergung von 3.8 auf 4.1 Prozent. "
+        "Die erwarteten Mehreinnahmen von rund 1.5 Milliarden Franken pro Jahr fliessen "
+        "vollständig in den AHV-Ausgleichsfonds. Hintergrund ist das Umlageergebnis der AHV, "
+        "das ohne Zusatzfinanzierung ab 2029 negativ würde. Die Vorlage geht im Herbst ins "
+        "Parlament. Da für die Erhöhung eine Verfassungsänderung nötig ist, kommt es zwingend "
+        "zu einer Volksabstimmung, voraussichtlich im Juni 2027. Wirtschaftsverbände "
+        "kritisieren die zusätzliche Belastung des Konsums, Gewerkschaften begrüssen die "
+        "Sicherung der Renten."
+    ),
+    "source_id": "bundesrat",
+    "viral_score": 78,
+}
+
+
 @app.route("/api/test-thread", methods=["POST"])
 @require_auth
 def api_test_thread():
-    """Generate a 3-tweet thread from the newest HIGH item.
-    Preview by default; ?publish=1 actually posts it to X."""
-    # Use the strongest recent HIGH item — that is what a thread is meant for
-    rows = query_db(
-        "SELECT title, summary, url, source_id, COALESCE(viral_score,0) as viral_score, "
-        "COALESCE(category,'Sonstiges') as category "
-        "FROM seen_items WHERE relevance='HIGH' AND title IS NOT NULL "
-        "AND fetched_at > datetime('now','-7 days') "
-        "ORDER BY COALESCE(viral_score,0) DESC, id DESC LIMIT 1"
-    ) or query_db(
-        "SELECT title, summary, url, source_id, COALESCE(viral_score,0) as viral_score, "
-        "COALESCE(category,'Sonstiges') as category "
-        "FROM seen_items WHERE relevance='HIGH' AND title IS NOT NULL "
-        "ORDER BY id DESC LIMIT 1"
-    )
-    if not rows:
-        return jsonify({"ok": False, "error": "Kein HIGH-Artikel in der Datenbank"}), 400
-    item = rows[0]
+    """Preview a generated thread. ?demo=1 uses a fabricated sample article
+    (never publishable); ?publish=1 posts a real one to X."""
+    demo = request.args.get("demo") == "1"
+    publish = request.args.get("publish") == "1"
+
+    # A fabricated article must never reach the real news account
+    if demo and publish:
+        return jsonify({"ok": False,
+                        "error": "Beispiel-Threads können nicht gepostet werden — "
+                                 "der Artikel ist erfunden."}), 400
+
+    if demo:
+        item = dict(DEMO_ITEM)
+    else:
+        # Use the strongest recent HIGH item — that is what a thread is meant for
+        rows = query_db(
+            "SELECT title, summary, url, source_id, COALESCE(viral_score,0) as viral_score, "
+            "COALESCE(category,'Sonstiges') as category "
+            "FROM seen_items WHERE relevance='HIGH' AND title IS NOT NULL "
+            "AND fetched_at > datetime('now','-7 days') "
+            "ORDER BY COALESCE(viral_score,0) DESC, id DESC LIMIT 1"
+        ) or query_db(
+            "SELECT title, summary, url, source_id, COALESCE(viral_score,0) as viral_score, "
+            "COALESCE(category,'Sonstiges') as category "
+            "FROM seen_items WHERE relevance='HIGH' AND title IS NOT NULL "
+            "ORDER BY id DESC LIMIT 1"
+        )
+        if not rows:
+            return jsonify({"ok": False, "error": "Kein HIGH-Artikel in der Datenbank"}), 400
+        item = rows[0]
 
     api_key = os.getenv("ANTHROPIC_API_KEY")
     if not api_key:
@@ -798,7 +831,7 @@ def api_test_thread():
             except Exception:
                 single = None
             return jsonify({
-                "ok": True, "published": False, "declined": True,
+                "ok": True, "published": False, "declined": True, "demo": demo,
                 "title": item["title"], "score": score,
                 "note": ("Quelle zu dünn für einen Thread — der Bot postet hier einen "
                          "Einzelpost. Das ist das gewünschte Verhalten."),
@@ -813,9 +846,12 @@ def api_test_thread():
 
     tweets = [t.strip() for t in thread.split("===NEXT===") if t.strip()]
 
-    if request.args.get("publish") != "1":
-        return jsonify({"ok": True, "published": False, "declined": False,
-                        "title": item["title"], "score": score, "tweets": tweets})
+    if not publish:
+        return jsonify({"ok": True, "published": False, "declined": False, "demo": demo,
+                        "title": item["title"], "score": score, "tweets": tweets,
+                        "note": ("Erfundener Beispiel-Artikel — dient nur der Ansicht "
+                                 "der Thread-Logik und kann nicht gepostet werden.")
+                        if demo else None})
 
     # Publish for real
     try:
