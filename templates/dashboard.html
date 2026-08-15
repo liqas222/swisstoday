@@ -1417,19 +1417,21 @@ async function testThread(){
     if(!d.ok){showToast(d.error||'Fehler','error');return}
     _testTweets=d.tweets;
     const n=d.tweets.length;
-    document.getElementById('tl-title').textContent=d.declined?'Kein Thread — Einzelpost':'Thread-Vorschau';
+    // One tweet is never a thread — label it honestly even if the flag is missing
+    const single=d.declined||n<=1;
+    document.getElementById('tl-title').textContent=single?'Kein Thread — Einzelpost':'Thread-Vorschau';
     document.getElementById('tl-cnt').textContent=d.declined?'':`— ${n} Tweets · Score ${d.score??'—'}`;
     const head=`<div style="padding:10px 12px;margin-bottom:8px;border-radius:8px;background:rgba(255,255,255,0.03);border:1px solid var(--border)">
         <div style="font-size:10px;color:var(--dim);letter-spacing:.1em;margin-bottom:4px">ARTIKEL</div>
         <div style="font-size:12px;color:var(--text2);line-height:1.5">${esc(d.title||'')}</div>
       </div>`;
-    const note=d.declined?`<div style="padding:12px;margin-bottom:8px;border-radius:8px;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.25);font-size:12px;color:var(--text2);line-height:1.6">⚖️ ${esc(d.note||'')}</div>`:'';
+    const note=single?`<div style="padding:12px;margin-bottom:8px;border-radius:8px;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.25);font-size:12px;color:var(--text2);line-height:1.6">⚖️ ${esc(d.note||'')}</div>`:'';
     const body=n?d.tweets.map((t,i)=>`<div style="padding:12px 4px;border-bottom:1px solid var(--border)">
-        <div style="font-size:10px;font-weight:700;color:var(--purple);letter-spacing:.1em;margin-bottom:6px">${d.declined?'EINZELPOST':`TWEET ${i+1}/${n}`}</div>
+        <div style="font-size:10px;font-weight:700;color:var(--purple);letter-spacing:.1em;margin-bottom:6px">${single?'EINZELPOST':`TWEET ${i+1}/${n}`}</div>
         <div style="font-size:12px;color:var(--text2);line-height:1.6;white-space:pre-wrap;word-break:break-word">${esc(t)}</div>
         <div style="font-size:9px;color:var(--dim);margin-top:6px;font-family:'JetBrains Mono',monospace">${t.length} Zeichen</div>
       </div>`).join(''):'';
-    const actions=d.declined?
+    const actions=single?
       `<div style="padding:16px 4px;font-size:11px;color:var(--dim)">Zum Testen eines echten Threads braucht es einen inhaltsreicheren Artikel.</div>`:
       `<div style="padding:16px 4px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
         <button class="ins-btn" onclick="publishTestThread(this)">𝕏 Jetzt posten</button>

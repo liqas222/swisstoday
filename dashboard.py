@@ -82,6 +82,17 @@ def get_bot_status():
         return {"running": False, "pid": None}
 
 
+@app.after_request
+def _no_cache_html(resp):
+    """The page carries its own JS inline, so a cached copy keeps running old
+    frontend code against a freshly deployed backend. Never cache the HTML."""
+    if resp.mimetype == "text/html":
+        resp.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+        resp.headers["Pragma"] = "no-cache"
+        resp.headers["Expires"] = "0"
+    return resp
+
+
 @app.route("/")
 @require_auth
 def index():
