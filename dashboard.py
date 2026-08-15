@@ -1,4 +1,5 @@
 import os
+import re
 import sqlite3
 import subprocess
 import functools
@@ -303,30 +304,55 @@ def api_export_csv():
     return resp
 
 
+_LOG_TS_RE = re.compile(r"^(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2}:\d{2})")
+
+
+def _log_last_ts(lines):
+    """Newest timestamp in a log tail, or datetime.min if none is parseable."""
+    for line in reversed(lines):
+        m = _LOG_TS_RE.match(line.strip())
+        if m:
+            try:
+                return datetime.strptime(f"{m.group(1)} {m.group(2)}", "%Y-%m-%d %H:%M:%S")
+            except ValueError:
+                continue
+    return datetime.min
+
+
+def _read_log_file(n=50):
+    if not (LOG_PATH and os.path.exists(LOG_PATH)):
+        return []
+    try:
+        with open(LOG_PATH, "r") as f:
+            return [l.rstrip() for l in f.readlines()[-n:] if l.strip()]
+    except Exception as e:
+        app.logger.error("api_log file read error: %s", e)
+        return []
+
+
+def _read_journal(n=50):
+    try:
+        result = subprocess.run(
+            ["journalctl", "-u", "swissintel-bot", "-n", str(n), "--no-pager", "-o", "cat"],
+            capture_output=True, text=True, timeout=8,
+        )
+        return [l.rstrip() for l in result.stdout.splitlines() if l.strip()]
+    except Exception as e:
+        app.logger.error("api_log journalctl error: %s", e)
+        return []
+
+
 @app.route("/api/log")
 @require_auth
 def api_log():
     ts = datetime.now(timezone.utc).isoformat()
-    # Prefer the log file if it exists; otherwise fall back to journald.
-    if LOG_PATH and os.path.exists(LOG_PATH):
-        try:
-            with open(LOG_PATH, "r") as f:
-                lines = f.readlines()
-            return jsonify({"lines": [l.rstrip() for l in lines[-50:]], "timestamp": ts})
-        except Exception as e:
-            app.logger.error("api_log file read error: %s", e)
-    # Fallback: read last 50 lines from journalctl (bot logs to stdout/journald)
-    try:
-        result = subprocess.run(
-            ["journalctl", "-u", "swissintel-bot", "-n", "50", "--no-pager", "-o", "cat"],
-            capture_output=True, text=True, timeout=8,
-        )
-        out = [l.rstrip() for l in result.stdout.splitlines() if l.strip()]
-        if out:
-            return jsonify({"lines": out, "timestamp": ts})
-    except Exception as e:
-        app.logger.error("api_log journalctl error: %s", e)
-    return jsonify({"lines": ["Log file not found"], "timestamp": ""})
+    # The bot may log to a file or to journald depending on the unit config.
+    # Read both and show whichever has the newer entries, so the panel never
+    # gets stuck on a stale source.
+    sources = [ls for ls in (_read_log_file(), _read_journal()) if ls]
+    if not sources:
+        return jsonify({"lines": ["Log file not found"], "timestamp": ""})
+    return jsonify({"lines": max(sources, key=_log_last_ts), "timestamp": ts})
 
 
 @app.route("/api/views")
