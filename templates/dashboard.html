@@ -758,7 +758,7 @@ footer{
   <span id="global-refresh-icon">↻</span> Aktualisieren
 </button>
 
-<footer id="footer">SwissIntel · <span id="ft">Aktualisiert: —</span></footer>
+<footer id="footer">SwissIntel · <span id="ft">Aktualisiert: —</span> · <span id="fv" title="Laufende Code-Version">Version: —</span></footer>
 
 <!-- TWEET LIST MODAL -->
 <div class="overlay" id="tweet-modal" onclick="if(event.target===this)closeTweetList()">
@@ -1392,6 +1392,19 @@ function renderSparkline(data7){
   </svg>`;
 }
 
+// ── Version ────────────────────────────────────────────────────────────────
+async function loadVersion(){
+  try{
+    const d=await api('/api/version');
+    if(!d.commit)return;
+    const el=document.getElementById('fv');
+    const when=d.committed_at?new Date(d.committed_at).toLocaleString('de-CH',
+      {day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'';
+    el.textContent=`Version: ${d.commit}${when?' ('+when+')':''}`;
+    el.title=d.subject||'';
+  }catch(e){}
+}
+
 // ── Thread-Test ────────────────────────────────────────────────────────────
 let _testTweets=null;
 async function testThread(){
@@ -1588,6 +1601,8 @@ document.addEventListener('DOMContentLoaded',()=>{
   refreshAll();
   refreshFollowers();
   loadFollowerChart();
+  loadVersion();
+  setInterval(loadVersion, 120000);
   updateGoalUI();
   startSSE();
   setInterval(refreshFollowers, 300000); // every 5min

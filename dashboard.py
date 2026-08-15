@@ -800,6 +800,28 @@ def api_test_thread():
                     "url": f"https://x.com/i/web/status/{tweet_id}" if tweet_id else None})
 
 
+@app.route("/api/version")
+@require_auth
+def api_version():
+    """Which commit is actually running — so the deployed state is visible."""
+    repo = os.path.dirname(os.path.abspath(__file__))
+
+    def git(*args):
+        try:
+            r = subprocess.run(["git", *args], cwd=repo, capture_output=True,
+                               text=True, timeout=10)
+            return r.stdout.strip() if r.returncode == 0 else ""
+        except Exception:
+            return ""
+
+    return jsonify({
+        "commit": git("rev-parse", "--short", "HEAD"),
+        "subject": git("log", "-1", "--format=%s"),
+        "committed_at": git("log", "-1", "--format=%cI"),
+        "branch": git("rev-parse", "--abbrev-ref", "HEAD"),
+    })
+
+
 @app.route("/api/health")
 def api_health():
     return jsonify({"ok": True})
