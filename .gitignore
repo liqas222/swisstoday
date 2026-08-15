@@ -4,3 +4,5 @@ __pycache__/
 .env
 swissintel.db
 *.db
+bot.log
+*.log

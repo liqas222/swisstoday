@@ -44,8 +44,12 @@ def auto_update():
     if os.getenv("AUTO_UPDATE", "true").strip().lower() not in ("1", "true", "yes"):
         return
     try:
-        if _git("status", "--porcelain"):
-            logger.warning("Auto-update skipped: uncommitted changes on server")
+        # -uno: untracked files (logs, db, scratch) must not block a fast-forward;
+        # only genuine edits to tracked files do.
+        dirty = _git("status", "--porcelain", "-uno")
+        if dirty:
+            logger.warning("Auto-update skipped: locally modified files: %s",
+                           dirty.replace("\n", ", ")[:200])
             return
         branch = _git("rev-parse", "--abbrev-ref", "HEAD")
         if branch == "HEAD":

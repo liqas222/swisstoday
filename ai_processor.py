@@ -126,9 +126,14 @@ AUFBAU (überspringe Punkte, für die die Quelle nichts hergibt):
 - Tweet 2: DIE ZAHLEN — was genau ändert sich, was steigt, was bleibt gleich (konkrete Werte, Daten, Fristen)
 - Tweet 3: DAS WARUM — Hintergrund, Auslöser, Begründung der Verantwortlichen
 - Tweet 4: DIE AUSWIRKUNG — Volumen, Mehreinnahmen/-kosten, wer ist betroffen
-- Tweet 5: BEISPIELRECHNUNG — PFLICHT sobald die Quelle Zahlen hergibt: rechne konkret vor,
-  was das für einen normalen Haushalt / ein KMU bedeutet ("Bei X Franken zahlst du künftig Y mehr").
-  Nur mit Zahlen aus der Quelle plausibel gerechnet — nichts erfinden. Ohne Zahlen: diesen Tweet weglassen.
+- Tweet 5: WAS DAS FÜR DICH HEISST — dieser Tweet ist PFLICHT, nur die Form richtet sich nach der Quelle:
+  · Liefert die Quelle Zahlen: rechne konkret vor, was das für einen normalen Haushalt / ein KMU
+    bedeutet ("Bei 5'000 Fr. Konsum pro Monat sind das rund 35 Fr. mehr pro Jahr").
+    Rechne NUR mit Zahlen aus der Quelle — erfinde NIEMALS Beträge, Prozente oder Fristen.
+  · Liefert die Quelle keine Zahlen: nenne stattdessen die konkrete Folge im Alltag — wer muss
+    ab wann was anders machen ("Wer bereits ein Gesuch eingereicht hat, muss neu einen
+    Sprachnachweis beilegen — für laufende Verfahren gilt das ab sofort").
+  · Im Zweifel lieber die konkrete Folge als eine unsichere Rechnung.
 - Tweet 6: NÄCHSTE SCHRITTE — wie geht es weiter (Parlament, Referendum, Abstimmung, Inkrafttreten)
 - LETZTER Tweet: ABSCHLUSS (siehe unten)"""
 
