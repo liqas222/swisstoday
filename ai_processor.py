@@ -392,11 +392,16 @@ THREAD_SEP_TOKEN = "===NEXT==="
 MAX_THREAD_TWEETS = 7
 
 
-def generate_thread(client: anthropic.Anthropic, model: str, item: dict,
-                    viral_score: int = 0) -> Optional[str]:
-    """Generate an X thread. Strong topics (viral_score >= THREAD_LONG_MIN_SCORE)
-    get the 5-7 tweet deep dive, the rest a 3-4 tweet version. Returns the tweets
-    joined by THREAD_SEP_TOKEN, or None on failure (caller falls back to single)."""
+def generate_thread_detailed(client: anthropic.Anthropic, model: str, item: dict,
+                             viral_score: int = 0) -> tuple[Optional[str], str]:
+    """Generate an X thread and report why it failed if it did.
+
+    Returns (thread_or_None, reason) where reason is one of:
+      'ok'          — thread generated
+      'thin'        — the model judged the source too thin (single post is correct)
+      'api_error'   — Claude did not respond
+      'bad_format'  — response had no usable ===NEXT=== structure
+    """
     import re
     long_form = viral_score >= THREAD_LONG_MIN_SCORE
     system = THREAD_SYSTEM_LONG if long_form else THREAD_SYSTEM_SHORT
@@ -408,15 +413,16 @@ def generate_thread(client: anthropic.Anthropic, model: str, item: dict,
     raw = _call_claude(client, model, system, user_msg,
                        max_tokens=2200 if long_form else 1000)
     if not raw:
-        return None
+        return None, "api_error"
     # The model may decline when the source is too thin for a thread
     if "KEIN_THREAD" in raw[:200].upper():
         logger.info("Thread declined (source too thin): %s", item.get("title", "")[:60])
-        return None
+        return None, "thin"
     # Split on the ===NEXT=== marker (tolerant of extra = or whitespace)
     parts = [p.strip() for p in re.split(r'={2,}\s*NEXT\s*={2,}', raw) if p.strip()]
     if len(parts) < 2:
-        return None  # not a valid thread → fall back to single post
+        logger.warning("Thread response had no separators: %r", raw[:160])
+        return None, "bad_format"
     parts = parts[:MAX_THREAD_TWEETS]
     # Tweet 1 must end with 👇🧵 side by side — repair it if the model didn't
     if "🧵" not in parts[0]:
@@ -426,4 +432,10 @@ def generate_thread(client: anthropic.Anthropic, model: str, item: dict,
         last = (last + "🧵") if last.endswith("👇") else (last + " 👇🧵")
         lines[-1] = last
         parts[0] = "\n".join(lines)
-    return (f"\n{THREAD_SEP_TOKEN}\n").join(parts)
+    return (f"\n{THREAD_SEP_TOKEN}\n").join(parts), "ok"
+
+
+def generate_thread(client: anthropic.Anthropic, model: str, item: dict,
+                    viral_score: int = 0) -> Optional[str]:
+    """Thread text, or None when a single post should be used instead."""
+    return generate_thread_detailed(client, model, item, viral_score)[0]

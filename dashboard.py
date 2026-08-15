@@ -741,7 +741,14 @@ def api_achievements():
 def api_test_thread():
     """Generate a 3-tweet thread from the newest HIGH item.
     Preview by default; ?publish=1 actually posts it to X."""
+    # Use the strongest recent HIGH item — that is what a thread is meant for
     rows = query_db(
+        "SELECT title, summary, url, source_id, COALESCE(viral_score,0) as viral_score, "
+        "COALESCE(category,'Sonstiges') as category "
+        "FROM seen_items WHERE relevance='HIGH' AND title IS NOT NULL "
+        "AND fetched_at > datetime('now','-7 days') "
+        "ORDER BY COALESCE(viral_score,0) DESC, id DESC LIMIT 1"
+    ) or query_db(
         "SELECT title, summary, url, source_id, COALESCE(viral_score,0) as viral_score, "
         "COALESCE(category,'Sonstiges') as category "
         "FROM seen_items WHERE relevance='HIGH' AND title IS NOT NULL "
@@ -760,23 +767,44 @@ def api_test_thread():
         import ai_processor
         client = _anthropic.Anthropic(api_key=api_key)
         model = os.getenv("CLAUDE_MODEL", "claude-haiku-4-5-20251001")
-        thread = ai_processor.generate_thread(client, model, {
+        gen_item = {
             "title": item["title"],
             "summary": item.get("summary") or item["title"],
             "source_id": item["source_id"],
-        }, viral_score=item.get("viral_score") or 0)
+        }
+        score = item.get("viral_score") or 0
+        thread, reason = ai_processor.generate_thread_detailed(
+            client, model, gen_item, viral_score=score)
     except Exception as e:
         app.logger.error("test-thread generate failed: %s", e)
         return jsonify({"ok": False, "error": f"Generierung fehlgeschlagen: {e}"}), 500
 
     if not thread:
-        return jsonify({"ok": False, "error": "KI lieferte keinen gültigen Thread"}), 500
+        if reason == "thin":
+            # Not an error — the substance gate did its job. Show what would be posted.
+            try:
+                single = ai_processor.generate_post(client, model, gen_item)
+            except Exception:
+                single = None
+            return jsonify({
+                "ok": True, "published": False, "declined": True,
+                "title": item["title"], "score": score,
+                "note": ("Quelle zu dünn für einen Thread — der Bot postet hier einen "
+                         "Einzelpost. Das ist das gewünschte Verhalten."),
+                "tweets": [single] if single else [],
+            })
+        msgs = {
+            "api_error": "Claude hat nicht geantwortet (API-Fehler oder Rate-Limit)",
+            "bad_format": "KI-Antwort ohne gültige Tweet-Trenner — siehe Log",
+        }
+        return jsonify({"ok": False,
+                        "error": msgs.get(reason, "Thread konnte nicht erzeugt werden")}), 500
 
     tweets = [t.strip() for t in thread.split("===NEXT===") if t.strip()]
 
     if request.args.get("publish") != "1":
-        return jsonify({"ok": True, "published": False,
-                        "title": item["title"], "tweets": tweets})
+        return jsonify({"ok": True, "published": False, "declined": False,
+                        "title": item["title"], "score": score, "tweets": tweets})
 
     # Publish for real
     try:
