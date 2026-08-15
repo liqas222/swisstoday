@@ -143,7 +143,28 @@ Zielgruppe: Unternehmer, Gründer, Investoren, Anwälte, Expats in der Schweiz.
 Trenne die Tweets mit einer eigenen Zeile, die exakt so aussieht:
 ===NEXT===
 
+SUBSTANZ-TEST (mach das ZUERST, bevor du irgendetwas schreibst):
+Zähle, wie viele KONKRETE, EIGENSTÄNDIGE Fakten die Quelle liefert — also Zahlen, Beträge,
+Daten, Fristen, Namen, Orte, Entscheide, Begründungen. Allgemeinwissen zählt NICHT.
+- Weniger als 3 solche Fakten → die Quelle trägt keinen Thread.
+  Antworte dann mit GENAU diesem einen Wort und sonst nichts: KEIN_THREAD
+- Ab 3 Fakten → schreibe den Thread nach dem Aufbau unten.
+Ein knapper starker Einzelpost ist immer besser als ein aufgeblasener Thread.
+
 {plan}
+
+VERBOTEN — daran scheitern die meisten Threads:
+- WIEDERHOLUNG: Kein Tweet darf sagen, was schon dasteht. Tweet 2 muss NEUE Information
+  bringen, nicht den Hook mit anderen Worten. Prüfe jeden Tweet: Steht das sinngemäss schon oben?
+  Dann streiche ihn und mach den Thread kürzer.
+- ALLGEMEINPLÄTZE: Streiche jeden Satz, der genauso für jede andere Meldung dieser Art gelten
+  würde. Beispiele für Sätze, die NICHT vorkommen dürfen: "ist Teil der regulären Polizeiarbeit",
+  "wirkt präventiv und repressiv", "die Behörden arbeiten eng zusammen", "bleibt ein
+  kontinuierliches Anliegen". Solche Füllsätze sind schlimmer als ein kurzer Thread.
+- SELBSTABSCHWÄCHUNG im Hook: keine Formulierungen wie "die Details sind noch spärlich",
+  "bisher ist wenig bekannt", "genaue Umstände unklar". Das nimmt die Spannung, die der Hook
+  aufbauen soll. Schreibe stattdessen, was FESTSTEHT.
+Lieber 3 dichte Tweets als 5 mit Luft.
 
 TWEET 1 — DER HAKEN (kurz, max. ~220 Zeichen, KEINE Hashtags):
 - EMOJI + knackige Headline (max. 6-8 Wörter, nur Kernaussage, mit Zahl falls vorhanden)
@@ -166,8 +187,11 @@ MITTLERE TWEETS (je max. ~500 Zeichen, KEINE Hashtags, KEINE Nummerierung):
 
 LETZTER TWEET — ABSCHLUSS + HASHTAGS (max. ~450 Zeichen):
 - 1-2 Sätze Einordnung: was heisst das mittelfristig, worauf sollte man achten.
-- Danach eine ECHTE Frage an die Leser, die zum Antworten einlädt und zum Thema passt
-  (z.B. "Findest du die Erhöhung gerechtfertigt? Und warum?"). Keine Floskelfrage.
+- Danach eine ECHTE Frage an die Leser. Sie muss sich auf die SACHE beziehen — auf den Entscheid,
+  die Zahl, die Konsequenz. Kein Smalltalk über persönliche Erlebnisse.
+  GUT: "Findest du die Erhöhung gerechtfertigt? Und warum?"
+  SCHLECHT: "Warst du in letzter Zeit in Bern unterwegs?" — das hat nichts mit der Meldung zu tun.
+  Trägt das Thema keine sinnvolle Frage, lass sie weg und ende mit der Einordnung.
 - AUSNAHME: Bei ERNSTEN Themen (Tote, Katastrophen, Verbrechen, Unglücke, Gewalt, Krankheit)
   KEINE Meinungsfrage — dort endet der Thread sachlich mit der Einordnung.
 - Danach die Hashtags nach den Regeln unten.
@@ -384,6 +408,10 @@ def generate_thread(client: anthropic.Anthropic, model: str, item: dict,
     raw = _call_claude(client, model, system, user_msg,
                        max_tokens=2200 if long_form else 1000)
     if not raw:
+        return None
+    # The model may decline when the source is too thin for a thread
+    if "KEIN_THREAD" in raw[:200].upper():
+        logger.info("Thread declined (source too thin): %s", item.get("title", "")[:60])
         return None
     # Split on the ===NEXT=== marker (tolerant of extra = or whitespace)
     parts = [p.strip() for p in re.split(r'={2,}\s*NEXT\s*={2,}', raw) if p.strip()]
