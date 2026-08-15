@@ -20,8 +20,12 @@ logger = logging.getLogger(__name__)
 # Items with viral_score >= this are posted as a 3-tweet thread, else single post
 THREAD_MIN_SCORE = 50
 
-# How often to check GitHub for new commits (independent of the pipeline interval)
-AUTO_UPDATE_INTERVAL_MINUTES = 3
+# How often to check GitHub for new commits (independent of the pipeline interval).
+# Costs nothing but a tiny git fetch; the point is that urgent fixes land fast.
+try:
+    AUTO_UPDATE_INTERVAL_MINUTES = max(1, int(os.getenv("AUTO_UPDATE_INTERVAL_MINUTES", "15")))
+except ValueError:
+    AUTO_UPDATE_INTERVAL_MINUTES = 15
 
 
 REPO_DIR = os.path.dirname(os.path.abspath(__file__))
