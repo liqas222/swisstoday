@@ -767,6 +767,10 @@ DEMO_ITEM = {
     "viral_score": 78,
 }
 
+# Prepended to tweet 1 when the demo thread is actually published, so the
+# invented decision cannot be mistaken for a real report.
+DEMO_PUBLISH_MARKER = "🧪 TESTPOST — erfundenes Beispiel, kein echter Entscheid."
+
 
 @app.route("/api/test-thread", methods=["POST"])
 @require_auth
@@ -775,12 +779,6 @@ def api_test_thread():
     (never publishable); ?publish=1 posts a real one to X."""
     demo = request.args.get("demo") == "1"
     publish = request.args.get("publish") == "1"
-
-    # A fabricated article must never reach the real news account
-    if demo and publish:
-        return jsonify({"ok": False,
-                        "error": "Beispiel-Threads können nicht gepostet werden — "
-                                 "der Artikel ist erfunden."}), 400
 
     if demo:
         item = dict(DEMO_ITEM)
@@ -849,9 +847,15 @@ def api_test_thread():
     if not publish:
         return jsonify({"ok": True, "published": False, "declined": False, "demo": demo,
                         "title": item["title"], "score": score, "tweets": tweets,
-                        "note": ("Erfundener Beispiel-Artikel — dient nur der Ansicht "
-                                 "der Thread-Logik und kann nicht gepostet werden.")
+                        "note": ("Erfundener Beispiel-Artikel. Beim Posten wird ein "
+                                 "sichtbarer Testhinweis vorangestellt, damit der "
+                                 "erfundene Entscheid nicht als echte Meldung gelesen wird.")
                         if demo else None})
+
+    # The demo article is invented — never let it go out looking like real news
+    if demo:
+        tweets = list(tweets)
+        tweets[0] = DEMO_PUBLISH_MARKER + "\n\n" + tweets[0]
 
     # Publish for real
     try:

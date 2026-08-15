@@ -1433,24 +1433,23 @@ async function testThread(demo){
         <div style="font-size:12px;color:var(--text2);line-height:1.6;white-space:pre-wrap;word-break:break-word">${esc(t)}</div>
         <div style="font-size:9px;color:var(--dim);margin-top:6px;font-family:'JetBrains Mono',monospace">${t.length} Zeichen</div>
       </div>`).join(''):'';
-    const actions=d.demo?
-      `<div style="padding:16px 4px;font-size:11px;color:var(--dim)">Beispiel-Artikel — kann nicht gepostet werden.</div>`:
-      single?
+    const actions=single?
       `<div style="padding:16px 4px;font-size:11px;color:var(--dim)">Zum Testen eines echten Threads braucht es einen inhaltsreicheren Artikel.</div>`:
       `<div style="padding:16px 4px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-        <button class="ins-btn" onclick="publishTestThread(this)">𝕏 Jetzt posten</button>
-        <span style="font-size:11px;color:var(--dim)">Postet wirklich auf deinen Account</span>
+        <button class="ins-btn" onclick="publishTestThread(this,${d.demo?'true':'false'})">𝕏 Jetzt posten</button>
+        <span style="font-size:11px;color:var(--dim)">${d.demo?'Wird mit Testhinweis gepostet — danach löschen':'Postet wirklich auf deinen Account'}</span>
       </div>`;
     document.getElementById('tl-list').innerHTML=head+note+body+actions;
     document.getElementById('tweet-modal').classList.add('open');
   }catch(e){showToast('Fehler: '+e.message,'error')}
   finally{btn.disabled=false;btn.textContent=old}
 }
-async function publishTestThread(el){
-  if(!confirm('Thread wirklich auf X posten?'))return;
+async function publishTestThread(el,demo){
+  if(!confirm(demo?'Beispiel-Thread mit Testhinweis auf X posten? Danach wieder löschen.'
+                  :'Thread wirklich auf X posten?'))return;
   el.disabled=true;el.textContent='Poste…';
   try{
-    const r=await fetch(BASE+'/api/test-thread?publish=1',{method:'POST'});
+    const r=await fetch(BASE+'/api/test-thread?publish=1'+(demo?'&demo=1':''),{method:'POST'});
     const d=await r.json();
     if(d.ok&&d.url){
       el.outerHTML=`<a class="xbtn" href="${d.url}" target="_blank" rel="noopener">𝕏 Thread ansehen</a>`;
