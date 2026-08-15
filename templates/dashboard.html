@@ -730,7 +730,10 @@ footer{
           <h2>Tweet-Optimierung — KI Analyse</h2>
           <span class="cnt" id="ins-status" style="background:rgba(168,85,247,0.1);color:var(--purple);border-color:rgba(168,85,247,0.2)">—</span>
         </div>
-        <button class="ins-btn" id="ins-btn" onclick="fetchInsights()">✨ Analyse starten</button>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="ins-btn" id="thread-btn" onclick="testThread()">🧵 Thread testen</button>
+          <button class="ins-btn" id="ins-btn" onclick="fetchInsights()">✨ Analyse starten</button>
+        </div>
       </div>
       <div id="ins-body" style="padding:20px 22px;color:var(--dim);font-size:12px">
         Klicke auf "Analyse starten" um KI-Empfehlungen zu generieren, wie du mehr Views bekommst.
@@ -1387,6 +1390,52 @@ function renderSparkline(data7){
   el.innerHTML=`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">
     <path d="${line}" stroke="#6366F1" stroke-width="1.5" fill="none" stroke-linejoin="round" stroke-linecap="round"/>
   </svg>`;
+}
+
+// ── Thread-Test ────────────────────────────────────────────────────────────
+let _testTweets=null;
+async function testThread(){
+  const btn=document.getElementById('thread-btn');
+  if(btn.disabled)return;
+  btn.disabled=true;const old=btn.textContent;btn.textContent='🧵 Generiere…';
+  try{
+    const r=await fetch(BASE+'/api/test-thread',{method:'POST'});
+    const d=await r.json();
+    if(!d.ok){showToast(d.error||'Fehler','error');return}
+    _testTweets=d.tweets;
+    document.getElementById('tl-title').textContent='Thread-Vorschau';
+    document.getElementById('tl-cnt').textContent=`— ${d.tweets.length} Tweets`;
+    document.getElementById('tl-list').innerHTML=
+      d.tweets.map((t,i)=>`<div style="padding:12px 4px;border-bottom:1px solid var(--border)">
+        <div style="font-size:10px;font-weight:700;color:var(--purple);letter-spacing:.1em;margin-bottom:6px">TWEET ${i+1}/${d.tweets.length}</div>
+        <div style="font-size:12px;color:var(--text2);line-height:1.6;white-space:pre-wrap;word-break:break-word">${esc(t)}</div>
+        <div style="font-size:9px;color:var(--dim);margin-top:6px;font-family:'JetBrains Mono',monospace">${t.length} Zeichen</div>
+      </div>`).join('')+
+      `<div style="padding:16px 4px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <button class="ins-btn" onclick="publishTestThread(this)">𝕏 Jetzt posten</button>
+        <span style="font-size:11px;color:var(--dim)">Postet wirklich auf deinen Account</span>
+      </div>`;
+    document.getElementById('tweet-modal').classList.add('open');
+  }catch(e){showToast('Fehler: '+e.message,'error')}
+  finally{btn.disabled=false;btn.textContent=old}
+}
+async function publishTestThread(el){
+  if(!confirm('Thread wirklich auf X posten?'))return;
+  el.disabled=true;el.textContent='Poste…';
+  try{
+    const r=await fetch(BASE+'/api/test-thread?publish=1',{method:'POST'});
+    const d=await r.json();
+    if(d.ok&&d.url){
+      el.outerHTML=`<a class="xbtn" href="${d.url}" target="_blank" rel="noopener">𝕏 Thread ansehen</a>`;
+      showToast('Thread gepostet','ok');
+    }else{
+      showToast(d.error||'Fehler beim Posten','error');
+      el.disabled=false;el.textContent='𝕏 Jetzt posten';
+    }
+  }catch(e){
+    showToast('Fehler: '+e.message,'error');
+    el.disabled=false;el.textContent='𝕏 Jetzt posten';
+  }
 }
 
 // ── Global Refresh ─────────────────────────────────────────────────────────

@@ -736,6 +736,69 @@ def api_achievements():
     return jsonify({"badges": badges})
 
 
+@app.route("/api/test-thread", methods=["POST"])
+@require_auth
+def api_test_thread():
+    """Generate a 3-tweet thread from the newest HIGH item.
+    Preview by default; ?publish=1 actually posts it to X."""
+    rows = query_db(
+        "SELECT title, summary, url, source_id, COALESCE(category,'Sonstiges') as category "
+        "FROM seen_items WHERE relevance='HIGH' AND title IS NOT NULL "
+        "ORDER BY id DESC LIMIT 1"
+    )
+    if not rows:
+        return jsonify({"ok": False, "error": "Kein HIGH-Artikel in der Datenbank"}), 400
+    item = rows[0]
+
+    api_key = os.getenv("ANTHROPIC_API_KEY")
+    if not api_key:
+        return jsonify({"ok": False, "error": "ANTHROPIC_API_KEY fehlt"}), 400
+
+    try:
+        import anthropic as _anthropic
+        import ai_processor
+        client = _anthropic.Anthropic(api_key=api_key)
+        model = os.getenv("CLAUDE_MODEL", "claude-haiku-4-5-20251001")
+        thread = ai_processor.generate_thread(client, model, {
+            "title": item["title"],
+            "summary": item.get("summary") or item["title"],
+            "source_id": item["source_id"],
+        })
+    except Exception as e:
+        app.logger.error("test-thread generate failed: %s", e)
+        return jsonify({"ok": False, "error": f"Generierung fehlgeschlagen: {e}"}), 500
+
+    if not thread:
+        return jsonify({"ok": False, "error": "KI lieferte keinen gültigen Thread"}), 500
+
+    tweets = [t.strip() for t in thread.split("===NEXT===") if t.strip()]
+
+    if request.args.get("publish") != "1":
+        return jsonify({"ok": True, "published": False,
+                        "title": item["title"], "tweets": tweets})
+
+    # Publish for real
+    try:
+        import tweepy as _tweepy
+        import publisher
+        client_x = _tweepy.Client(
+            bearer_token=os.getenv("X_BEARER_TOKEN"),
+            consumer_key=os.getenv("X_API_KEY"),
+            consumer_secret=os.getenv("X_API_SECRET"),
+            access_token=os.getenv("X_ACCESS_TOKEN"),
+            access_token_secret=os.getenv("X_ACCESS_TOKEN_SECRET"),
+            wait_on_rate_limit=False,
+        )
+        tweet_id = publisher.post_thread(client_x, tweets, dry_run=False)
+    except Exception as e:
+        app.logger.error("test-thread publish failed: %s", e)
+        return jsonify({"ok": False, "error": f"Posten fehlgeschlagen: {e}"}), 500
+
+    return jsonify({"ok": True, "published": True, "tweets": tweets,
+                    "tweet_id": tweet_id,
+                    "url": f"https://x.com/i/web/status/{tweet_id}" if tweet_id else None})
+
+
 @app.route("/api/health")
 def api_health():
     return jsonify({"ok": True})
