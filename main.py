@@ -20,6 +20,9 @@ logger = logging.getLogger(__name__)
 # Items with viral_score >= this are posted as a 3-tweet thread, else single post
 THREAD_MIN_SCORE = 50
 
+# How often to check GitHub for new commits (independent of the pipeline interval)
+AUTO_UPDATE_INTERVAL_MINUTES = 3
+
 
 REPO_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -94,13 +97,19 @@ def auto_update():
         logger.warning("Auto-update failed (continuing with current code): %s", e)
 
 
+def auto_update_job():
+    """Scheduler entry point. Swallows the restart signal so APScheduler does not
+    log it as a job failure — systemd is already bringing the new code up."""
+    try:
+        auto_update()
+    except SystemExit:
+        pass
+
+
 def run_pipeline(cfg, anthropic_client):
     """Wrapper that guarantees one pipeline failure never kills the scheduler."""
     try:
-        auto_update()
         _run_pipeline(cfg, anthropic_client)
-    except SystemExit:
-        raise
     except Exception as e:
         logger.exception("Pipeline run crashed (continuing): %s", e)
 
@@ -284,7 +293,8 @@ def main():
 
     logger.info("SwissIntel bot starting (dry_run=%s, interval=%dm)", cfg.dry_run, cfg.check_interval_minutes)
 
-    # Run once immediately on startup
+    # Pick up any commit pushed while we were down, then run once immediately
+    auto_update_job()
     run_pipeline(cfg, anthropic_client)
     sync_views(cfg)
 
@@ -302,6 +312,15 @@ def main():
         "interval",
         hours=6,
         args=[cfg],
+        max_instances=1,
+        coalesce=True,
+    )
+    # Check for new commits far more often than the pipeline runs, so a push
+    # goes live within minutes instead of waiting for the next 15-min tick.
+    scheduler.add_job(
+        auto_update_job,
+        "interval",
+        minutes=AUTO_UPDATE_INTERVAL_MINUTES,
         max_instances=1,
         coalesce=True,
     )
