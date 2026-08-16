@@ -176,12 +176,13 @@ VERBOTEN — daran scheitern die meisten Threads:
   aufbauen soll. Schreibe stattdessen, was FESTSTEHT.
 Lieber 3 dichte Tweets als 5 mit Luft.
 
-TWEET 1 — DER HAKEN (kurz, max. ~220 Zeichen, KEINE Hashtags):
-- EMOJI + knackige Headline (max. 6-8 Wörter, nur Kernaussage, mit Zahl falls vorhanden)
-- 1 Satz Kontext, der neugierig macht
-- Der Cliffhanger steht als EIGENER ABSATZ ganz am Schluss — durch eine LEERZEILE vom
-  Kontextsatz getrennt, niemals an den Fliesstext angehängt. Aufbau von Tweet 1 also:
-  Zeile 1 = Headline, Leerzeile, Kontextsatz, Leerzeile, Cliffhanger.
+TWEET 1 — DER HAKEN (sehr kurz, max. ~140 Zeichen, KEINE Hashtags):
+Tweet 1 besteht aus GENAU ZWEI Teilen und sonst nichts:
+  Zeile 1:   EMOJI + knackige Headline (max. 6-8 Wörter, nur Kernaussage, mit Zahl falls vorhanden)
+  Leerzeile
+  Zeile 3:   der Cliffhanger
+- KEIN Fliesstext, KEIN Kontextsatz, KEINE Details dazwischen. Alle Fakten gehören in Tweet 2 —
+  stünden sie schon hier, gäbe es keinen Grund weiterzulesen.
 - Der Cliffhanger MUSS mit den beiden Emojis 👇🧵 DIREKT NEBENEINANDER enden
   (ohne Leerzeichen dazwischen) — PFLICHT.
 - VARIIERE die Formulierung (nicht immer dieselbe!). Passende Beispiele:
@@ -466,6 +467,15 @@ def _isolate_cliffhanger(text: str) -> str:
     return "\n".join(lines)
 
 
+def _trim_hook(text: str) -> str:
+    """Tweet 1 is headline + cliffhanger only. Body text there would give away
+    what tweet 2 is for."""
+    blocks = [b.strip() for b in re.split(r'\n\s*\n', text.strip()) if b.strip()]
+    if len(blocks) > 2 and "🧵" in blocks[-1]:
+        return blocks[0] + "\n\n" + blocks[-1]
+    return text
+
+
 def _strip_preamble(text: str) -> str:
     """Remove reasoning the model printed before tweet 1 (substance test,
     headings, divider lines). The prompt forbids it, but prompts are not
@@ -531,7 +541,7 @@ def generate_thread_detailed(client: anthropic.Anthropic, model: str, item: dict
         last = (last + "🧵") if last.endswith("👇") else (last + " 👇🧵")
         lines[-1] = last
         parts[0] = "\n".join(lines)
-    parts[0] = _isolate_cliffhanger(parts[0])
+    parts[0] = _trim_hook(_isolate_cliffhanger(parts[0]))
     return (f"\n{THREAD_SEP_TOKEN}\n").join(parts), "ok"
 
 
