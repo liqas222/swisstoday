@@ -179,8 +179,11 @@ Lieber 3 dichte Tweets als 5 mit Luft.
 TWEET 1 — DER HAKEN (kurz, max. ~220 Zeichen, KEINE Hashtags):
 - EMOJI + knackige Headline (max. 6-8 Wörter, nur Kernaussage, mit Zahl falls vorhanden)
 - 1 Satz Kontext, der neugierig macht
-- Letzte Zeile: ein Cliffhanger, der auf den nächsten Tweet verweist. Diese Zeile MUSS mit den
-  beiden Emojis 👇🧵 DIREKT NEBENEINANDER am Ende schliessen (ohne Leerzeichen dazwischen) — PFLICHT.
+- Der Cliffhanger steht als EIGENER ABSATZ ganz am Schluss — durch eine LEERZEILE vom
+  Kontextsatz getrennt, niemals an den Fliesstext angehängt. Aufbau von Tweet 1 also:
+  Zeile 1 = Headline, Leerzeile, Kontextsatz, Leerzeile, Cliffhanger.
+- Der Cliffhanger MUSS mit den beiden Emojis 👇🧵 DIREKT NEBENEINANDER enden
+  (ohne Leerzeichen dazwischen) — PFLICHT.
 - VARIIERE die Formulierung (nicht immer dieselbe!). Passende Beispiele:
   "Das bedeutet das für dich 👇🧵" · "Was das konkret heisst 👇🧵" · "Die wichtigsten Punkte 👇🧵"
   · "Das steckt dahinter 👇🧵" · "Was jetzt wichtig wird 👇🧵"
@@ -445,6 +448,24 @@ def _strip_closing_question(text: str) -> str:
     return "\n".join([body] + tail).rstrip()
 
 
+def _isolate_cliffhanger(text: str) -> str:
+    """Put the 👇🧵 cliffhanger on its own line, separated by a blank line.
+    Glued to the body text it disappears when readers skim."""
+    t = text.rstrip()
+    if "🧵" not in t:
+        return text
+    lines = t.split("\n")
+    # Cliffhanger stuck to the end of the preceding sentence → break it out
+    m = re.match(r'^(.*[.!?:])\s+([^.!?]*🧵[^.!?]*)$', lines[-1].strip())
+    if m:
+        lines[-1] = m.group(1).rstrip()
+        lines += ["", m.group(2).strip()]
+    # Already its own line, but no blank line above it → add one
+    elif len(lines) > 1 and lines[-2].strip():
+        lines.insert(len(lines) - 1, "")
+    return "\n".join(lines)
+
+
 def _strip_preamble(text: str) -> str:
     """Remove reasoning the model printed before tweet 1 (substance test,
     headings, divider lines). The prompt forbids it, but prompts are not
@@ -510,6 +531,7 @@ def generate_thread_detailed(client: anthropic.Anthropic, model: str, item: dict
         last = (last + "🧵") if last.endswith("👇") else (last + " 👇🧵")
         lines[-1] = last
         parts[0] = "\n".join(lines)
+    parts[0] = _isolate_cliffhanger(parts[0])
     return (f"\n{THREAD_SEP_TOKEN}\n").join(parts), "ok"
 
 
