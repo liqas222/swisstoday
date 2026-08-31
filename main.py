@@ -191,30 +191,46 @@ def _run_pipeline(cfg, anthropic_client):
             logger.info("Ranking %d queued items by engagement potential", len(unposted))
             unposted = ai_processor.rank_items_by_potential(anthropic_client, cfg.claude_model, unposted)
         recent_items = database.get_recently_posted_items(cfg.db_path, hours=24)
-        to_post = []
+        posted_this_window = database.get_posted_this_window_count(cfg.db_path)
+
+        # Post one at a time: a follow-up can only quote the item before it once
+        # that one actually has a tweet id. Batching lost that link and turned
+        # several reports on the same event into separate standalone posts.
         for item in unposted:
-            status, quote_tweet_id = ai_processor.check_topic_overlap(anthropic_client, cfg.claude_model, item, recent_items)
+            status, quote_tweet_id = ai_processor.check_topic_overlap(
+                anthropic_client, cfg.claude_model, item, recent_items)
             if status == "duplicate":
                 logger.info("[SKIP duplicate] %s", item["title"][:60])
                 database.update_posted(cfg.db_path, item["id"], "duplicate_topic")
-            else:
-                if status == "update" and quote_tweet_id:
-                    logger.info("[UPDATE] %s → quoting %s", item["title"][:60], quote_tweet_id)
-                    item = {**item, "quote_tweet_id": quote_tweet_id}
-                    # Prepend update marker to post text
-                    if item.get("post_text") and not item["post_text"].startswith("🔄"):
-                        item = {**item, "post_text": "🔄 Update:\n\n" + item["post_text"]}
-                recent_items.append({"title": item["title"], "post_text": item.get("post_text", ""), "tweet_id": item.get("quote_tweet_id")})
-                to_post.append(item)
-        posted_this_window = database.get_posted_this_window_count(cfg.db_path)
-        results = publisher.post_batch(cfg, to_post, posted_today=posted_today, posted_this_window=posted_this_window)
-        for item_id, (status, payload) in results.items():
-            if status == "ok":
-                database.update_posted(cfg.db_path, item_id, payload)
-                stats["posted"] += 1
-            else:
-                database.update_error(cfg.db_path, item_id, payload)
-                stats["errors"] += 1
+                continue
+            if status == "update" and quote_tweet_id:
+                logger.info("[UPDATE] %s → quoting %s", item["title"][:60], quote_tweet_id)
+                item = {**item, "quote_tweet_id": quote_tweet_id}
+                if item.get("post_text") and not item["post_text"].startswith("🔄"):
+                    item = {**item, "post_text": "🔄 Update:\n\n" + item["post_text"]}
+
+            results = publisher.post_batch(
+                cfg, [item], posted_today=posted_today,
+                posted_this_window=posted_this_window)
+            if not results:
+                break  # a posting limit kicked in — leave the rest queued
+
+            for item_id, (res_status, payload) in results.items():
+                if res_status == "ok":
+                    database.update_posted(cfg.db_path, item_id, payload)
+                    stats["posted"] += 1
+                    posted_today += 1
+                    posted_this_window += 1
+                    # Remember the real tweet id so the next report on this
+                    # event can attach to it instead of starting over
+                    recent_items.append({
+                        "title": item["title"],
+                        "post_text": item.get("post_text", ""),
+                        "tweet_id": payload,
+                    })
+                else:
+                    database.update_error(cfg.db_path, item_id, payload)
+                    stats["errors"] += 1
 
     database.log_run(cfg.db_path, stats)
     logger.info("=== Run complete: %s ===", stats)
