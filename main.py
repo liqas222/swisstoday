@@ -17,8 +17,15 @@ from config import load_config
 
 logger = logging.getLogger(__name__)
 
-# Items with viral_score >= this are posted as a 3-tweet thread, else single post
+# Items with viral_score >= this are posted as a thread, else as a single post
 THREAD_MIN_SCORE = 50
+
+# Only post items scoring at least this. Volume alone does not grow an account:
+# a weak post costs reach on the next one. Raise or lower via .env.
+try:
+    POST_MIN_SCORE = max(0, int(os.getenv("POST_MIN_SCORE", "60")))
+except ValueError:
+    POST_MIN_SCORE = 60
 
 # How often to check GitHub for new commits (independent of the pipeline interval).
 # Costs nothing but a tiny git fetch; the point is that urgent fixes land fast.
@@ -184,6 +191,12 @@ def _run_pipeline(cfg, anthropic_client):
         logger.info("Archived %d stale queue items (>24h old)", archived)
     posted_today = database.get_posted_today_count(cfg.db_path)
     unposted = database.get_unposted_high_items(cfg.db_path)
+    if unposted and POST_MIN_SCORE:
+        strong = [i for i in unposted if (i.get("viral_score") or 0) >= POST_MIN_SCORE]
+        if len(strong) < len(unposted):
+            logger.info("Score-Filter: %d von %d Artikeln erreichen %d Punkte nicht — bleiben liegen",
+                        len(unposted) - len(strong), len(unposted), POST_MIN_SCORE)
+        unposted = strong
     if unposted:
         logger.info("Posting %d HIGH items", len(unposted))
         # If many items queued, rank by engagement potential first

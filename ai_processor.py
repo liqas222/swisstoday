@@ -34,13 +34,24 @@ ABSOLUT IMMER LOW — keine Ausnahmen:
 - Alles mit "könnte", "plant", "diskutiert", "erwartet", "prognostiziert", "dürfte"
 - Vorstösse/Motionen die noch nicht beschlossen sind
 
-HIGH wenn konkretes Ereignis in der Schweiz:
-- Verhaftung, Verbrechen, Polizeieinsatz, Gerichtsurteil — IMMER HIGH
-- Bundesgerichtsurteil, Strafprozess — IMMER HIGH
+HIGH wenn konkretes Ereignis in der Schweiz MIT BREITER BEDEUTUNG:
+- Schwere Gewaltverbrechen: Tötungsdelikte, Schusswaffengebrauch, Anschläge, Geiselnahmen,
+  Fälle mit mehreren Opfern
+- Grosse Polizeiaktionen, Razzien, organisierte Kriminalität, Terrorermittlungen
+- Gerichtsurteile von öffentlichem Interesse: Bundesgericht, Präzedenzfälle, bekannte Personen,
+  hohe Deliktsummen, aussergewöhnlich hohe Strafen
 - Beschlossenes Gesetz/Verordnung, Abstimmungsresultat
 - SNB/FINMA Entscheid, Zinsänderung
 - Unternehmenstransaktion (Übernahme, Konkurs, Entlassung >100 Stellen)
 - Politischer Skandal mit konkreten Folgen
+
+ROUTINE-POLIZEIMELDUNGEN sind LOW — davon erscheinen täglich dutzende, sie tragen keinen Post:
+- Einzelne Einbrüche, Diebstähle, Sachbeschädigung, Ladendiebstahl
+- Verkehrsunfälle ohne Todesopfer, Selbstunfälle, Fahren in fahrunfähigem Zustand
+- Festnahmen ohne besondere Umstände, Fahndungsaufrufe, Vermisstmeldungen
+- Betrugs- und Diebstahlsfälle im Kleinbereich, Hausfriedensbruch
+- Prüfe bei Kriminalität immer: Würde eine überregionale Zeitung darüber berichten?
+  Wenn nur die Lokalzeitung — dann LOW.
 
 Kategorien (wähle die passendste):
 Finanzen, Steuern, Wirtschaft, Politik, Kriminalität, Recht, Einwanderung, Gesundheit, Energie, Umwelt, Sonstiges

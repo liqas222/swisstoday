@@ -263,7 +263,8 @@ def get_today_slots(db_path: str, max_slots: int = 5) -> list[dict]:
 def get_unposted_high_items(db_path: str) -> list[dict]:
     with _connect(db_path) as conn:
         rows = conn.execute(
-            """SELECT id, title, url, summary, post_text, source_id
+            """SELECT id, title, url, summary, post_text, source_id,
+                      COALESCE(viral_score, 0) AS viral_score
                FROM seen_items
                WHERE relevance='HIGH' AND posted_at IS NULL AND error IS NULL AND post_text IS NOT NULL
                ORDER BY id ASC"""
