@@ -203,7 +203,7 @@ def _run_pipeline(cfg, anthropic_client):
         if len(unposted) > 3:
             logger.info("Ranking %d queued items by engagement potential", len(unposted))
             unposted = ai_processor.rank_items_by_potential(anthropic_client, cfg.claude_model, unposted)
-        recent_items = database.get_recently_posted_items(cfg.db_path, hours=24)
+        recent_items = database.get_recently_posted_items(cfg.db_path, hours=72)
         posted_this_window = database.get_posted_this_window_count(cfg.db_path)
 
         # Post one at a time: a follow-up can only quote the item before it once

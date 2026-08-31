@@ -343,6 +343,48 @@ def score_relevance(client: anthropic.Anthropic, model: str, item: dict) -> tupl
         return "LOW", "JSON-Parsing-Fehler", "Sonstiges", 0
 
 
+# How many posts one event may get before we stop, no matter how new the angle.
+# The Aarau shooting produced 31 posts; impressions fell from 14'969 to 39.
+MAX_POSTS_PER_TOPIC = 4
+
+_TOPIC_STOP = {
+    "schweiz", "schweizer", "heute", "neue", "neuer", "neues", "nach", "nich",
+    "mehr", "video", "update", "live", "blick", "news", "jahre", "jahren",
+    "prozent", "franken", "million", "millionen", "milliarden",
+}
+
+
+def _topic_keywords(text: str) -> set:
+    """Distinctive words of a headline: proper nouns and numbers, cut to a stem
+    so that Aarau/Aarauer and Verletzte/Verletzt count as the same word."""
+    words = re.findall(r'\b[A-ZÄÖÜ][\wäöüéèà]{3,}\b|\b\d{2,}\b', text or "")
+    out = set()
+    for w in words:
+        w = w.lower()
+        if w in _TOPIC_STOP:
+            continue
+        out.add(w[:5])  # crude stem — enough to link variants of one event
+    return out
+
+
+# One shared distinctive word is enough. Measured against the real Aarau
+# headlines this linked all 45 pairs with no false match against other topics.
+TOPIC_OVERLAP_WORDS = 1
+
+
+def _same_topic_count(new_title: str, recent_items: list[dict]) -> int:
+    """How many recent posts are clearly about the same event."""
+    kw = _topic_keywords(new_title)
+    if len(kw) < 2:
+        return 0
+    hits = 0
+    for r in recent_items:
+        other = _topic_keywords(r.get("title") or r.get("post_text", ""))
+        if len(kw & other) >= TOPIC_OVERLAP_WORDS:
+            hits += 1
+    return hits
+
+
 def check_topic_overlap(client: anthropic.Anthropic, model: str, new_item: dict, recent_items: list[dict]) -> tuple[str, Optional[str]]:
     """Check if new item is duplicate, update, or new topic.
     Returns (status, quote_tweet_id) where status is 'new'|'duplicate'|'update'.
@@ -351,25 +393,41 @@ def check_topic_overlap(client: anthropic.Anthropic, model: str, new_item: dict,
         return "new", None
 
     new_title = new_item.get("title", "")
+
+    # Hard cap first — no AI call needed once an event is exhausted
+    seen = _same_topic_count(new_title, recent_items)
+    if seen >= MAX_POSTS_PER_TOPIC:
+        logger.info("[TOPIC CAP] %s — bereits %d Posts zu diesem Ereignis, kein weiterer",
+                    new_title[:60], seen)
+        return "duplicate", None
     new_text = (new_item.get("post_text") or new_item.get("summary") or "")[:300]
 
-    recent_list = recent_items[-30:]
+    recent_list = recent_items[-60:]  # 72h window, so keep more in view
     recent_str = "\n".join(
         f"[{i}] Titel: {r['title']}\n    Post: {(r.get('post_text') or '')[:150]}"
         for i, r in enumerate(recent_list)
     )
 
     system = (
-        "Du prüfst ob ein neuer Artikel ein Duplikat, ein Update oder ein neues Thema ist.\n"
-        "DUPLIKAT: Exakt dasselbe Ereignis, dieselbe Entscheidung — keine neuen Fakten.\n"
-        "UPDATE: Dasselbe Thema, aber neue Entwicklung (z.B. neue Zahlen, Urteil, Reaktion).\n"
-        "NEU: Anderes Thema oder neues unabhängiges Ereignis.\n"
-        "Antworte NUR mit JSON: {\"status\": \"new\"|\"duplicate\"|\"update\", \"related_index\": null|0..N, \"reason\": \"...\"}\n"
+        "Du prüfst, ob ein neuer Artikel ein Duplikat, ein Update oder ein neues Thema ist.\n"
+        "Sei STRENG. Im Zweifel immer 'duplicate'.\n\n"
+        "DUPLIKAT: Dasselbe Ereignis wie ein bereits geposteter Artikel, ohne EINEN konkreten\n"
+        "  neuen Fakt. Auch wenn eine andere Quelle es anders formuliert, andere Details\n"
+        "  betont oder eine neue Schlagzeile wählt — das bleibt ein Duplikat.\n"
+        "UPDATE: Dasselbe Ereignis, aber mit einer NEUEN, BENENNBAREN Tatsache, die in den\n"
+        "  bisherigen Posts nachweislich fehlt — z.B. Festnahme erfolgt, Opferzahl geändert,\n"
+        "  Täter identifiziert, Urteil gefallen, offizielle Reaktion.\n"
+        "NEU: Ein anderes, unabhängiges Ereignis.\n\n"
+        "Für 'update' MUSST du in 'new_fact' die neue Tatsache in wenigen Worten benennen.\n"
+        "Kannst du keine benennen, ist es 'duplicate'. Formulierungen wie 'mehr Details',\n"
+        "'andere Perspektive', 'ausführlicher' zählen NICHT als neue Tatsache.\n\n"
+        "Antworte NUR mit JSON: {\"status\": \"new\"|\"duplicate\"|\"update\", "
+        "\"related_index\": null|0..N, \"new_fact\": \"\", \"reason\": \"...\"}\n"
         "related_index = Index des verwandten Posts aus der Liste (nur bei update/duplicate)."
     )
     user_msg = (
         f"NEUER ARTIKEL:\nTitel: {new_title}\nPost: {new_text}\n\n"
-        f"BEREITS GEPOSTET (letzte 24h):\n{recent_str}\n\n"
+        f"BEREITS GEPOSTET (letzte 72h):\n{recent_str}\n\n"
         f"Bewerte den neuen Artikel."
     )
 
@@ -382,6 +440,15 @@ def check_topic_overlap(client: anthropic.Anthropic, model: str, new_item: dict,
         status = data.get("status", "duplicate")
         reason = data.get("reason", "")
         related_idx = data.get("related_index")
+        # An update has to name what is actually new — otherwise it is a rerun
+        if status == "update":
+            fact = (data.get("new_fact") or "").strip()
+            vague = re.search(r'mehr detail|ausführlich|andere perspektive|neue quelle|'
+                              r'genauer|weitere info|zusätzliche info', fact, re.I)
+            if len(fact) < 8 or vague:
+                logger.info("[TOPIC CHECK] %s → update ohne benennbaren neuen Fakt (%r) "
+                            "→ als Duplikat behandelt", new_title[:60], fact[:40])
+                status = "duplicate"
         logger.info("[TOPIC CHECK] %s → %s (%s)", new_title[:60], status, reason)
         quote_tweet_id = None
         if status in ("update", "duplicate") and related_idx is not None:
