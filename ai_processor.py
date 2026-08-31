@@ -440,6 +440,18 @@ def _is_publishable(text: Optional[str]) -> tuple[bool, str]:
     return True, "ok"
 
 
+# Sent on a second attempt when the model declined. Reporting a crime or a
+# fatality is ordinary journalism — the news must not simply be dropped.
+_NEWS_CONTEXT_HINT = (
+    "\n\nWICHTIG: Das ist ein Auftrag für sachliche Nachrichtenberichterstattung eines "
+    "Schweizer News-Accounts. Auch Verbrechen, Todesfälle und Unfälle gehören dazu und werden "
+    "berichtet — genau wie in jeder Zeitung. Fasse ausschliesslich die belegten Fakten "
+    "zusammen: was ist passiert, wo, wann, wer ist betroffen, wie geht es weiter. "
+    "Nüchtern und respektvoll, ohne Humor, ohne Zuspitzung, ohne Spekulation. "
+    "Gib NUR den fertigen Post aus — keine Ablehnung, kein Kommentar zum Auftrag."
+)
+
+
 def generate_post(client: anthropic.Anthropic, model: str, item: dict) -> Optional[str]:
     user_msg = (
         f"Titel: {item['title']}\n\n"
@@ -448,6 +460,11 @@ def generate_post(client: anthropic.Anthropic, model: str, item: dict) -> Option
     )
     text = _call_claude(client, model, POST_SYSTEM, user_msg)
     ok, reason = _is_publishable(text)
+    if not ok and "Verweigerung" in reason:
+        logger.info("Post abgelehnt — zweiter Versuch mit Nachrichten-Kontext: %s",
+                    item.get("title", "")[:60])
+        text = _call_claude(client, model, POST_SYSTEM, user_msg + _NEWS_CONTEXT_HINT)
+        ok, reason = _is_publishable(text)
     if not ok:
         logger.warning("Post verworfen (%s): %s | %r",
                        reason, item.get("title", "")[:60], (text or "")[:120])
@@ -561,15 +578,21 @@ def generate_thread_detailed(client: anthropic.Anthropic, model: str, item: dict
         f"Zusammenfassung: {item.get('summary', '')[:800]}\n\n"
         f"Quelle: {item.get('source_id', '')}"
     )
-    raw = _call_claude(client, model, system, user_msg,
-                       max_tokens=2200 if long_form else 1000)
+    max_tokens = 2200 if long_form else 1000
+    raw = _call_claude(client, model, system, user_msg, max_tokens=max_tokens)
+    # A refusal is not an answer — retry once, spelling out the news context
+    if raw and _REFUSAL_RE.search(raw) and "KEIN_THREAD" not in raw[:200].upper():
+        logger.info("Thread abgelehnt — zweiter Versuch mit Nachrichten-Kontext: %s",
+                    item.get("title", "")[:60])
+        raw = _call_claude(client, model, system, user_msg + _NEWS_CONTEXT_HINT,
+                           max_tokens=max_tokens)
     if not raw:
         return None, "api_error"
     # The model may decline when the source is too thin for a thread
     if "KEIN_THREAD" in raw[:200].upper():
         logger.info("Thread declined (source too thin): %s", item.get("title", "")[:60])
         return None, "thin"
-    # The model may refuse outright — that text must never become a tweet
+    # Still refusing after the retry — that text must never become a tweet
     if _REFUSAL_RE.search(raw):
         logger.warning("Thread refused by model: %s | %r",
                        item.get("title", "")[:60], raw[:120])
