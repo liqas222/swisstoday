@@ -63,6 +63,16 @@ Addiere A+B+C+E = viral_score (1-100). Rechne es WIRKLICH aus — nicht schätze
 POST_SYSTEM = """Du erstellst X-Posts (Twitter) auf Deutsch für den Account @SwissIntelNews.
 Zielgruppe: Unternehmer, Gründer, Investoren, Anwälte, Expats in der Schweiz.
 
+Das ist sachliche Nachrichtenberichterstattung. Auch Verbrechen, Todesfälle, Unfälle und
+Katastrophen werden berichtet — nüchtern, faktentreu und respektvoll gegenüber Betroffenen,
+so wie es jede seriöse Zeitung tut. Bei solchen Themen gilt: kein Humor, keine Zuspitzung,
+keine reisserische Sprache, nur die belegten Fakten.
+
+Gib IMMER einen fertigen Post aus. Schreibe NIEMALS über den Auftrag, lehne NIEMALS ab und
+stelle keine Rückfragen — kein "ich kann keinen Post erstellen", keine Hinweise auf Richtlinien.
+Solcher Text würde ungeprüft veröffentlicht. Ist ein Thema heikel, formuliere sachlicher,
+aber liefere den Post.
+
 Format (EXAKT so):
 EMOJI HEADLINE
 
@@ -140,6 +150,14 @@ AUFBAU (überspringe Punkte, für die die Quelle nichts hergibt):
 
 _THREAD_TEMPLATE = """Du erstellst einen X-THREAD auf Deutsch für den Account @SwissIntelNews.
 Zielgruppe: Unternehmer, Gründer, Investoren, Anwälte, Expats in der Schweiz.
+
+Das ist sachliche Nachrichtenberichterstattung. Auch Verbrechen, Todesfälle, Unfälle und
+Katastrophen werden berichtet — nüchtern, faktentreu und respektvoll gegenüber Betroffenen.
+Bei solchen Themen: kein Humor, keine Zuspitzung, nur belegte Fakten.
+
+Antworte AUSSCHLIESSLICH mit dem Thread oder mit KEIN_THREAD. Schreibe NIEMALS über den
+Auftrag, lehne NIEMALS mit Begründung ab und stelle keine Rückfragen — solcher Text würde
+ungeprüft veröffentlicht. Ist ein Thema heikel, formuliere sachlicher.
 
 Trenne die Tweets mit einer eigenen Zeile, die exakt so aussieht:
 ===NEXT===
@@ -394,13 +412,47 @@ def rank_items_by_potential(client: anthropic.Anthropic, model: str, items: list
         return items
 
 
+# Phrases that mean the model talked *about* the task instead of doing it.
+# Such text must never be published — it once went out as a tweet verbatim.
+_REFUSAL_RE = re.compile(
+    r"(ich kann (dir |diesen |hier )?(leider )?kein|ich erstelle kein|ich werde kein|"
+    r"nach meinen richtlinien|meine richtlinien|ich darf (hier )?kein|"
+    r"als (ki|ai|sprachmodell)\b|verstösst gegen|"
+    r"falls du einen anderen|helfe ich (dir )?gerne weiter|"
+    r"möchtest du, dass ich|soll ich stattdessen|"
+    r"erfordern sensibilität|wäre unangemessen|"
+    r"i (can'?t|cannot|am unable|won'?t)\b|as an ai\b|i'?m sorry\b)",
+    re.I)
+
+
+def _is_publishable(text: Optional[str]) -> tuple[bool, str]:
+    """A generated post must BE a post — not a refusal, apology or a question
+    back to us. Returns (ok, reason)."""
+    if not text or not text.strip():
+        return False, "leer"
+    t = text.strip()
+    m = _REFUSAL_RE.search(t)
+    if m:
+        return False, f"Verweigerung/Meta-Antwort der KI ({m.group(0)!r})"
+    # Every post is required to end with #Schweiz; a refusal never does.
+    if "#Schweiz" not in t:
+        return False, "kein #Schweiz — vermutlich kein gültiger Post"
+    return True, "ok"
+
+
 def generate_post(client: anthropic.Anthropic, model: str, item: dict) -> Optional[str]:
     user_msg = (
         f"Titel: {item['title']}\n\n"
         f"Zusammenfassung: {item.get('summary', '')[:800]}\n\n"
         f"Quelle: {item.get('source_id', '')}"
     )
-    return _call_claude(client, model, POST_SYSTEM, user_msg)
+    text = _call_claude(client, model, POST_SYSTEM, user_msg)
+    ok, reason = _is_publishable(text)
+    if not ok:
+        logger.warning("Post verworfen (%s): %s | %r",
+                       reason, item.get("title", "")[:60], (text or "")[:120])
+        return None
+    return text
 
 
 # Marker between tweets in a stored thread (must match publisher.THREAD_SEP_TOKEN)
@@ -517,6 +569,11 @@ def generate_thread_detailed(client: anthropic.Anthropic, model: str, item: dict
     if "KEIN_THREAD" in raw[:200].upper():
         logger.info("Thread declined (source too thin): %s", item.get("title", "")[:60])
         return None, "thin"
+    # The model may refuse outright — that text must never become a tweet
+    if _REFUSAL_RE.search(raw):
+        logger.warning("Thread refused by model: %s | %r",
+                       item.get("title", "")[:60], raw[:120])
+        return None, "refused"
     # Split on the ===NEXT=== marker (tolerant of extra = or whitespace)
     parts = [p.strip() for p in re.split(r'={2,}\s*NEXT\s*={2,}', raw) if p.strip()]
     if len(parts) < 2:
@@ -526,7 +583,9 @@ def generate_thread_detailed(client: anthropic.Anthropic, model: str, item: dict
     parts[0] = _strip_preamble(parts[0])
     if len(parts) > 2 and _looks_like_meta(parts[0]):
         parts = parts[1:]  # the whole first block was meta, not a tweet
-    parts = parts[:MAX_THREAD_TWEETS]
+    # When capping, keep the closing tweet — it carries the hashtags
+    if len(parts) > MAX_THREAD_TWEETS:
+        parts = parts[:MAX_THREAD_TWEETS - 1] + [parts[-1]]
     # Never end a thread about a fatality with a question
     if _has_fatality(item.get("title", ""), item.get("summary", ""), parts[-1]):
         cleaned_last = _strip_closing_question(parts[-1])
@@ -542,6 +601,11 @@ def generate_thread_detailed(client: anthropic.Anthropic, model: str, item: dict
         lines[-1] = last
         parts[0] = "\n".join(lines)
     parts[0] = _trim_hook(_isolate_cliffhanger(parts[0]))
+    # Final gate: the closing tweet must look like a real post
+    if "#Schweiz" not in parts[-1]:
+        logger.warning("Thread without #Schweiz in the last tweet — discarded: %r",
+                       parts[-1][:120])
+        return None, "bad_format"
     return (f"\n{THREAD_SEP_TOKEN}\n").join(parts), "ok"
 
 
