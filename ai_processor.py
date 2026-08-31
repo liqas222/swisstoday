@@ -140,7 +140,7 @@ SPRACHE — jeder Satz muss grammatikalisch korrekt sein. Lies jeden Satz vor de
 Ziel: 700-1000 Zeichen gesamt. Kein Link, keine URL. Gib NUR den Post-Text zurück, nichts anderes."""
 
 
-_THREAD_SHORT_PLAN = """LÄNGE: 3 bis 4 Tweets — je nachdem, wie viel Substanz die Quelle hergibt.
+_THREAD_SHORT_PLAN = """LÄNGE: 2 bis 3 Tweets — je nachdem, wie viel Substanz die Quelle hergibt.
 Lieber 3 starke Tweets als 4 mit Füllmaterial. Streiche alles, was nur wiederholt.
 
 AUFBAU:
@@ -149,7 +149,7 @@ AUFBAU:
 - Tweet 3 (optional, nur bei echtem Mehrwert): Hintergrund — warum passiert das, was steckt dahinter
 - LETZTER Tweet: ABSCHLUSS (siehe unten)"""
 
-_THREAD_LONG_PLAN = """LÄNGE: 5 bis 7 Tweets — nutze nur so viele, wie die Quelle WIRKLICH trägt.
+_THREAD_LONG_PLAN = """LÄNGE: 3 bis 4 Tweets — nutze nur so viele, wie die Quelle WIRKLICH trägt.
 Hat der Artikel zu wenig Material für 7, mach 5. Niemals strecken, niemals Füllmaterial.
 
 AUFBAU (überspringe Punkte, für die die Quelle nichts hergibt):
@@ -214,13 +214,14 @@ VERBOTEN — daran scheitern die meisten Threads:
   aufbauen soll. Schreibe stattdessen, was FESTSTEHT.
 Lieber 3 dichte Tweets als 5 mit Luft.
 
-TWEET 1 — DER HAKEN (sehr kurz, max. ~140 Zeichen, KEINE Hashtags):
-Tweet 1 besteht aus GENAU ZWEI Teilen und sonst nichts:
-  Zeile 1:   EMOJI + knackige Headline (max. 6-8 Wörter, nur Kernaussage, mit Zahl falls vorhanden)
-  Leerzeile
-  Zeile 3:   der Cliffhanger
-- KEIN Fliesstext, KEIN Kontextsatz, KEINE Details dazwischen. Alle Fakten gehören in Tweet 2 —
-  stünden sie schon hier, gäbe es keinen Grund weiterzulesen.
+TWEET 1 — DER HAKEN (max. ~260 Zeichen, KEINE Hashtags):
+Aufbau, jeweils durch eine Leerzeile getrennt:
+  EMOJI + knackige Headline (max. 6-8 Wörter, nur Kernaussage, mit Zahl falls vorhanden)
+  1-2 Sätze mit der WICHTIGSTEN Information: was ist passiert, wo, wann, wie viele Betroffene
+  der Cliffhanger
+- WICHTIG: Tweet 1 muss FÜR SICH ALLEIN VERSTÄNDLICH sein. Die Hälfte der Leser klappt den
+  Thread nie auf — wer nur diesen einen Tweet sieht, muss die Nachricht trotzdem kennen.
+- Der Cliffhanger verspricht die VERTIEFUNG (Hintergrund, Zahlen, Folgen), nicht die Grundinfo.
 - Der Cliffhanger MUSS mit den beiden Emojis 👇🧵 DIREKT NEBENEINANDER enden
   (ohne Leerzeichen dazwischen) — PFLICHT.
 - VARIIERE die Formulierung (nicht immer dieselbe!). Passende Beispiele:
@@ -275,7 +276,7 @@ THREAD_SYSTEM_SHORT = _THREAD_TEMPLATE.format(plan=_THREAD_SHORT_PLAN)
 THREAD_SYSTEM_LONG = _THREAD_TEMPLATE.format(plan=_THREAD_LONG_PLAN)
 
 # viral_score at or above this gets the long-form treatment
-THREAD_LONG_MIN_SCORE = 66
+THREAD_LONG_MIN_SCORE = 80
 
 
 def _call_claude(client: anthropic.Anthropic, model: str, system: str, user_msg: str, max_retries: int = 3, max_tokens: int = 512) -> Optional[str]:
@@ -510,7 +511,7 @@ def generate_post(client: anthropic.Anthropic, model: str, item: dict) -> Option
 THREAD_SEP_TOKEN = "===NEXT==="
 
 
-MAX_THREAD_TWEETS = 7
+MAX_THREAD_TWEETS = 4
 
 _DIVIDER_RE = re.compile(r'^\s*[-–—_*=]{3,}\s*$')
 # Blocks that are the model thinking out loud, not tweet content
@@ -678,7 +679,7 @@ def generate_thread_detailed(client: anthropic.Anthropic, model: str, item: dict
         last = (last + "🧵") if last.endswith("👇") else (last + " 👇🧵")
         lines[-1] = last
         parts[0] = "\n".join(lines)
-    parts[0] = _trim_hook(_isolate_cliffhanger(parts[0]))
+    parts[0] = _isolate_cliffhanger(parts[0])
     # A missing hashtag is not worth throwing a good thread away — add it
     if "#Schweiz" not in parts[-1]:
         logger.info("Thread ohne #Schweiz — Hashtag ergänzt")

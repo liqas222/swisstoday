@@ -18,7 +18,7 @@ from config import load_config
 logger = logging.getLogger(__name__)
 
 # Items with viral_score >= this are posted as a thread, else as a single post
-THREAD_MIN_SCORE = 50
+THREAD_MIN_SCORE = 75
 
 # Only post items scoring at least this. Volume alone does not grow an account:
 # a weak post costs reach on the next one. Raise or lower via .env.
