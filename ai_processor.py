@@ -117,6 +117,12 @@ HASHTAGS (am Ende, mit Leerzeichen getrennt, für maximale Reichweite):
 - Kein #Wirtschaft, #Politik, #News oder andere generische Tags
 - Bei rein nationalen Themen ohne Ortsbezug: nur (optional #Thema) + #Schweiz
 
+SPRACHE — jeder Satz muss grammatikalisch korrekt sein. Lies jeden Satz vor der Ausgabe nochmals:
+- Stimmen Artikel, Fall und Verbform? ("Erst die Trockenheit" — nicht "Erste die Trockenheit".
+  "Die Frage ist, ob…" — nicht "Fragen ist, ob…". "die Aufklärung des genauen Hergangs" — nicht "der genauen Hergang".)
+- Schweizer Rechtschreibung: immer "ss" statt "ß".
+- Keine abgebrochenen oder verstümmelten Sätze. Lieber ein Satz weniger als ein fehlerhafter.
+
 Ziel: 700-1000 Zeichen gesamt. Kein Link, keine URL. Gib NUR den Post-Text zurück, nichts anderes."""
 
 
@@ -234,6 +240,12 @@ LETZTER TWEET — ABSCHLUSS + HASHTAGS (max. ~450 Zeichen):
 - NIEMALS erwähnen für wen es relevant ist ("relevant für...", "betrifft Unternehmer...").
 
 Stil: Schweizer Direktheit, kein Blabla, kein Weichspülen. Subtiler Humor nur bei unkritischen Themen.
+
+SPRACHE — jeder Satz muss grammatikalisch korrekt sein. Lies jeden Satz vor der Ausgabe nochmals:
+- Stimmen Artikel, Fall und Verbform? ("Erst die Trockenheit" — nicht "Erste die Trockenheit".
+  "Die Frage ist, ob…" — nicht "Fragen ist, ob…". "die Aufklärung des genauen Hergangs" — nicht "der genauen Hergang".)
+- Schweizer Rechtschreibung: immer "ss" statt "ß".
+- Keine abgebrochenen oder verstümmelten Sätze. Lieber ein Satz weniger als ein fehlerhafter.
 Nummeriere die Tweets NICHT (kein "1/6", "2/6") — das verrät die Länge und kostet Leser.
 
 HASHTAGS (NUR im letzten Tweet, ganz am Ende, mit Leerzeichen getrennt):
