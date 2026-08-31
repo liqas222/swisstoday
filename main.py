@@ -10,6 +10,7 @@ import tweepy
 from apscheduler.schedulers.blocking import BlockingScheduler
 
 import ai_processor
+import article_fetcher
 import database
 import monitor
 import publisher
@@ -144,6 +145,17 @@ def _run_pipeline(cfg, anthropic_client):
                 new_items.append(item)
     stats["new_items"] = len(new_items)
     logger.info("New items this run: %d", len(new_items))
+
+    # 2b. Fetch the actual article. RSS gives us little more than a headline;
+    # with the full text the model has real material to judge and write from.
+    fetched = 0
+    for item in new_items:
+        text = article_fetcher.fetch_article_text(item.get("url", ""))
+        if text:
+            item["article_text"] = text
+            fetched += 1
+    if new_items:
+        logger.info("Artikeltext geholt: %d von %d", fetched, len(new_items))
 
     # 3. Score relevance for each new item
     for item in new_items:

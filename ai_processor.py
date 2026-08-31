@@ -330,7 +330,8 @@ def score_relevance(client: anthropic.Anthropic, model: str, item: dict) -> tupl
     summary = item.get("summary", "").strip()
     if not title and not summary:
         return "LOW", "Kein Inhalt verfügbar", "Sonstiges", 0
-    user_msg = f"Titel: {title}\n\nZusammenfassung: {summary[:500]}\n\nQuelle: {item.get('source_id', '')}"
+    user_msg = (f"Titel: {title}\n\n{_source_material(item)}\n\n"
+                f"Quelle: {item.get('source_id', '')}")
     raw = _call_claude(client, model, SCORE_SYSTEM, user_msg)
     if not raw:
         return "LOW", "API-Fehler bei Bewertung", "Sonstiges", 0
@@ -343,9 +344,21 @@ def score_relevance(client: anthropic.Anthropic, model: str, item: dict) -> tupl
         return "LOW", "JSON-Parsing-Fehler", "Sonstiges", 0
 
 
-# How many posts one event may get before we stop, no matter how new the angle.
-# The Aarau shooting produced 31 posts; impressions fell from 14'969 to 39.
-MAX_POSTS_PER_TOPIC = 4
+# How many posts one event may get. A big story earns more room than a routine
+# one — but not unlimited: the Aarau shooting ran to 31 posts and impressions
+# fell from 14'969 to 39.
+MAX_POSTS_PER_TOPIC = 4          # ordinary story
+MAX_POSTS_PER_TOPIC_BIG = 8      # viral_score >= 75
+MAX_POSTS_PER_TOPIC_MAJOR = 14   # viral_score >= 88 — a genuine major event
+
+
+def topic_cap(viral_score: int) -> int:
+    """Room a story gets, scaled to how big it is."""
+    if viral_score >= 88:
+        return MAX_POSTS_PER_TOPIC_MAJOR
+    if viral_score >= 75:
+        return MAX_POSTS_PER_TOPIC_BIG
+    return MAX_POSTS_PER_TOPIC
 
 _TOPIC_STOP = {
     "schweiz", "schweizer", "heute", "neue", "neuer", "neues", "nach", "nich",
@@ -395,10 +408,11 @@ def check_topic_overlap(client: anthropic.Anthropic, model: str, new_item: dict,
     new_title = new_item.get("title", "")
 
     # Hard cap first — no AI call needed once an event is exhausted
+    cap = topic_cap(int(new_item.get("viral_score") or 0))
     seen = _same_topic_count(new_title, recent_items)
-    if seen >= MAX_POSTS_PER_TOPIC:
-        logger.info("[TOPIC CAP] %s — bereits %d Posts zu diesem Ereignis, kein weiterer",
-                    new_title[:60], seen)
+    if seen >= cap:
+        logger.info("[TOPIC CAP] %s — bereits %d/%d Posts zu diesem Ereignis, kein weiterer",
+                    new_title[:60], seen, cap)
         return "duplicate", None
     new_text = (new_item.get("post_text") or new_item.get("summary") or "")[:300]
 
@@ -546,10 +560,20 @@ _NEWS_CONTEXT_HINT = (
 )
 
 
+
+def _source_material(item: dict) -> str:
+    """What the model gets to work with. The full article when we could fetch
+    it, otherwise the RSS snippet."""
+    full = (item.get("article_text") or "").strip()
+    if len(full) > 400:
+        return f"Artikeltext:\n{full[:5000]}"
+    return f"Zusammenfassung: {(item.get('summary') or '')[:800]}"
+
+
 def generate_post(client: anthropic.Anthropic, model: str, item: dict) -> Optional[str]:
     user_msg = (
         f"Titel: {item['title']}\n\n"
-        f"Zusammenfassung: {item.get('summary', '')[:800]}\n\n"
+        f"{_source_material(item)}\n\n"
         f"Quelle: {item.get('source_id', '')}"
     )
     def _make(msg):
@@ -698,7 +722,7 @@ def generate_thread_detailed(client: anthropic.Anthropic, model: str, item: dict
     system = THREAD_SYSTEM_LONG if long_form else THREAD_SYSTEM_SHORT
     user_msg = (
         f"Titel: {item['title']}\n\n"
-        f"Zusammenfassung: {item.get('summary', '')[:800]}\n\n"
+        f"{_source_material(item)}\n\n"
         f"Quelle: {item.get('source_id', '')}"
     )
     max_tokens = 2200 if long_form else 1000
