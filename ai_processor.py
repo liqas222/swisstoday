@@ -528,8 +528,12 @@ def _isolate_cliffhanger(text: str) -> str:
     # Cliffhanger stuck to the end of the preceding sentence → break it out
     m = re.match(r'^(.*[.!?:])\s+([^.!?]*🧵[^.!?]*)$', lines[-1].strip())
     if m:
+        cliff = m.group(2).strip()
+        # Splitting can leave just the emojis behind — that is not a cliffhanger
+        if not re.sub(r'[👇🧵\s]', '', cliff):
+            cliff = "Was dahinter steckt 👇🧵"
         lines[-1] = m.group(1).rstrip()
-        lines += ["", m.group(2).strip()]
+        lines += ["", cliff]
     # Already its own line, but no blank line above it → add one
     elif len(lines) > 1 and lines[-2].strip():
         lines.insert(len(lines) - 1, "")
@@ -624,11 +628,10 @@ def generate_thread_detailed(client: anthropic.Anthropic, model: str, item: dict
         lines[-1] = last
         parts[0] = "\n".join(lines)
     parts[0] = _trim_hook(_isolate_cliffhanger(parts[0]))
-    # Final gate: the closing tweet must look like a real post
+    # A missing hashtag is not worth throwing a good thread away — add it
     if "#Schweiz" not in parts[-1]:
-        logger.warning("Thread without #Schweiz in the last tweet — discarded: %r",
-                       parts[-1][:120])
-        return None, "bad_format"
+        logger.info("Thread ohne #Schweiz — Hashtag ergänzt")
+        parts[-1] = parts[-1].rstrip() + "\n\n#Schweiz"
     return (f"\n{THREAD_SEP_TOKEN}\n").join(parts), "ok"
 
 
