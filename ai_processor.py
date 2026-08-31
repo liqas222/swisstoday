@@ -79,10 +79,13 @@ Katastrophen werden berichtet — nüchtern, faktentreu und respektvoll gegenüb
 so wie es jede seriöse Zeitung tut. Bei solchen Themen gilt: kein Humor, keine Zuspitzung,
 keine reisserische Sprache, nur die belegten Fakten.
 
-Gib IMMER einen fertigen Post aus. Schreibe NIEMALS über den Auftrag, lehne NIEMALS ab und
-stelle keine Rückfragen — kein "ich kann keinen Post erstellen", keine Hinweise auf Richtlinien.
-Solcher Text würde ungeprüft veröffentlicht. Ist ein Thema heikel, formuliere sachlicher,
-aber liefere den Post.
+Gib IMMER GENAU EINEN fertigen Post aus — niemals mehrere, niemals eine Auswahl.
+Deine Antwort beginnt beim ersten Zeichen des Posts und endet mit den Hashtags. Verboten sind:
+Einleitungen ("Ich erstelle 5 separate Posts für diese Themen"), Überschriften ("POST 1:"),
+Trennlinien ("---"), Kommentare davor oder danach, Rückfragen, Ablehnungen und Hinweise auf
+Richtlinien. Solcher Text würde ungeprüft veröffentlicht.
+Behandelt die Quelle mehrere Themen, wähle das wichtigste und schreibe NUR dazu einen Post.
+Ist ein Thema heikel, formuliere sachlicher — aber liefere den Post.
 
 Format (EXAKT so):
 EMOJI HEADLINE
@@ -481,12 +484,20 @@ def generate_post(client: anthropic.Anthropic, model: str, item: dict) -> Option
         f"Zusammenfassung: {item.get('summary', '')[:800]}\n\n"
         f"Quelle: {item.get('source_id', '')}"
     )
-    text = _call_claude(client, model, POST_SYSTEM, user_msg)
+    def _make(msg):
+        raw = _call_claude(client, model, POST_SYSTEM, msg)
+        if not raw:
+            return None
+        # Drop any commentary the model wrote around the post, and keep only
+        # the first post if it bundled several into one answer.
+        return _first_post_only(_strip_preamble(raw))
+
+    text = _make(user_msg)
     ok, reason = _is_publishable(text)
     if not ok and "Verweigerung" in reason:
         logger.info("Post abgelehnt — zweiter Versuch mit Nachrichten-Kontext: %s",
                     item.get("title", "")[:60])
-        text = _call_claude(client, model, POST_SYSTEM, user_msg + _NEWS_CONTEXT_HINT)
+        text = _make(user_msg + _NEWS_CONTEXT_HINT)
         ok, reason = _is_publishable(text)
     if not ok:
         logger.warning("Post verworfen (%s): %s | %r",
@@ -504,7 +515,24 @@ MAX_THREAD_TWEETS = 7
 _DIVIDER_RE = re.compile(r'^\s*[-–—_*=]{3,}\s*$')
 # Blocks that are the model thinking out loud, not tweet content
 _META_RE = re.compile(r'SUBSTANZ|KEIN_THREAD|→\s*THREAD|^\s*✓|^\s*THREAD\s*:?\s*$'
-                      r'|^\s*(TWEET|AUFBAU|LÄNGE)\b', re.I | re.M)
+                      r'|^\s*(TWEET|AUFBAU|LÄNGE)\b'
+                      # "**POST 1:**", "Ich erstelle 5 separate Posts:", "Hier sind 3 …"
+                      r'|^\s*\**\s*POST\s*\d+\s*[:.]?\s*\**\s*$'
+                      r'|ich erstelle\s+\d+|hier sind\s+\d+|folgende\s+\d+\s+posts',
+                      re.I | re.M)
+
+# A line that is nothing but hashtags — the end of a post
+_HASHTAG_LINE_RE = re.compile(r'^\s*#\S+(?:\s+#\S+)*\s*$')
+
+
+def _first_post_only(text: str) -> str:
+    """Keep only the first post. The model sometimes bundles several posts into
+    one answer; everything after the first hashtag line belongs to the next one."""
+    lines = text.split("\n")
+    for i, line in enumerate(lines):
+        if _HASHTAG_LINE_RE.match(line):
+            return "\n".join(lines[:i + 1]).rstrip()
+    return text
 
 
 def _looks_like_meta(block: str) -> bool:
