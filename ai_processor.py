@@ -360,10 +360,16 @@ def topic_cap(viral_score: int) -> int:
         return MAX_POSTS_PER_TOPIC_BIG
     return MAX_POSTS_PER_TOPIC
 
+# 5-Zeichen-Stämme von Wörtern, die in halben Schweizer Nachrichten vorkommen.
+# Nur grossgeschriebene Wörter und Zahlen landen überhaupt in der Prüfung,
+# deshalb stehen hier Substantive und keine Füllwörter.
 _TOPIC_STOP = {
-    "schweiz", "schweizer", "heute", "neue", "neuer", "neues", "nach", "nich",
-    "mehr", "video", "update", "live", "blick", "news", "jahre", "jahren",
-    "prozent", "franken", "million", "millionen", "milliarden",
+    "schwe", "heute", "video", "updat", "blick", "news", "jahre", "proze",
+    "frank", "milli", "bunde", "parla", "kanto", "gemei", "poliz", "medie",
+    "regie", "depar", "kommi", "rat", "natio", "stadt", "einwo", "behör",
+    "monta", "diens", "mittw", "donne", "freit", "samst", "sonnt",
+    "janua", "febru", "märz", "april", "juni", "juli", "augus", "septe",
+    "oktob", "novem", "dezem", "woche", "mensc", "person", "perso",
 }
 
 
@@ -373,10 +379,10 @@ def _topic_keywords(text: str) -> set:
     words = re.findall(r'\b[A-ZÄÖÜ][\wäöüéèà]{3,}\b|\b\d{2,}\b', text or "")
     out = set()
     for w in words:
-        w = w.lower()
-        if w in _TOPIC_STOP:
+        stem = w.lower()[:5]  # crude stem — enough to link variants of one event
+        if stem in _TOPIC_STOP:
             continue
-        out.add(w[:5])  # crude stem — enough to link variants of one event
+        out.add(stem)
     return out
 
 
@@ -385,17 +391,57 @@ def _topic_keywords(text: str) -> set:
 TOPIC_OVERLAP_WORDS = 1
 
 
-def _same_topic_count(new_title: str, recent_items: list[dict]) -> int:
+# Headlines on one story often share no wording at all — "Ständerat schwächt
+# UBS-Eigenkapitalregeln ab" and "UBS-Regulierung: Kommission einigt sich auf
+# Kompromiss" have not one word in common. The body does: same names, same
+# figures. So a second, stricter signal reads the whole text.
+# Gemessen an den fünf UBS-Eigenkapital-Meldungen: untereinander teilen sie
+# mindestens 2 Stämme, mit fremden Themen null. Der Anteil-Wert fängt lange
+# Artikeltexte ab, in denen sich zufällige Treffer sonst häufen.
+BODY_OVERLAP_WORDS = 2
+BODY_OVERLAP_RATIO = 0.12
+_BODY_CHARS = 1200
+
+
+def _body_keywords(item: dict) -> set:
+    """Distinctive words of the whole story, not just its headline."""
+    parts = [item.get("title") or "", item.get("post_text") or "",
+             item.get("summary") or "", (item.get("article_text") or "")[:_BODY_CHARS]]
+    return _topic_keywords(" ".join(parts))
+
+
+def _is_same_topic(new_item: dict, recent: dict) -> bool:
+    """Same event? Either the headlines match, or the substance does."""
+    title_kw = _topic_keywords(new_item.get("title", ""))
+    if len(title_kw) >= 2:
+        other_title = _topic_keywords(recent.get("title") or recent.get("post_text", ""))
+        if len(title_kw & other_title) >= TOPIC_OVERLAP_WORDS:
+            return True
+    a, b = _body_keywords(new_item), _body_keywords(recent)
+    if not a or not b:
+        return False
+    shared = len(a & b)
+    return (shared >= BODY_OVERLAP_WORDS
+            and shared / min(len(a), len(b)) >= BODY_OVERLAP_RATIO)
+
+
+def _same_topic_count(new_item, recent_items: list[dict]) -> int:
     """How many recent posts are clearly about the same event."""
-    kw = _topic_keywords(new_title)
-    if len(kw) < 2:
-        return 0
-    hits = 0
+    if isinstance(new_item, str):  # older callers passed just the headline
+        new_item = {"title": new_item}
+    return sum(1 for r in recent_items if _is_same_topic(new_item, r))
+
+
+def _fact_already_posted(fact: str, recent_items: list[dict]) -> bool:
+    """Is the supposedly new fact already in one of the posts we sent?"""
+    kw = _topic_keywords(fact)
+    if not kw:
+        return True  # nothing distinctive in it at all
     for r in recent_items:
-        other = _topic_keywords(r.get("title") or r.get("post_text", ""))
-        if len(kw & other) >= TOPIC_OVERLAP_WORDS:
-            hits += 1
-    return hits
+        posted = _topic_keywords(f"{r.get('title') or ''} {r.get('post_text') or ''}")
+        if kw <= posted:  # every distinctive word of the "news" is old news
+            return True
+    return False
 
 
 def check_topic_overlap(client: anthropic.Anthropic, model: str, new_item: dict, recent_items: list[dict]) -> tuple[str, Optional[str]]:
@@ -409,7 +455,7 @@ def check_topic_overlap(client: anthropic.Anthropic, model: str, new_item: dict,
 
     # Hard cap first — no AI call needed once an event is exhausted
     cap = topic_cap(int(new_item.get("viral_score") or 0))
-    seen = _same_topic_count(new_title, recent_items)
+    seen = _same_topic_count(new_item, recent_items)
     if seen >= cap:
         logger.info("[TOPIC CAP] %s — bereits %d/%d Posts zu diesem Ereignis, kein weiterer",
                     new_title[:60], seen, cap)
@@ -462,6 +508,13 @@ def check_topic_overlap(client: anthropic.Anthropic, model: str, new_item: dict,
             if len(fact) < 8 or vague:
                 logger.info("[TOPIC CHECK] %s → update ohne benennbaren neuen Fakt (%r) "
                             "→ als Duplikat behandelt", new_title[:60], fact[:40])
+                status = "duplicate"
+            elif _fact_already_posted(fact, recent_list):
+                # Das Modell nennt zwar eine Tatsache, sie stand aber schon in
+                # einem früheren Post — genau so entstanden fünf "Updates" zur
+                # selben UBS-Eigenkapitalvorlage.
+                logger.info("[TOPIC CHECK] %s → \"neuer\" Fakt %r stand schon in einem "
+                            "früheren Post → Duplikat", new_title[:60], fact[:40])
                 status = "duplicate"
         logger.info("[TOPIC CHECK] %s → %s (%s)", new_title[:60], status, reason)
         quote_tweet_id = None
