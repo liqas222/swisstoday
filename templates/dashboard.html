@@ -599,6 +599,20 @@ footer{
 .sc-kv .k{color:var(--muted)}
 .sc-kv .v{font-family:'JetBrains Mono',monospace;font-size:11px}
 @media(max-width:800px){.stats-row{grid-template-columns:repeat(2,1fr)!important}}
+
+.pt-log{max-height:340px;overflow:auto;padding:4px 0}
+.pt-ev{display:flex;gap:10px;align-items:baseline;padding:7px 16px;border-bottom:1px solid var(--border);font-size:12px}
+.pt-ev:last-child{border-bottom:0}
+.pt-ev .t{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);white-space:nowrap;min-width:92px}
+.pt-ev .dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.pt-ev .sym{font-weight:700;min-width:54px}
+.pt-ev .txt{flex:1}
+.pt-ev .det{color:var(--dim);font-size:10px}
+.pt-ev .val{font-family:'JetBrains Mono',monospace;font-size:11px;white-space:nowrap}
+.d-open{background:var(--indigo)}
+.d-target{background:var(--green)}
+.d-close-win{background:var(--green)}
+.d-close-loss{background:var(--red)}
 </style>
 </head>
 <body>
@@ -964,6 +978,12 @@ footer{
     </div>
     <div style="padding:0 4px 4px"><div id="pt-open-table" class="crypto-pairs">
       <p class="crypto-empty" style="padding:16px">Lädt…</p></div></div>
+  </div>
+
+  <div class="log-card" style="margin-bottom:16px">
+    <div class="log-hdr"><h2>Trading-Log</h2>
+      <span style="font-size:10px;color:var(--dim)">jede Eröffnung, jedes Ziel, jeder Ausstieg</span></div>
+    <div id="pt-log" class="pt-log"><p class="crypto-empty" style="padding:16px">—</p></div>
   </div>
 
   <div class="log-card" style="margin-bottom:16px">
@@ -2199,6 +2219,7 @@ async function tradesLoad(){
       o.trades?('Erwartungswert '+(o.expectancy_usd??'—')+' $ je Position'
                +(o.profit_factor!=null?(' · Profitfaktor '+o.profit_factor):'')):'—';
 
+    tradesLog();
     tradesRenderOpen(d.open||[]);
     tradesRenderClosed(d.closed||[]);
     tradesRenderBands(perf);
@@ -2307,6 +2328,33 @@ function tradesRenderStrategy(d,perf){
     <p style="color:var(--dim);font-size:10px;margin-top:12px">
       Keine dieser Zahlen ist optimiert. Sie sind Startwerte und werden mit jeder Position
       gespeichert, damit später überhaupt etwas zu vergleichen ist.</p>`;
+}
+
+
+async function tradesLog(){
+  const box=document.getElementById('pt-log');
+  try{
+    const d=await api('/api/crypto/log');
+    const ev=d.events||[];
+    if(!ev.length){
+      box.innerHTML='<p class="crypto-empty" style="padding:16px">Noch keine Ereignisse. '+
+        'Sobald der Scanner eine Position eröffnet, steht sie hier.</p>';
+      return;
+    }
+    box.innerHTML=ev.map(e=>{
+      const dot=e.kind==='close'
+        ? ((e.value??0)>=0?'d-close-win':'d-close-loss')
+        : ('d-'+e.kind);
+      const val=(e.kind==='close'&&e.value!=null)?ptRet(e.value):'';
+      return `<div class="pt-ev">
+        <span class="t">${scAgo(e.at)}</span>
+        <span class="dot ${dot}"></span>
+        <span class="sym">${cesc(e.symbol||'')}</span>
+        <span class="txt">${cesc(e.text||'')} <span class="det">${cesc(e.detail||'')}</span></span>
+        <span class="val">${val}</span>
+      </div>`;
+    }).join('');
+  }catch(e){ box.innerHTML='<p class="crypto-empty" style="padding:16px">Log nicht ladbar.</p>' }
 }
 
 async function tradesCycle(){

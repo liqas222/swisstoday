@@ -1035,6 +1035,12 @@ def api_crypto_trade_history(trade_id):
     return jsonify({"snapshots": crypto_paper.trade_snapshots(DB_PATH, trade_id)})
 
 
+@app.route("/api/crypto/log")
+@require_auth
+def api_crypto_log():
+    return jsonify({"events": crypto_paper.trade_log(DB_PATH, 150)})
+
+
 @app.route("/api/crypto/performance")
 @require_auth
 def api_crypto_performance():

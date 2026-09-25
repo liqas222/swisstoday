@@ -464,6 +464,55 @@ def trade_snapshots(db_path: str, trade_id: int, limit: int = 200) -> list[dict]
     return [dict(r) for r in reversed(rows)]
 
 
+def trade_log(db_path: str, limit: int = 120) -> list[dict]:
+    """Chronologische Ereignisliste, abgeleitet aus den Positionen selbst.
+
+    Eröffnung, jedes erreichte Ziel und der Ausstieg stehen bereits mit
+    Zeitstempel in den Positionszeilen — eine zweite Tabelle mit denselben
+    Fakten könnte davon nur abweichen.
+    """
+    init_db(db_path)
+    with store._connect(db_path) as conn:
+        rows = [dict(r) for r in conn.execute(
+            "SELECT * FROM paper_trades ORDER BY id DESC LIMIT ?", (limit,)).fetchall()]
+
+    events: list[dict] = []
+    for t in rows:
+        sym = t["symbol"] or t["contract"][:8]
+
+        events.append({
+            "at": t["opened_at"], "kind": "open", "symbol": sym, "trade_id": t["id"],
+            "text": f"Position eröffnet zu {t['entry_price']:.8g} $",
+            "detail": (f"Score {t['score_at_entry']} · Risiko {t['risk_at_entry']} · "
+                       f"Stop {t['stop_price']:.8g} $"),
+            "value": None,
+        })
+
+        for key, pct, label in (("tp1_hit_at", CONFIG["tp1_pct"], "Ziel 1"),
+                                ("tp2_hit_at", CONFIG["tp2_pct"], "Ziel 2"),
+                                ("tp3_hit_at", CONFIG["tp3_pct"], "Ziel 3")):
+            if t[key]:
+                events.append({
+                    "at": t[key], "kind": "target", "symbol": sym, "trade_id": t["id"],
+                    "text": f"{label} erreicht (+{pct:.0f}%)",
+                    "detail": "ein Drittel verkauft" if key != "tp3_hit_at" else "Rest verkauft",
+                    "value": pct,
+                })
+
+        if t["closed_at"]:
+            events.append({
+                "at": t["closed_at"], "kind": "close", "symbol": sym, "trade_id": t["id"],
+                "text": f"Geschlossen: {t['exit_reason']}",
+                "detail": (f"Haltedauer {(t['duration_minutes'] or 0) / 60:.1f}h · "
+                           f"bester Stand {t['mfe_pct'] or 0:+.0f}% · "
+                           f"schlechtester {t['mae_pct'] or 0:+.0f}%"),
+                "value": t["return_pct"],
+            })
+
+    events.sort(key=lambda e: (e["at"] or "", e["trade_id"]), reverse=True)
+    return events[:limit]
+
+
 def _median(values: list[float]) -> Optional[float]:
     if not values:
         return None
