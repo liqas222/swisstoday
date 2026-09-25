@@ -375,6 +375,11 @@ def main():
     auto_update_job()
     run_pipeline(cfg, anthropic_client)
     sync_views(cfg)
+    if CRYPTO_SCAN_ENABLED:
+        # Auch sofort, nicht erst nach dem ersten Intervall: der Prozess startet
+        # bei jedem Auto-Deploy neu, und offene Positionen dürfen nicht jedes
+        # Mal eine Viertelstunde unbeaufsichtigt bleiben.
+        crypto_scan_job()
 
     scheduler = BlockingScheduler()
     scheduler.add_job(
