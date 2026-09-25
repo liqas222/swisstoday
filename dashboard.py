@@ -7,6 +7,8 @@ from datetime import datetime, timezone
 from flask import Flask, render_template, jsonify, request, Response, make_response, redirect
 from dotenv import load_dotenv
 
+import crypto_agent
+
 load_dotenv()
 
 app = Flask(__name__)
@@ -877,6 +879,47 @@ def api_test_thread():
     return jsonify({"ok": True, "published": True, "tweets": tweets,
                     "tweet_id": tweet_id,
                     "url": f"https://x.com/i/web/status/{tweet_id}" if tweet_id else None})
+
+
+# ── Crypto-Research-Tab ────────────────────────────────────────────────────
+# Zweite Oberfläche auf derselben Seite, portiert aus dem Next.js-Projekt
+# memecoins-chatgpt-agent. Nur Recherche, es wird nichts gehandelt.
+
+@app.route("/api/crypto/analyze", methods=["POST"])
+@require_auth
+def api_crypto_analyze():
+    query = (request.get_json(silent=True) or {}).get("query", "").strip()
+    if not query or len(query) > 180:
+        return jsonify({"error": "Bitte einen Ticker oder eine Contract-Adresse eingeben."}), 400
+    try:
+        market = crypto_agent.search_dex(query)
+    except Exception as e:
+        return jsonify({"error": f"DexScreener nicht erreichbar: {e}"}), 502
+    if not market:
+        return jsonify({"error": "Keine Handelspaare gefunden. Versuch die exakte "
+                                 "Contract-Adresse."}), 404
+    try:
+        report = crypto_agent.run_agent(query, market)
+    except Exception as e:
+        return jsonify({"error": f"Analyse fehlgeschlagen: {e}"}), 500
+    crypto_agent.save_analysis(DB_PATH, query, report, market)
+    return jsonify({"report": report, "market": market})
+
+
+@app.route("/api/crypto/history")
+@require_auth
+def api_crypto_history():
+    return jsonify({"items": crypto_agent.recent_analyses(DB_PATH)})
+
+
+@app.route("/api/crypto/history/<int:analysis_id>", methods=["DELETE"])
+@require_auth
+def api_crypto_delete(analysis_id):
+    try:
+        crypto_agent.delete_analysis(DB_PATH, analysis_id)
+        return jsonify({"ok": True})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 @app.route("/api/version")
