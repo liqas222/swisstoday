@@ -571,6 +571,34 @@ footer{
   .tabs{margin-left:0}
   .brand{flex-wrap:wrap}
 }
+
+/* ── Memecoin-Scanner ── */
+.sc-lbl{color:var(--dim);font-size:10px;text-transform:uppercase;letter-spacing:.07em}
+.sc-val{font-size:26px;font-weight:700;margin-top:4px;font-variant-numeric:tabular-nums}
+.sc-note{color:var(--muted);font-size:10px;margin-top:2px}
+.btn-scan{background:var(--accent);border:0;border-radius:7px;padding:6px 14px;color:#fff;
+  font-family:inherit;font-weight:700;font-size:11px;cursor:pointer}
+.btn-scan:disabled{opacity:.5;cursor:wait}
+.sc-row{cursor:pointer}
+.sc-row:hover{background:var(--surface2)}
+.sc-pill{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700}
+.sc-s-high{background:rgba(34,197,94,.15);color:#6ee7a0}
+.sc-s-mid{background:rgba(99,102,241,.18);color:#a3aaf8}
+.sc-s-low{background:rgba(255,255,255,.07);color:var(--muted)}
+.sc-r-low{background:rgba(34,197,94,.13);color:#6ee7a0}
+.sc-r-medium{background:rgba(245,158,11,.15);color:#f4c67a}
+.sc-r-high{background:rgba(239,68,68,.15);color:#f59a9a}
+.sc-r-critical{background:rgba(239,68,68,.25);color:#ffb4b4}
+.sc-bar{height:5px;background:var(--surface2);border-radius:999px;overflow:hidden;margin-top:3px}
+.sc-bar>i{display:block;height:100%;background:linear-gradient(90deg,#6366F1,#A855F7)}
+.sc-flag{padding:8px 0;border-bottom:1px solid var(--border);font-size:12px}
+.sc-flag:last-child{border-bottom:0}
+.sc-flag .c{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted)}
+.sc-kv{display:flex;justify-content:space-between;gap:12px;padding:6px 0;border-bottom:1px solid var(--border);font-size:12px}
+.sc-kv:last-child{border-bottom:0}
+.sc-kv .k{color:var(--muted)}
+.sc-kv .v{font-family:'JetBrains Mono',monospace;font-size:11px}
+@media(max-width:800px){.stats-row{grid-template-columns:repeat(2,1fr)!important}}
 </style>
 </head>
 <body>
@@ -582,6 +610,7 @@ footer{
     <nav class="tabs">
       <button class="tab active" id="tab-intel" onclick="showView('intel')">📰 News-Bot</button>
       <button class="tab" id="tab-crypto" onclick="showView('crypto')">🪙 Crypto-Research</button>
+      <button class="tab" id="tab-scanner" onclick="showView('scanner')">📡 Memecoin-Scanner</button>
     </nav>
   </div>
   <div class="hdr-right">
@@ -840,6 +869,60 @@ footer{
   <div class="log-card" style="margin-top:16px">
     <div class="log-hdr"><h2>Marktdaten</h2><span id="cpairs-n" style="font-size:10px;color:var(--dim)"></span></div>
     <div style="padding:0 4px 4px"><div id="cpairs" class="crypto-pairs"></div></div>
+  </div>
+
+</div>
+
+
+<div class="main" id="view-scanner" style="display:none">
+
+  <div class="crypto-hero">
+    <div class="crypto-badge">Nur Recherche · es wird nichts gehandelt</div>
+    <h2>Memecoin-Scanner</h2>
+    <p>Findet Solana-Token selbständig, wirft den offensichtlichen Müll weg und bewertet den Rest.
+       Der Punktwert ist eine interne Rangfolge, keine Gewinnwahrscheinlichkeit.</p>
+  </div>
+
+  <div class="stats-row" style="grid-template-columns:repeat(4,1fr);margin-bottom:16px">
+    <div class="log-card"><div style="padding:14px 16px">
+      <div class="sc-lbl">Token gesehen (24h)</div><div class="sc-val" id="sc-seen">—</div></div></div>
+    <div class="log-card"><div style="padding:14px 16px">
+      <div class="sc-lbl">Chancen</div><div class="sc-val" id="sc-opps">—</div>
+      <div class="sc-note" id="sc-opps-note">—</div></div></div>
+    <div class="log-card"><div style="padding:14px 16px">
+      <div class="sc-lbl">Letzter Lauf</div><div class="sc-val" id="sc-last" style="font-size:18px">—</div>
+      <div class="sc-note" id="sc-last-note">—</div></div></div>
+    <div class="log-card"><div style="padding:14px 16px">
+      <div class="sc-lbl">Automatik</div><div class="sc-val" id="sc-auto" style="font-size:18px">—</div>
+      <div class="sc-note">läuft im Bot-Prozess</div></div></div>
+  </div>
+
+  <div class="log-card">
+    <div class="log-hdr">
+      <h2>Token</h2>
+      <div style="display:flex;gap:8px;align-items:center">
+        <span id="sc-runinfo" style="font-size:10px;color:var(--dim);font-family:'JetBrains Mono',monospace"></span>
+        <select id="sc-filter" onchange="scannerRender()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:7px;padding:5px 8px;font-size:11px;font-family:inherit">
+          <option value="0">Alle</option>
+          <option value="50">Ab 50 Punkten</option>
+          <option value="65">Nur Chancen (65+)</option>
+          <option value="75">Ab 75 Punkten</option>
+        </select>
+        <button class="btn-scan" id="sc-btn" onclick="scannerScan()">Scan starten</button>
+      </div>
+    </div>
+    <div style="padding:0 4px 4px"><div id="sc-table" class="crypto-pairs"><p class="crypto-empty" style="padding:16px">Lädt…</p></div></div>
+  </div>
+
+  <div class="crypto-grid" style="margin-top:16px">
+    <div class="log-card">
+      <div class="log-hdr"><h2>Token-Detail</h2><span id="sc-detail-name" style="font-size:10px;color:var(--dim)"></span></div>
+      <div style="padding:16px"><div id="sc-detail" class="crypto-empty">Eine Zeile in der Tabelle anklicken.</div></div>
+    </div>
+    <div class="log-card">
+      <div class="log-hdr"><h2>Aussortiert</h2><span style="font-size:10px;color:var(--dim)">letzter Lauf</span></div>
+      <div style="padding:14px 16px"><div id="sc-rejects" class="crypto-empty">—</div></div>
+    </div>
   </div>
 
 </div>
@@ -1718,15 +1801,17 @@ document.addEventListener('DOMContentLoaded',()=>{
 // ── Crypto-Research-Tab ────────────────────────────────────────────────────
 let cryptoLoaded=false;
 function showView(v){
-  const intel=v==='intel';
-  document.getElementById('view-intel').style.display=intel?'':'none';
-  document.getElementById('view-crypto').style.display=intel?'none':'';
-  document.getElementById('tab-intel').classList.toggle('active',intel);
-  document.getElementById('tab-crypto').classList.toggle('active',!intel);
+  ['intel','crypto','scanner'].forEach(name=>{
+    const view=document.getElementById('view-'+name);
+    const tab=document.getElementById('tab-'+name);
+    if(view)view.style.display=(name===v)?'':'none';
+    if(tab)tab.classList.toggle('active',name===v);
+  });
   const rb=document.getElementById('global-refresh-btn');
-  if(rb)rb.style.display=intel?'':'none';
+  if(rb)rb.style.display=(v==='intel')?'':'none';
   try{localStorage.setItem('si_view',v)}catch(e){}
-  if(!intel&&!cryptoLoaded){cryptoLoaded=true;cryptoHistory()}
+  if(v==='crypto'&&!cryptoLoaded){cryptoLoaded=true;cryptoHistory()}
+  if(v==='scanner'&&!scannerLoaded){scannerLoaded=true;scannerLoad()}
 }
 
 function cesc(t){return (t||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
@@ -1831,7 +1916,178 @@ async function cryptoDelete(id){
   cryptoHistory();
 }
 
-try{if(localStorage.getItem('si_view')==='crypto')showView('crypto')}catch(e){}
+
+// ── Memecoin-Scanner ───────────────────────────────────────────────────────
+let scannerLoaded=false, scTokens=[], scThresholds={opportunity:65};
+
+function scoreCls(n){ if(n==null)return'sc-s-low'; if(n>=75)return'sc-s-high'; if(n>=60)return'sc-s-mid'; return'sc-s-low' }
+function riskCls(n){ if(n==null)return'sc-r-low'; if(n>=70)return'sc-r-critical'; if(n>=45)return'sc-r-high'; if(n>=25)return'sc-r-medium'; return'sc-r-low' }
+
+function scAge(h){
+  if(h==null)return'—';
+  if(h<1)return Math.round(h*60)+'m';
+  if(h<48)return h.toFixed(1)+'h';
+  return Math.round(h/24)+'d';
+}
+function scAgo(ts){
+  if(!ts)return'—';
+  const ms=Date.now()-Date.parse(ts.replace(' ','T')+'Z');
+  if(!isFinite(ms))return'—';
+  const m=Math.round(ms/60000);
+  if(m<1)return'gerade eben';
+  if(m<60)return'vor '+m+'min';
+  const h=Math.round(m/60);
+  return h<48?('vor '+h+'h'):('vor '+Math.round(h/24)+'d');
+}
+// Fehlende Werte bleiben "—", nie 0.
+function scUsd(n){
+  if(n==null||!isFinite(n))return'—';
+  const a=Math.abs(n);
+  if(a>=1e9)return'$'+(n/1e9).toFixed(2)+'B';
+  if(a>=1e6)return'$'+(n/1e6).toFixed(2)+'M';
+  if(a>=1e3)return'$'+(n/1e3).toFixed(1)+'k';
+  return'$'+n.toFixed(0);
+}
+function scPrice(n){
+  if(n==null||!isFinite(n))return'—';
+  if(n===0)return'$0';
+  if(n<0.000001)return'$'+n.toExponential(2);
+  if(n<1)return'$'+n.toPrecision(3);
+  return'$'+n.toFixed(2);
+}
+function scPct(n){ return (n==null||!isFinite(n))?'—':((n>=0?'+':'')+n.toFixed(1)+'%') }
+function scNum(n){ return (n==null||!isFinite(n))?'—':Math.round(n).toLocaleString('de-CH') }
+
+async function scannerLoad(){
+  try{
+    const [st,tk]=await Promise.all([api('/api/crypto/scanner-status'),api('/api/crypto/tokens?limit=300')]);
+    scTokens=tk.tokens||[]; scThresholds=tk.thresholds||scThresholds;
+    document.getElementById('sc-seen').textContent=st.seen_24h??'—';
+    document.getElementById('sc-opps').textContent=st.opportunities??'—';
+    document.getElementById('sc-opps-note').textContent='ab '+(st.thresholds?.opportunity??65)+' Punkten';
+    const lr=st.last_run;
+    document.getElementById('sc-last').textContent=lr?scAgo(lr.ran_at):'nie';
+    document.getElementById('sc-last-note').textContent=lr
+      ? (lr.scored+' bewertet in '+lr.duration_ms+'ms') : 'noch kein Lauf';
+    document.getElementById('sc-auto').textContent=st.enabled?('alle '+st.interval_minutes+' Min'):'aus';
+    if(lr){
+      document.getElementById('sc-runinfo').textContent=
+        lr.discovered+' gefunden · '+lr.rejected_by_filters+' gefiltert · '+lr.scored+' bewertet';
+      scannerRejects(lr.rejections||[]);
+    }
+    scannerRender();
+  }catch(e){
+    document.getElementById('sc-table').innerHTML='<p class="crypto-empty" style="padding:16px">Daten nicht ladbar.</p>';
+  }
+}
+
+function scannerRejects(rej){
+  const box=document.getElementById('sc-rejects');
+  if(!rej.length){box.innerHTML='<p class="crypto-empty">Nichts aussortiert.</p>';return}
+  const byRule={};
+  rej.forEach(r=>{byRule[r.rule]=(byRule[r.rule]||0)+1});
+  box.innerHTML=Object.entries(byRule).sort((a,b)=>b[1]-a[1])
+    .map(([rule,n])=>`<div class="sc-kv"><span class="k">${cesc(rule)}</span><span class="v">${n}</span></div>`).join('');
+}
+
+function scannerRender(){
+  const min=Number(document.getElementById('sc-filter').value||0);
+  const rows=scTokens.filter(t=>(t.overall_score??-1)>=min);
+  const box=document.getElementById('sc-table');
+  if(!rows.length){
+    box.innerHTML='<p class="crypto-empty" style="padding:16px">'+
+      (scTokens.length?'Nichts über dieser Schwelle. Das ist ein normales Ergebnis — die meisten Token sollten sie nicht schaffen.'
+                      :'Noch keine Token. „Scan starten“ drücken.')+'</p>';
+    return;
+  }
+  box.innerHTML='<table><thead><tr>'+
+    ['Token','Alter','MCap','Liquidität','Vol 24h','Käufe/Verkäufe 1h','1h','24h','Risiko','Score']
+      .map(h=>`<th>${h}</th>`).join('')+'</tr></thead><tbody>'+
+    rows.map(t=>`<tr class="sc-row" onclick="scannerDetail('${cesc(t.contract)}')">
+      <td><strong>${cesc(t.symbol||'?')}</strong> <span style="color:var(--dim)">${cesc((t.name||'').slice(0,20))}</span></td>
+      <td>${scAge(t.pair_age_hours)}</td>
+      <td>${scUsd(t.market_cap)}</td>
+      <td>${scUsd(t.liquidity_usd)}</td>
+      <td>${scUsd(t.volume_h24)}</td>
+      <td>${scNum(t.buys_h1)} / ${scNum(t.sells_h1)}</td>
+      <td class="${t.change_h1_pct>=0?'up':'down'}">${scPct(t.change_h1_pct)}</td>
+      <td class="${t.change_h24_pct>=0?'up':'down'}">${scPct(t.change_h24_pct)}</td>
+      <td><span class="sc-pill ${riskCls(t.risk_score)}">${t.risk_score??'—'}</span></td>
+      <td><span class="sc-pill ${scoreCls(t.overall_score)}">${t.overall_score??'—'}</span></td>
+    </tr>`).join('')+'</tbody></table>';
+}
+
+async function scannerScan(){
+  const btn=document.getElementById('sc-btn');
+  btn.disabled=true; btn.textContent='Scannt…';
+  try{
+    const r=await fetch(BASE+'/api/crypto/scan',{method:'POST'});
+    const d=await r.json();
+    if(!r.ok)throw new Error(d.error||'Scan fehlgeschlagen');
+    showToast(d.scored+' Token bewertet, '+d.opportunities+' Chancen','ok');
+    await scannerLoad();
+  }catch(e){ showToast('Scan fehlgeschlagen: '+e.message,'error') }
+  finally{ btn.disabled=false; btn.textContent='Scan starten' }
+}
+
+const SC_LABELS={market_structure:'Marktstruktur',momentum:'Momentum',liquidity:'Liquiditätsqualität',
+                 social:'Soziale Dynamik',onchain:'On-Chain / Wallets',catalyst:'Narrativ / Auslöser'};
+
+async function scannerDetail(contract){
+  const box=document.getElementById('sc-detail');
+  box.className='crypto-empty'; box.textContent='Lädt…';
+  try{
+    const t=await api('/api/crypto/token/'+encodeURIComponent(contract));
+    document.getElementById('sc-detail-name').textContent=(t.symbol||'')+(t.live?' · Direktabfrage':'');
+    const w=t.weights||{};
+    const comp=t.components||{};
+    const missing=t.missing_inputs||[];
+    const bars=Object.keys(SC_LABELS).map(k=>{
+      const max=w[k]||0, got=comp[k]||0, na=missing.includes(k);
+      return `<div style="margin-bottom:9px">
+        <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:2px">
+          <span style="color:${na?'var(--dim)':'var(--muted)'}">${SC_LABELS[k]}${na?' · noch keine Datenquelle':''}</span>
+          <span style="font-family:'JetBrains Mono',monospace">${na?'—':got.toFixed(1)+' / '+max}</span>
+        </div>
+        <div class="sc-bar"><i style="width:${max?Math.min(100,(got/max)*100):0}%"></i></div></div>`;
+    }).join('');
+    const flags=(t.flags||[]).map(f=>`<div class="sc-flag">
+        <span class="sc-pill sc-r-${f.severity}">${f.severity}</span>
+        <div class="c" style="margin-top:4px">${cesc(f.code)}</div>
+        <div style="color:var(--muted)">${cesc(f.description)}</div></div>`).join('')
+      || '<p class="crypto-empty">Keine Auffälligkeiten in den Prüfungen, die laufen konnten.</p>';
+    const link=(u,l)=>u?`<a href="${cesc(u)}" target="_blank" rel="noopener" style="color:var(--cyan)">${l} ↗</a>`:'—';
+
+    box.className='';
+    box.innerHTML=`
+      <div class="sc-kv"><span class="k">Contract</span><span class="v" style="font-size:10px">${cesc(t.contract||'')}</span></div>
+      <div class="sc-kv"><span class="k">Kurs</span><span class="v">${scPrice(t.price_usd)}</span></div>
+      <div class="sc-kv"><span class="k">MCap / Liquidität</span><span class="v">${scUsd(t.market_cap)} / ${scUsd(t.liquidity_usd)}</span></div>
+      <div class="sc-kv"><span class="k">Liquidität zu MCap</span><span class="v">${t.liquidity_to_mcap!=null?(t.liquidity_to_mcap*100).toFixed(1)+'%':'—'}</span></div>
+      <div class="sc-kv"><span class="k">Volumen zu Liquidität</span><span class="v">${t.volume_to_liquidity!=null?t.volume_to_liquidity.toFixed(1)+'x':'—'}</span></div>
+      <div class="sc-kv"><span class="k">Kaufanteil 1h</span><span class="v">${t.buy_ratio_h1!=null?(t.buy_ratio_h1*100).toFixed(0)+'%':'—'}</span></div>
+      <div class="sc-kv"><span class="k">Alter</span><span class="v">${scAge(t.pair_age_hours)}</span></div>
+      <div class="sc-kv"><span class="k">Links</span><span class="v">
+        ${link(t.website,'Web')} ${link(t.twitter,'X')} ${link(t.pair_address?'https://dexscreener.com/solana/'+t.pair_address:null,'Chart')}</span></div>
+
+      <h3 style="font-size:12px;margin:16px 0 8px">Punkte im Detail</h3>
+      ${bars}
+      <div class="sc-kv"><span class="k">Risiko-Abzug</span><span class="v down">−${comp.risk_penalty??0}</span></div>
+      <div class="sc-kv"><span class="k">Gesamt</span><span class="v"><strong>${t.overall_score??'—'}</strong></span></div>
+      <p style="color:var(--dim);font-size:10px;margin-top:8px">
+        Kategorien ohne Datenquelle geben null Punkte; die Summe wird über die messbaren normalisiert.</p>
+
+      <h3 style="font-size:12px;margin:16px 0 4px">Risiko-Signale</h3>
+      ${flags}
+      ${(t.unavailable_checks||[]).length?`<p style="color:var(--dim);font-size:10px;margin-top:10px">
+        Nicht geprüft (braucht einen On-Chain-Anbieter): ${cesc((t.unavailable_checks||[]).join(', '))}</p>`:''}`;
+  }catch(e){
+    box.className='crypto-empty';
+    box.textContent='Token nicht ladbar.';
+  }
+}
+
+try{const v=localStorage.getItem('si_view'); if(v==='crypto'||v==='scanner')showView(v)}catch(e){}
 </script>
 </body>
 </html>

@@ -11,6 +11,7 @@ from apscheduler.schedulers.blocking import BlockingScheduler
 
 import ai_processor
 import article_fetcher
+import crypto_scanner
 import database
 import monitor
 import publisher
@@ -34,6 +35,15 @@ try:
     AUTO_UPDATE_INTERVAL_MINUTES = max(1, int(os.getenv("AUTO_UPDATE_INTERVAL_MINUTES", "15")))
 except ValueError:
     AUTO_UPDATE_INTERVAL_MINUTES = 15
+
+
+# Memecoin-Scanner: läuft im selben Prozess mit, weil hier bereits ein
+# Scheduler rund um die Uhr läuft und die SQLite-Datei wirklich bestehen bleibt.
+CRYPTO_SCAN_ENABLED = os.getenv("CRYPTO_SCAN_ENABLED", "true").lower() == "true"
+try:
+    CRYPTO_SCAN_MINUTES = max(5, int(os.getenv("CRYPTO_SCAN_MINUTES", "15")))
+except ValueError:
+    CRYPTO_SCAN_MINUTES = 15
 
 
 REPO_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -327,6 +337,14 @@ def sync_views(cfg):
         logger.error("Views sync failed: %s", e)
 
 
+def crypto_scan_job():
+    """Ein Scanlauf. Fehler dürfen den Nachrichten-Bot nie mitreissen."""
+    try:
+        crypto_scanner.run_scan(os.getenv("DB_PATH", "swissintel.db"))
+    except Exception:
+        logger.exception("Memecoin-Scan fehlgeschlagen")
+
+
 def main():
     cfg = load_config()
     logging.basicConfig(
@@ -369,6 +387,16 @@ def main():
         max_instances=1,
         coalesce=True,
     )
+    if CRYPTO_SCAN_ENABLED:
+        scheduler.add_job(
+            crypto_scan_job,
+            "interval",
+            minutes=CRYPTO_SCAN_MINUTES,
+            max_instances=1,
+            coalesce=True,
+        )
+        logger.info("Memecoin-Scanner aktiv, alle %d Minuten", CRYPTO_SCAN_MINUTES)
+
     try:
         scheduler.start()
     except (KeyboardInterrupt, SystemExit):
