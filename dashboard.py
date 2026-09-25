@@ -10,6 +10,7 @@ from dotenv import load_dotenv
 import crypto_agent
 import crypto_scanner
 import crypto_store
+import crypto_paper
 
 load_dotenv()
 
@@ -1012,6 +1013,42 @@ def api_crypto_settings():
         "discovery_queries": crypto_scanner.DISCOVERY_QUERIES,
         "weights_version": crypto_scanner.WEIGHTS_VERSION,
     })
+
+
+# ── Papier-Handel ──────────────────────────────────────────────────────────
+# Eröffnet und schliesst Positionen selbständig. Kein echtes Geld.
+
+@app.route("/api/crypto/trades")
+@require_auth
+def api_crypto_trades():
+    return jsonify({
+        "open": crypto_paper.list_trades(DB_PATH, "open"),
+        "closed": crypto_paper.list_trades(DB_PATH, "closed", 100),
+        "config": crypto_paper.CONFIG,
+        "strategy_version": crypto_paper.STRATEGY_VERSION,
+    })
+
+
+@app.route("/api/crypto/trades/<int:trade_id>/history")
+@require_auth
+def api_crypto_trade_history(trade_id):
+    return jsonify({"snapshots": crypto_paper.trade_snapshots(DB_PATH, trade_id)})
+
+
+@app.route("/api/crypto/performance")
+@require_auth
+def api_crypto_performance():
+    return jsonify(crypto_paper.performance(DB_PATH))
+
+
+@app.route("/api/crypto/cycle", methods=["POST"])
+@require_auth
+def api_crypto_cycle():
+    """Von Hand angestossener Durchgang: verfolgen, scannen, eröffnen."""
+    try:
+        return jsonify(crypto_paper.run_cycle(DB_PATH))
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 @app.route("/api/version")

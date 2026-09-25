@@ -12,6 +12,7 @@ from apscheduler.schedulers.blocking import BlockingScheduler
 import ai_processor
 import article_fetcher
 import crypto_scanner
+import crypto_paper
 import database
 import monitor
 import publisher
@@ -44,6 +45,10 @@ try:
     CRYPTO_SCAN_MINUTES = max(5, int(os.getenv("CRYPTO_SCAN_MINUTES", "15")))
 except ValueError:
     CRYPTO_SCAN_MINUTES = 15
+try:
+    CRYPTO_TRACK_MINUTES = max(2, int(os.getenv("CRYPTO_TRACK_MINUTES", "5")))
+except ValueError:
+    CRYPTO_TRACK_MINUTES = 5
 
 
 REPO_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -338,11 +343,21 @@ def sync_views(cfg):
 
 
 def crypto_scan_job():
-    """Ein Scanlauf. Fehler dürfen den Nachrichten-Bot nie mitreissen."""
+    """Ein voller Durchgang: offene Papier-Positionen verfolgen, scannen, neue
+    Positionen eröffnen. Fehler dürfen den Nachrichten-Bot nie mitreissen."""
     try:
-        crypto_scanner.run_scan(os.getenv("DB_PATH", "swissintel.db"))
+        crypto_paper.run_cycle(os.getenv("DB_PATH", "swissintel.db"))
     except Exception:
-        logger.exception("Memecoin-Scan fehlgeschlagen")
+        logger.exception("Memecoin-Durchgang fehlgeschlagen")
+
+
+def crypto_track_job():
+    """Nur die offenen Positionen nachführen — häufiger als der volle Scan,
+    damit ein Stop nicht eine Viertelstunde zu spät greift."""
+    try:
+        crypto_paper.track_trades(os.getenv("DB_PATH", "swissintel.db"))
+    except Exception:
+        logger.exception("Verfolgen der Papier-Positionen fehlgeschlagen")
 
 
 def main():
@@ -395,7 +410,16 @@ def main():
             max_instances=1,
             coalesce=True,
         )
-        logger.info("Memecoin-Scanner aktiv, alle %d Minuten", CRYPTO_SCAN_MINUTES)
+        scheduler.add_job(
+            crypto_track_job,
+            "interval",
+            minutes=CRYPTO_TRACK_MINUTES,
+            max_instances=1,
+            coalesce=True,
+        )
+        logger.info("Memecoin-Scanner aktiv: Durchgang alle %d Min, "
+                    "Positionen nachführen alle %d Min",
+                    CRYPTO_SCAN_MINUTES, CRYPTO_TRACK_MINUTES)
 
     try:
         scheduler.start()

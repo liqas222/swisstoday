@@ -611,6 +611,7 @@ footer{
       <button class="tab active" id="tab-intel" onclick="showView('intel')">📰 News-Bot</button>
       <button class="tab" id="tab-crypto" onclick="showView('crypto')">🪙 Crypto-Research</button>
       <button class="tab" id="tab-scanner" onclick="showView('scanner')">📡 Memecoin-Scanner</button>
+      <button class="tab" id="tab-trades" onclick="showView('trades')">💼 Paper-Trades</button>
     </nav>
   </div>
   <div class="hdr-right">
@@ -922,6 +923,66 @@ footer{
     <div class="log-card">
       <div class="log-hdr"><h2>Aussortiert</h2><span style="font-size:10px;color:var(--dim)">letzter Lauf</span></div>
       <div style="padding:14px 16px"><div id="sc-rejects" class="crypto-empty">—</div></div>
+    </div>
+  </div>
+
+</div>
+
+
+<div class="main" id="view-trades" style="display:none">
+
+  <div class="crypto-hero">
+    <div class="crypto-badge">Simuliert · kein echtes Geld, keine Wallet</div>
+    <h2>Paper-Trades</h2>
+    <p>Der Scanner eröffnet und schliesst Positionen selbständig. Jeder Einstieg hält den
+       Punktestand und die Risiko-Signale fest, die in genau diesem Moment galten — nur so
+       lässt sich später messen, ob die Bewertung etwas taugt.</p>
+  </div>
+
+  <div class="stats-row" style="grid-template-columns:repeat(4,1fr);margin-bottom:16px">
+    <div class="log-card"><div style="padding:14px 16px">
+      <div class="sc-lbl">Offene Positionen</div><div class="sc-val" id="pt-open">—</div>
+      <div class="sc-note" id="pt-open-pnl">—</div></div></div>
+    <div class="log-card"><div style="padding:14px 16px">
+      <div class="sc-lbl">Geschlossen</div><div class="sc-val" id="pt-closed">—</div>
+      <div class="sc-note" id="pt-closed-note">—</div></div></div>
+    <div class="log-card"><div style="padding:14px 16px">
+      <div class="sc-lbl">Trefferquote</div><div class="sc-val" id="pt-win">—</div>
+      <div class="sc-note" id="pt-win-note">—</div></div></div>
+    <div class="log-card"><div style="padding:14px 16px">
+      <div class="sc-lbl">Gesamt-Ergebnis</div><div class="sc-val" id="pt-pnl">—</div>
+      <div class="sc-note" id="pt-pnl-note">—</div></div></div>
+  </div>
+
+  <div class="log-card" style="margin-bottom:16px">
+    <div class="log-hdr">
+      <h2>Offen</h2>
+      <div style="display:flex;gap:8px;align-items:center">
+        <span id="pt-cycle-info" style="font-size:10px;color:var(--dim);font-family:'JetBrains Mono',monospace"></span>
+        <button class="btn-scan" id="pt-btn" onclick="tradesCycle()">Durchgang starten</button>
+      </div>
+    </div>
+    <div style="padding:0 4px 4px"><div id="pt-open-table" class="crypto-pairs">
+      <p class="crypto-empty" style="padding:16px">Lädt…</p></div></div>
+  </div>
+
+  <div class="log-card" style="margin-bottom:16px">
+    <div class="log-hdr"><h2>Geschlossen</h2>
+      <span style="font-size:10px;color:var(--dim)">auch Verluste und tote Token bleiben stehen</span></div>
+    <div style="padding:0 4px 4px"><div id="pt-closed-table" class="crypto-pairs">
+      <p class="crypto-empty" style="padding:16px">—</p></div></div>
+  </div>
+
+  <div class="crypto-grid">
+    <div class="log-card">
+      <div class="log-hdr"><h2>Ergebnis nach Punktestand</h2>
+        <span style="font-size:10px;color:var(--dim)">die eigentliche Frage</span></div>
+      <div style="padding:0 4px 4px"><div id="pt-bands" class="crypto-pairs">
+        <p class="crypto-empty" style="padding:16px">—</p></div></div>
+    </div>
+    <div class="log-card">
+      <div class="log-hdr"><h2>Strategie & Ausstiege</h2></div>
+      <div style="padding:14px 16px"><div id="pt-strategy" class="crypto-empty">—</div></div>
     </div>
   </div>
 
@@ -1801,7 +1862,7 @@ document.addEventListener('DOMContentLoaded',()=>{
 // ── Crypto-Research-Tab ────────────────────────────────────────────────────
 let cryptoLoaded=false;
 function showView(v){
-  ['intel','crypto','scanner'].forEach(name=>{
+  ['intel','crypto','scanner','trades'].forEach(name=>{
     const view=document.getElementById('view-'+name);
     const tab=document.getElementById('tab-'+name);
     if(view)view.style.display=(name===v)?'':'none';
@@ -1812,6 +1873,7 @@ function showView(v){
   try{localStorage.setItem('si_view',v)}catch(e){}
   if(v==='crypto'&&!cryptoLoaded){cryptoLoaded=true;cryptoHistory()}
   if(v==='scanner'&&!scannerLoaded){scannerLoaded=true;scannerLoad()}
+  if(v==='trades'&&!tradesLoaded){tradesLoaded=true;tradesLoad()}
 }
 
 function cesc(t){return (t||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
@@ -2087,7 +2149,183 @@ async function scannerDetail(contract){
   }
 }
 
-try{const v=localStorage.getItem('si_view'); if(v==='crypto'||v==='scanner')showView(v)}catch(e){}
+
+// ── Paper-Trades ───────────────────────────────────────────────────────────
+let tradesLoaded=false;
+
+function ptRet(n){
+  if(n==null||!isFinite(n))return '<span class="dim">—</span>';
+  return `<span class="${n>=0?'up':'down'}">${n>=0?'+':''}${n.toFixed(1)}%</span>`;
+}
+function ptUsd(n){
+  if(n==null||!isFinite(n))return '<span class="dim">—</span>';
+  return `<span class="${n>=0?'up':'down'}">${n>=0?'+':''}$${n.toFixed(2)}</span>`;
+}
+function ptDur(min){
+  if(min==null||!isFinite(min))return '—';
+  if(min<60)return Math.round(min)+'m';
+  if(min<2880)return (min/60).toFixed(1)+'h';
+  return Math.round(min/1440)+'d';
+}
+// Erreichte Ziele als Punktkette, damit der Verlauf auf einen Blick lesbar ist.
+function ptTargets(t){
+  return ['tp1_hit_at','tp2_hit_at','tp3_hit_at']
+    .map((k,i)=>`<span style="color:${t[k]?'var(--green)':'var(--dim)'}">${i+1}</span>`)
+    .join('·');
+}
+
+async function tradesLoad(){
+  try{
+    const [d,perf]=await Promise.all([api('/api/crypto/trades'),api('/api/crypto/performance')]);
+    const o=perf.overall||{};
+
+    document.getElementById('pt-open').textContent=perf.open_trades??0;
+    document.getElementById('pt-open-pnl').innerHTML=
+      'unrealisiert '+ptUsd(perf.open_unrealised_pnl_usd);
+    document.getElementById('pt-closed').textContent=o.trades??0;
+    document.getElementById('pt-closed-note').textContent=
+      o.trades?('Ø Haltedauer '+(o.avg_hold_hours??'—')+'h'):'noch keine';
+
+    // Eine Trefferquote aus fünf Positionen ist Rauschen, keine Kennzahl.
+    const enough=o.enough_data;
+    document.getElementById('pt-win').textContent=
+      enough?((o.win_rate??0)+'%'):'—';
+    document.getElementById('pt-win-note').textContent=
+      enough?('Ø Gewinner '+(o.avg_winner??'—')+'% / Verlierer '+(o.avg_loser??'—')+'%')
+            :('erst ab '+perf.min_trades_for_stats+' geschlossenen Positionen aussagekräftig');
+    document.getElementById('pt-pnl').innerHTML=
+      o.trades?ptUsd(o.total_pnl_usd):'<span class="dim">—</span>';
+    document.getElementById('pt-pnl-note').textContent=
+      o.trades?('Erwartungswert '+(o.expectancy_usd??'—')+' $ je Position'
+               +(o.profit_factor!=null?(' · Profitfaktor '+o.profit_factor):'')):'—';
+
+    tradesRenderOpen(d.open||[]);
+    tradesRenderClosed(d.closed||[]);
+    tradesRenderBands(perf);
+    tradesRenderStrategy(d,perf);
+  }catch(e){
+    document.getElementById('pt-open-table').innerHTML=
+      '<p class="crypto-empty" style="padding:16px">Daten nicht ladbar.</p>';
+  }
+}
+
+function tradesRenderOpen(rows){
+  const box=document.getElementById('pt-open-table');
+  if(!rows.length){
+    box.innerHTML='<p class="crypto-empty" style="padding:16px">Keine offene Position. '+
+      'Der Scanner eröffnet eine, sobald ein Token die Schwelle erreicht.</p>';
+    return;
+  }
+  box.innerHTML='<table><thead><tr>'+
+    ['Token','Score','Einstieg','Aktuell','Ergebnis','Beste','Schlechteste','Ziele','Stop','Rest','Offen seit']
+      .map(h=>`<th>${h}</th>`).join('')+'</tr></thead><tbody>'+
+    rows.map(t=>`<tr>
+      <td><strong>${cesc(t.symbol||'?')}</strong></td>
+      <td><span class="sc-pill ${scoreCls(t.score_at_entry)}">${t.score_at_entry??'—'}</span></td>
+      <td>${scPrice(t.entry_price)}</td>
+      <td>${scPrice(t.last_price)}</td>
+      <td>${ptRet(t.unrealized_return_pct)}</td>
+      <td>${ptRet(t.mfe_pct)}</td>
+      <td>${ptRet(t.mae_pct)}</td>
+      <td>${ptTargets(t)}</td>
+      <td>${scPrice(t.stop_price)}</td>
+      <td>${Math.round((t.remaining_fraction||0)*100)}%</td>
+      <td class="dim">${scAgo(t.opened_at)}</td>
+    </tr>`).join('')+'</tbody></table>';
+}
+
+function tradesRenderClosed(rows){
+  const box=document.getElementById('pt-closed-table');
+  if(!rows.length){box.innerHTML='<p class="crypto-empty" style="padding:16px">Noch nichts geschlossen.</p>';return}
+  box.innerHTML='<table><thead><tr>'+
+    ['Token','Score','Einstieg','Ausstieg','Ergebnis','P&L','Beste','Schlechteste','Dauer','Grund']
+      .map(h=>`<th>${h}</th>`).join('')+'</tr></thead><tbody>'+
+    rows.map(t=>`<tr>
+      <td><strong>${cesc(t.symbol||'?')}</strong></td>
+      <td><span class="sc-pill ${scoreCls(t.score_at_entry)}">${t.score_at_entry??'—'}</span></td>
+      <td>${scPrice(t.entry_price)}</td>
+      <td>${scPrice(t.exit_price)}</td>
+      <td>${ptRet(t.return_pct)}</td>
+      <td>${ptUsd(t.pnl_usd)}</td>
+      <td>${ptRet(t.mfe_pct)}</td>
+      <td>${ptRet(t.mae_pct)}</td>
+      <td class="dim">${ptDur(t.duration_minutes)}</td>
+      <td class="dim">${cesc(t.exit_reason||'')}</td>
+    </tr>`).join('')+'</tbody></table>';
+}
+
+function tradesRenderBands(perf){
+  const box=document.getElementById('pt-bands');
+  const bands=perf.by_score||{};
+  const keys=Object.keys(bands);
+  if(!keys.length){
+    box.innerHTML='<p class="crypto-empty" style="padding:16px">Noch keine geschlossene Position. '+
+      'Hier steht später, ob ein hoher Punktestand tatsächlich besser abschneidet als ein tiefer.</p>';
+    return;
+  }
+  box.innerHTML='<table><thead><tr>'+
+    ['Punkte','Positionen','Trefferquote','Ø Ergebnis','Median','Ø Beste','Ø Schlechteste']
+      .map(h=>`<th>${h}</th>`).join('')+'</tr></thead><tbody>'+
+    keys.map(k=>{
+      const b=bands[k];
+      const thin=!b.enough_data;
+      const cell=v=>thin?'<span class="dim">—</span>':v;
+      return `<tr>
+        <td><span class="sc-pill ${scoreCls(parseInt(k))}">${cesc(k)}</span></td>
+        <td>${b.trades}</td>
+        <td>${cell(b.win_rate+'%')}</td>
+        <td>${cell(ptRet(b.avg_return))}</td>
+        <td>${cell(ptRet(b.median_return))}</td>
+        <td>${cell(ptRet(b.avg_mfe))}</td>
+        <td>${cell(ptRet(b.avg_mae))}</td>
+      </tr>`;
+    }).join('')+'</tbody></table>'+
+    `<p style="color:var(--dim);font-size:10px;padding:8px 12px">
+       Gruppen mit weniger als ${perf.min_trades_for_stats} Positionen zeigen keine Quoten —
+       eine Trefferquote aus drei Trades ist Zufall, keine Erkenntnis.</p>`;
+}
+
+function tradesRenderStrategy(d,perf){
+  const c=d.config||{};
+  const ex=perf.exit_reasons||{};
+  const exRows=Object.entries(ex).sort((a,b)=>b[1]-a[1])
+    .map(([k,n])=>`<div class="sc-kv"><span class="k">${cesc(k)}</span><span class="v">${n}</span></div>`).join('')
+    || '<div class="sc-kv"><span class="k">noch keine Ausstiege</span><span class="v">—</span></div>';
+  document.getElementById('pt-strategy').className='';
+  document.getElementById('pt-strategy').innerHTML=`
+    <div class="sc-kv"><span class="k">Position</span><span class="v">$${c.position_usd} virtuell</span></div>
+    <div class="sc-kv"><span class="k">Einstieg ab</span><span class="v">Score ${c.min_score}, Risiko ≤ ${c.max_risk}</span></div>
+    <div class="sc-kv"><span class="k">Stop</span><span class="v">${c.stop_pct}%</span></div>
+    <div class="sc-kv"><span class="k">Ziele</span><span class="v">+${c.tp1_pct}% / +${c.tp2_pct}% / +${c.tp3_pct}%</span></div>
+    <div class="sc-kv"><span class="k">Teilverkäufe</span><span class="v">⅓ bei Ziel 1 und 2</span></div>
+    <div class="sc-kv"><span class="k">Nach Ziel 1</span><span class="v">${c.breakeven_after_tp1?'Stop auf Einstieg':'Stop bleibt'}</span></div>
+    <div class="sc-kv"><span class="k">Haltefrist</span><span class="v">max. ${c.max_hold_hours}h</span></div>
+    <div class="sc-kv"><span class="k">Gleichzeitig offen</span><span class="v">max. ${c.max_open_trades}</span></div>
+    <div class="sc-kv"><span class="k">Version</span><span class="v">${cesc(d.strategy_version||'')}</span></div>
+    <h3 style="font-size:12px;margin:14px 0 6px">Ausstiegsgründe</h3>
+    ${exRows}
+    <p style="color:var(--dim);font-size:10px;margin-top:12px">
+      Keine dieser Zahlen ist optimiert. Sie sind Startwerte und werden mit jeder Position
+      gespeichert, damit später überhaupt etwas zu vergleichen ist.</p>`;
+}
+
+async function tradesCycle(){
+  const btn=document.getElementById('pt-btn');
+  btn.disabled=true; btn.textContent='Läuft…';
+  try{
+    const r=await fetch(BASE+'/api/crypto/cycle',{method:'POST'});
+    const d=await r.json();
+    if(!r.ok)throw new Error(d.error||'Durchgang fehlgeschlagen');
+    const tr=d.tracking||{}, op=d.opening||{}, sc=d.scan||{};
+    document.getElementById('pt-cycle-info').textContent=
+      `${tr.tracked||0} nachgeführt · ${tr.closed||0} geschlossen · ${sc.scored||0} bewertet · ${op.opened||0} eröffnet`;
+    showToast(`${op.opened||0} eröffnet, ${tr.closed||0} geschlossen`,'ok');
+    await tradesLoad();
+  }catch(e){ showToast('Durchgang fehlgeschlagen: '+e.message,'error') }
+  finally{ btn.disabled=false; btn.textContent='Durchgang starten' }
+}
+
+try{const v=localStorage.getItem('si_view'); if(['crypto','scanner','trades'].includes(v))showView(v)}catch(e){}
 </script>
 </body>
 </html>
