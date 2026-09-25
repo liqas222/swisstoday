@@ -7,10 +7,8 @@ from datetime import datetime, timezone
 from flask import Flask, render_template, jsonify, request, Response, make_response, redirect
 from dotenv import load_dotenv
 
-import crypto_agent
-import crypto_scanner
-import crypto_store
-import crypto_paper
+import btc_trader
+
 
 load_dotenv()
 
@@ -884,175 +882,35 @@ def api_test_thread():
                     "url": f"https://x.com/i/web/status/{tweet_id}" if tweet_id else None})
 
 
-# ── Crypto-Research-Tab ────────────────────────────────────────────────────
-# Zweite Oberfläche auf derselben Seite, portiert aus dem Next.js-Projekt
-# memecoins-chatgpt-agent. Nur Recherche, es wird nichts gehandelt.
+# ── BTC-Dip-Handel ─────────────────────────────────────────────────────────
+# Mehrere Hebel-Strategien parallel auf Papier. Es wird nichts gehandelt.
 
-@app.route("/api/crypto/analyze", methods=["POST"])
+@app.route("/api/btc/overview")
 @require_auth
-def api_crypto_analyze():
-    query = (request.get_json(silent=True) or {}).get("query", "").strip()
-    if not query or len(query) > 180:
-        return jsonify({"error": "Bitte einen Ticker oder eine Contract-Adresse eingeben."}), 400
-    try:
-        market = crypto_agent.search_dex(query)
-    except Exception as e:
-        return jsonify({"error": f"DexScreener nicht erreichbar: {e}"}), 502
-    if not market:
-        return jsonify({"error": "Keine Handelspaare gefunden. Versuch die exakte "
-                                 "Contract-Adresse."}), 404
-    try:
-        report = crypto_agent.run_agent(query, market)
-    except Exception as e:
-        return jsonify({"error": f"Analyse fehlgeschlagen: {e}"}), 500
-    crypto_agent.save_analysis(DB_PATH, query, report, market)
-    return jsonify({"report": report, "market": market})
+def api_btc_overview():
+    return jsonify(btc_trader.overview(DB_PATH))
 
 
-@app.route("/api/crypto/history")
+@app.route("/api/btc/trades")
 @require_auth
-def api_crypto_history():
-    return jsonify({"items": crypto_agent.recent_analyses(DB_PATH)})
-
-
-@app.route("/api/crypto/history/<int:analysis_id>", methods=["DELETE"])
-@require_auth
-def api_crypto_delete(analysis_id):
-    try:
-        crypto_agent.delete_analysis(DB_PATH, analysis_id)
-        return jsonify({"ok": True})
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-
-# ── Memecoin-Scanner ───────────────────────────────────────────────────────
-# Findet, filtert und bewertet Solana-Token selbständig. Der Bot-Scheduler
-# stösst die Läufe an; hier wird nur gelesen und auf Wunsch von Hand gestartet.
-
-@app.route("/api/crypto/scan", methods=["POST"])
-@require_auth
-def api_crypto_scan():
-    try:
-        return jsonify(crypto_scanner.run_scan(DB_PATH))
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-
-@app.route("/api/crypto/tokens")
-@require_auth
-def api_crypto_tokens():
-    min_score = request.args.get("minScore", type=int) or 0
-    limit = min(request.args.get("limit", type=int) or 200, 500)
+def api_btc_trades():
     return jsonify({
-        "tokens": crypto_store.list_tokens(DB_PATH, min_score, limit),
-        "thresholds": crypto_scanner.THRESHOLDS,
+        "open": btc_trader.trades(DB_PATH, status="open"),
+        "closed": btc_trader.trades(DB_PATH, status="closed", limit=150),
     })
 
 
-@app.route("/api/crypto/token/<contract>")
+@app.route("/api/btc/curves")
 @require_auth
-def api_crypto_token(contract):
-    token_id = contract if ":" in contract else f"solana:{contract}"
-    view = crypto_store.get_token(DB_PATH, token_id)
-    live = False
-
-    if not view or view.get("overall_score") is None:
-        # Noch nie gescannt: einmal direkt nachschlagen, damit jede Adresse
-        # angesehen werden kann.
-        try:
-            pairs = crypto_scanner.by_contract(token_id.split(":", 1)[1])
-        except Exception as e:
-            return jsonify({"error": f"Abruf fehlgeschlagen: {e}"}), 502
-        if not pairs:
-            return jsonify({"error": "Token nicht gefunden."}), 404
-        best = max(pairs, key=lambda c: c.market.get("liquidity_usd") or 0)
-        risk = crypto_scanner.assess_risk(best)
-        score = crypto_scanner.score_token(best, risk)
-        view = {
-            **{k: getattr(best, k) for k in
-               ("contract", "symbol", "name", "pair_address", "dex", "image_url",
-                "website", "twitter", "telegram", "discovery_source")},
-            "id": best.token_id, **best.market, **risk, **score,
-        }
-        live = True
-
-    return jsonify({
-        **view,
-        "live": live,
-        "score_history": [] if live else crypto_store.score_history(DB_PATH, token_id),
-        "price_history": [] if live else crypto_store.price_history(DB_PATH, token_id),
-        "weights": crypto_scanner.WEIGHTS,
-    })
+def api_btc_curves():
+    return jsonify({"curves": btc_trader.equity_curves(DB_PATH)})
 
 
-@app.route("/api/crypto/scanner-status")
+@app.route("/api/btc/run", methods=["POST"])
 @require_auth
-def api_crypto_scanner_status():
-    opportunities = crypto_store.list_tokens(
-        DB_PATH, crypto_scanner.THRESHOLDS["opportunity"], 100)
-    return jsonify({
-        "last_run": crypto_store.latest_run(DB_PATH),
-        "seen_24h": crypto_store.count_tokens_since(DB_PATH, 24),
-        "opportunities": len(opportunities),
-        "top": opportunities[:5],
-        "thresholds": crypto_scanner.THRESHOLDS,
-        "interval_minutes": int(os.getenv("CRYPTO_SCAN_MINUTES", "15")),
-        "enabled": os.getenv("CRYPTO_SCAN_ENABLED", "true").lower() == "true",
-    })
-
-
-@app.route("/api/crypto/settings")
-@require_auth
-def api_crypto_settings():
-    return jsonify({
-        "filters": crypto_scanner.FILTERS,
-        "weights": crypto_scanner.WEIGHTS,
-        "thresholds": crypto_scanner.THRESHOLDS,
-        "risk_penalty": crypto_scanner.RISK_PENALTY,
-        "limits": crypto_scanner.LIMITS,
-        "discovery_queries": crypto_scanner.DISCOVERY_QUERIES,
-        "weights_version": crypto_scanner.WEIGHTS_VERSION,
-    })
-
-
-# ── Papier-Handel ──────────────────────────────────────────────────────────
-# Eröffnet und schliesst Positionen selbständig. Kein echtes Geld.
-
-@app.route("/api/crypto/trades")
-@require_auth
-def api_crypto_trades():
-    return jsonify({
-        "open": crypto_paper.list_trades(DB_PATH, "open"),
-        "closed": crypto_paper.list_trades(DB_PATH, "closed", 100),
-        "config": crypto_paper.CONFIG,
-        "strategy_version": crypto_paper.STRATEGY_VERSION,
-    })
-
-
-@app.route("/api/crypto/trades/<int:trade_id>/history")
-@require_auth
-def api_crypto_trade_history(trade_id):
-    return jsonify({"snapshots": crypto_paper.trade_snapshots(DB_PATH, trade_id)})
-
-
-@app.route("/api/crypto/log")
-@require_auth
-def api_crypto_log():
-    return jsonify({"events": crypto_paper.trade_log(DB_PATH, 150)})
-
-
-@app.route("/api/crypto/performance")
-@require_auth
-def api_crypto_performance():
-    return jsonify(crypto_paper.performance(DB_PATH))
-
-
-@app.route("/api/crypto/cycle", methods=["POST"])
-@require_auth
-def api_crypto_cycle():
-    """Von Hand angestossener Durchgang: verfolgen, scannen, eröffnen."""
+def api_btc_run():
     try:
-        return jsonify(crypto_paper.run_cycle(DB_PATH))
+        return jsonify(btc_trader.run_cycle(DB_PATH))
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 

@@ -572,7 +572,7 @@ footer{
   .brand{flex-wrap:wrap}
 }
 
-/* ── Memecoin-Scanner ── */
+/* ── Handels-Tab ── */
 .sc-lbl{color:var(--dim);font-size:10px;text-transform:uppercase;letter-spacing:.07em}
 .sc-val{font-size:26px;font-weight:700;margin-top:4px;font-variant-numeric:tabular-nums}
 .sc-note{color:var(--muted);font-size:10px;margin-top:2px}
@@ -623,9 +623,7 @@ footer{
     <h1>SwissIntel</h1>
     <nav class="tabs">
       <button class="tab active" id="tab-intel" onclick="showView('intel')">📰 News-Bot</button>
-      <button class="tab" id="tab-crypto" onclick="showView('crypto')">🪙 Crypto-Research</button>
-      <button class="tab" id="tab-scanner" onclick="showView('scanner')">📡 Memecoin-Scanner</button>
-      <button class="tab" id="tab-trades" onclick="showView('trades')">💼 Paper-Trades</button>
+      <button class="tab" id="tab-btc" onclick="showView('btc')">₿ BTC-Dip-Handel</button>
     </nav>
   </div>
   <div class="hdr-right">
@@ -852,159 +850,68 @@ footer{
 </div>
 
 
-<div class="main" id="view-crypto" style="display:none">
+
+<div class="main" id="view-btc" style="display:none">
 
   <div class="crypto-hero">
-    <div class="crypto-badge">Nur Recherche · keine echten Trades</div>
-    <h2>Crypto-Research-Agent</h2>
-    <p>Live-Marktdaten von DexScreener, kombiniert mit KI-Recherche. Ticker oder — besser — die Contract-Adresse eingeben.</p>
-  </div>
-
-  <div class="log-card" style="margin-bottom:16px">
-    <div style="padding:16px">
-      <form class="crypto-form" onsubmit="cryptoAnalyze(event)">
-        <input id="cq" placeholder="Contract-Adresse oder Ticker, z.B. BONK…" autocomplete="off">
-        <button id="cbtn" type="submit">Analysieren</button>
-      </form>
-      <p class="crypto-error" id="cerr" style="display:none"></p>
-    </div>
-  </div>
-
-  <div class="crypto-grid">
-    <div class="log-card">
-      <div class="log-hdr"><h2>Analyse</h2><span id="cmeta" style="font-size:10px;color:var(--dim)"></span></div>
-      <div style="padding:16px"><div id="creport" class="crypto-report crypto-empty">Noch keine Analyse. Oben einen Token eingeben.</div></div>
-    </div>
-    <div class="log-card">
-      <div class="log-hdr"><h2>Verlauf</h2></div>
-      <div style="padding:12px"><div id="chist" class="crypto-hist"><p class="crypto-empty">Noch leer.</p></div></div>
-    </div>
-  </div>
-
-  <div class="log-card" style="margin-top:16px">
-    <div class="log-hdr"><h2>Marktdaten</h2><span id="cpairs-n" style="font-size:10px;color:var(--dim)"></span></div>
-    <div style="padding:0 4px 4px"><div id="cpairs" class="crypto-pairs"></div></div>
-  </div>
-
-</div>
-
-
-<div class="main" id="view-scanner" style="display:none">
-
-  <div class="crypto-hero">
-    <div class="crypto-badge">Nur Recherche · es wird nichts gehandelt</div>
-    <h2>Memecoin-Scanner</h2>
-    <p>Findet Solana-Token selbständig, wirft den offensichtlichen Müll weg und bewertet den Rest.
-       Der Punktwert ist eine interne Rangfolge, keine Gewinnwahrscheinlichkeit.</p>
+    <div class="crypto-badge">Papier · kein echtes Geld, keine Börse</div>
+    <h2>BTC-Dip-Handel mit Hebel</h2>
+    <p>Fällt BTC innerhalb eines Zeitfensters um einen bestimmten Prozentsatz, wird long gegangen.
+       Jede Strategie startet mit 1000 $ und handelt unabhängig — verschiedene Auslösungen,
+       verschiedene Hebel, nebeneinander.</p>
   </div>
 
   <div class="stats-row" style="grid-template-columns:repeat(4,1fr);margin-bottom:16px">
     <div class="log-card"><div style="padding:14px 16px">
-      <div class="sc-lbl">Token gesehen (24h)</div><div class="sc-val" id="sc-seen">—</div></div></div>
+      <div class="sc-lbl">BTC</div><div class="sc-val" id="bt-price">—</div>
+      <div class="sc-note" id="bt-change">—</div></div></div>
     <div class="log-card"><div style="padding:14px 16px">
-      <div class="sc-lbl">Chancen</div><div class="sc-val" id="sc-opps">—</div>
-      <div class="sc-note" id="sc-opps-note">—</div></div></div>
+      <div class="sc-lbl">Beste Strategie</div><div class="sc-val" id="bt-best" style="font-size:18px">—</div>
+      <div class="sc-note" id="bt-best-note">—</div></div></div>
     <div class="log-card"><div style="padding:14px 16px">
-      <div class="sc-lbl">Letzter Lauf</div><div class="sc-val" id="sc-last" style="font-size:18px">—</div>
-      <div class="sc-note" id="sc-last-note">—</div></div></div>
+      <div class="sc-lbl">Positionen gesamt</div><div class="sc-val" id="bt-trades">—</div>
+      <div class="sc-note" id="bt-liqs">—</div></div></div>
     <div class="log-card"><div style="padding:14px 16px">
-      <div class="sc-lbl">Automatik</div><div class="sc-val" id="sc-auto" style="font-size:18px">—</div>
-      <div class="sc-note">läuft im Bot-Prozess</div></div></div>
-  </div>
-
-  <div class="log-card">
-    <div class="log-hdr">
-      <h2>Token</h2>
-      <div style="display:flex;gap:8px;align-items:center">
-        <span id="sc-runinfo" style="font-size:10px;color:var(--dim);font-family:'JetBrains Mono',monospace"></span>
-        <select id="sc-filter" onchange="scannerRender()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:7px;padding:5px 8px;font-size:11px;font-family:inherit">
-          <option value="0">Alle</option>
-          <option value="50">Ab 50 Punkten</option>
-          <option value="65">Nur Chancen (65+)</option>
-          <option value="75">Ab 75 Punkten</option>
-        </select>
-        <button class="btn-scan" id="sc-btn" onclick="scannerScan()">Scan starten</button>
-      </div>
-    </div>
-    <div style="padding:0 4px 4px"><div id="sc-table" class="crypto-pairs"><p class="crypto-empty" style="padding:16px">Lädt…</p></div></div>
-  </div>
-
-  <div class="crypto-grid" style="margin-top:16px">
-    <div class="log-card">
-      <div class="log-hdr"><h2>Token-Detail</h2><span id="sc-detail-name" style="font-size:10px;color:var(--dim)"></span></div>
-      <div style="padding:16px"><div id="sc-detail" class="crypto-empty">Eine Zeile in der Tabelle anklicken.</div></div>
-    </div>
-    <div class="log-card">
-      <div class="log-hdr"><h2>Aussortiert</h2><span style="font-size:10px;color:var(--dim)">letzter Lauf</span></div>
-      <div style="padding:14px 16px"><div id="sc-rejects" class="crypto-empty">—</div></div>
-    </div>
-  </div>
-
-</div>
-
-
-<div class="main" id="view-trades" style="display:none">
-
-  <div class="crypto-hero">
-    <div class="crypto-badge">Simuliert · kein echtes Geld, keine Wallet</div>
-    <h2>Paper-Trades</h2>
-    <p>Der Scanner eröffnet und schliesst Positionen selbständig. Jeder Einstieg hält den
-       Punktestand und die Risiko-Signale fest, die in genau diesem Moment galten — nur so
-       lässt sich später messen, ob die Bewertung etwas taugt.</p>
-  </div>
-
-  <div class="stats-row" style="grid-template-columns:repeat(4,1fr);margin-bottom:16px">
-    <div class="log-card"><div style="padding:14px 16px">
-      <div class="sc-lbl">Offene Positionen</div><div class="sc-val" id="pt-open">—</div>
-      <div class="sc-note" id="pt-open-pnl">—</div></div></div>
-    <div class="log-card"><div style="padding:14px 16px">
-      <div class="sc-lbl">Geschlossen</div><div class="sc-val" id="pt-closed">—</div>
-      <div class="sc-note" id="pt-closed-note">—</div></div></div>
-    <div class="log-card"><div style="padding:14px 16px">
-      <div class="sc-lbl">Trefferquote</div><div class="sc-val" id="pt-win">—</div>
-      <div class="sc-note" id="pt-win-note">—</div></div></div>
-    <div class="log-card"><div style="padding:14px 16px">
-      <div class="sc-lbl">Gesamt-Ergebnis</div><div class="sc-val" id="pt-pnl">—</div>
-      <div class="sc-note" id="pt-pnl-note">—</div></div></div>
+      <div class="sc-lbl">Datenbasis</div><div class="sc-val" id="bt-data" style="font-size:18px">—</div>
+      <div class="sc-note" id="bt-data-note">Minutenkerzen</div></div></div>
   </div>
 
   <div class="log-card" style="margin-bottom:16px">
     <div class="log-hdr">
-      <h2>Offen</h2>
+      <h2>Strategien im Vergleich</h2>
       <div style="display:flex;gap:8px;align-items:center">
-        <span id="pt-cycle-info" style="font-size:10px;color:var(--dim);font-family:'JetBrains Mono',monospace"></span>
-        <button class="btn-scan" id="pt-btn" onclick="tradesCycle()">Durchgang starten</button>
+        <span id="bt-runinfo" style="font-size:10px;color:var(--dim);font-family:'JetBrains Mono',monospace"></span>
+        <button class="btn-scan" id="bt-btn" onclick="btcRun()">Jetzt rechnen</button>
       </div>
     </div>
-    <div style="padding:0 4px 4px"><div id="pt-open-table" class="crypto-pairs">
+    <div style="padding:0 4px 4px"><div id="bt-table" class="crypto-pairs">
       <p class="crypto-empty" style="padding:16px">Lädt…</p></div></div>
   </div>
 
   <div class="log-card" style="margin-bottom:16px">
-    <div class="log-hdr"><h2>Trading-Log</h2>
-      <span style="font-size:10px;color:var(--dim)">jede Eröffnung, jedes Ziel, jeder Ausstieg</span></div>
-    <div id="pt-log" class="pt-log"><p class="crypto-empty" style="padding:16px">—</p></div>
-  </div>
-
-  <div class="log-card" style="margin-bottom:16px">
-    <div class="log-hdr"><h2>Geschlossen</h2>
-      <span style="font-size:10px;color:var(--dim)">auch Verluste und tote Token bleiben stehen</span></div>
-    <div style="padding:0 4px 4px"><div id="pt-closed-table" class="crypto-pairs">
-      <p class="crypto-empty" style="padding:16px">—</p></div></div>
+    <div class="log-hdr"><h2>Kapitalkurven</h2>
+      <span style="font-size:10px;color:var(--dim)">ab 1000 $ je Strategie</span></div>
+    <div style="padding:14px 16px"><div id="bt-chart"></div></div>
   </div>
 
   <div class="crypto-grid">
     <div class="log-card">
-      <div class="log-hdr"><h2>Ergebnis nach Punktestand</h2>
-        <span style="font-size:10px;color:var(--dim)">die eigentliche Frage</span></div>
-      <div style="padding:0 4px 4px"><div id="pt-bands" class="crypto-pairs">
-        <p class="crypto-empty" style="padding:16px">—</p></div></div>
+      <div class="log-hdr"><h2>Handelsprotokoll</h2>
+        <span style="font-size:10px;color:var(--dim)">jede Position, auch die liquidierten</span></div>
+      <div id="bt-log" class="pt-log"><p class="crypto-empty" style="padding:16px">—</p></div>
     </div>
     <div class="log-card">
-      <div class="log-hdr"><h2>Strategie & Ausstiege</h2></div>
-      <div style="padding:14px 16px"><div id="pt-strategy" class="crypto-empty">—</div></div>
+      <div class="log-hdr"><h2>Offen</h2></div>
+      <div style="padding:14px 16px"><div id="bt-open" class="crypto-empty">—</div></div>
     </div>
   </div>
+
+  <p style="color:var(--dim);font-size:11px;margin-top:14px;max-width:820px">
+    Gerechnet wird über Minutenkerzen, nicht über den Momentankurs — zwischen zwei Abfragen kann
+    eine Position längst liquidiert sein. Innerhalb einer Kerze wird immer zuerst das Ungünstige
+    geprüft: Liquidation vor Stop vor Ziel. Handelsgebühren sind enthalten (<span id="bt-fee">—</span>
+    je Seite auf den Gegenwert). Nicht modelliert: Funding, Slippage, Teilausführungen.
+  </p>
 
 </div>
 
@@ -1879,10 +1786,12 @@ document.addEventListener('DOMContentLoaded',()=>{
   setInterval(refreshAll, 120000); // full refresh every 2min
 });
 
-// ── Crypto-Research-Tab ────────────────────────────────────────────────────
-let cryptoLoaded=false;
+
+// ── BTC-Dip-Handel ─────────────────────────────────────────────────────────
+let btcLoaded=false;
+
 function showView(v){
-  ['intel','crypto','scanner','trades'].forEach(name=>{
+  ['intel','btc'].forEach(name=>{
     const view=document.getElementById('view-'+name);
     const tab=document.getElementById('tab-'+name);
     if(view)view.style.display=(name===v)?'':'none';
@@ -1891,489 +1800,194 @@ function showView(v){
   const rb=document.getElementById('global-refresh-btn');
   if(rb)rb.style.display=(v==='intel')?'':'none';
   try{localStorage.setItem('si_view',v)}catch(e){}
-  if(v==='crypto'&&!cryptoLoaded){cryptoLoaded=true;cryptoHistory()}
-  if(v==='scanner'&&!scannerLoaded){scannerLoaded=true;scannerLoad()}
-  if(v==='trades'&&!tradesLoaded){tradesLoaded=true;tradesLoad()}
+  if(v==='btc'&&!btcLoaded){btcLoaded=true;btcLoad()}
 }
 
 function cesc(t){return (t||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
 
-// Der Bericht kommt als Markdown zurück — Überschriften und Fettdruck reichen.
-function mdLite(t){
-  return cesc(t)
-    .replace(/^#{1,3}\s*(.+)$/gm,'<h3>$1</h3>')
-    .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');
+// Fehlende Werte bleiben "—", nie 0.
+function btUsd(n,d){
+  if(n==null||!isFinite(n))return'—';
+  return '$'+Number(n).toLocaleString('de-CH',{minimumFractionDigits:d??2,maximumFractionDigits:d??2});
 }
-
-function cnum(n,d){
-  if(n===null||n===undefined||n==='')return '—';
-  const v=Number(n); if(!isFinite(v))return '—';
-  if(d)return v.toLocaleString('de-CH',{maximumFractionDigits:d});
-  if(Math.abs(v)>=1e6)return (v/1e6).toFixed(1)+'M';
-  if(Math.abs(v)>=1e3)return (v/1e3).toFixed(1)+'k';
-  return v.toLocaleString('de-CH',{maximumFractionDigits:2});
+function btPct(n,d){
+  if(n==null||!isFinite(n))return'<span class="dim">—</span>';
+  return `<span class="${n>=0?'up':'down'}">${n>=0?'+':''}${n.toFixed(d??1)}%</span>`;
 }
-
-function cpct(n){
-  if(n===null||n===undefined)return '<span>—</span>';
-  const v=Number(n);
-  return `<span class="${v>=0?'up':'down'}">${v>=0?'+':''}${v.toFixed(1)}%</span>`;
-}
-
-function renderPairs(pairs){
-  const box=document.getElementById('cpairs');
-  document.getElementById('cpairs-n').textContent=pairs.length?pairs.length+' Paare':'';
-  if(!pairs.length){box.innerHTML='<p class="crypto-empty" style="padding:14px">Keine Marktdaten.</p>';return}
-  box.innerHTML='<table><thead><tr>'+
-    ['Token','Chain','Preis','Liquidität','Vol 24h','MCap','1h','24h','Alter',''].map(h=>`<th>${h}</th>`).join('')+
-    '</tr></thead><tbody>'+pairs.map(p=>`<tr>
-      <td><strong>${cesc(p.base_symbol||'?')}</strong>/${cesc(p.quote_symbol||'')}</td>
-      <td>${cesc(p.chain||'—')}</td>
-      <td>$${cnum(p.price_usd,6)}</td>
-      <td>$${cnum(p.liquidity_usd)}</td>
-      <td>$${cnum(p.volume_h24)}</td>
-      <td>$${cnum(p.market_cap)}</td>
-      <td>${cpct(p.change_h1_pct)}</td>
-      <td>${cpct(p.change_h24_pct)}</td>
-      <td>${p.pair_age_hours!=null?cnum(p.pair_age_hours/24,1)+'d':'—'}</td>
-      <td>${p.url?`<a href="${cesc(p.url)}" target="_blank" rel="noopener">↗</a>`:''}</td>
-    </tr>`).join('')+'</tbody></table>';
-}
-
-async function cryptoAnalyze(ev){
-  ev.preventDefault();
-  const q=document.getElementById('cq').value.trim();
-  if(!q)return;
-  const btn=document.getElementById('cbtn'),err=document.getElementById('cerr'),
-        rep=document.getElementById('creport');
-  err.style.display='none';
-  btn.disabled=true;btn.textContent='Recherchiert…';
-  rep.className='crypto-report crypto-empty';
-  rep.textContent='Marktdaten werden geholt und ausgewertet — das dauert bis zu einer Minute.';
-  try{
-    const r=await fetch(BASE+'/api/crypto/analyze',{method:'POST',
-      headers:{'Content-Type':'application/json'},body:JSON.stringify({query:q})});
-    const d=await r.json();
-    if(!r.ok)throw new Error(d.error||'Analyse fehlgeschlagen');
-    rep.className='crypto-report';
-    rep.innerHTML=mdLite(d.report);
-    document.getElementById('cmeta').textContent=q+' · gerade eben';
-    renderPairs(d.market||[]);
-    cryptoHistory();
-  }catch(e){
-    err.textContent=e.message;err.style.display='';
-    rep.className='crypto-report crypto-empty';
-    rep.textContent='Keine Analyse erstellt.';
-  }finally{
-    btn.disabled=false;btn.textContent='Analysieren';
-  }
-}
-
-async function cryptoHistory(){
-  const box=document.getElementById('chist');
-  try{
-    const d=await api('/api/crypto/history');
-    const items=d.items||[];
-    if(!items.length){box.innerHTML='<p class="crypto-empty">Noch leer.</p>';return}
-    box.innerHTML=items.map(i=>`<div class="hrow">
-        <button class="hpick" onclick='cryptoShow(${JSON.stringify(i.id)})'>${cesc(i.query)}
-          <span>${new Date(i.created_at+'Z').toLocaleString('de-CH')}</span></button>
-        <button class="hdel" title="Löschen" onclick="cryptoDelete(${i.id})">✕</button>
-      </div>`).join('');
-    window._chist=items;
-  }catch(e){box.innerHTML='<p class="crypto-empty">Verlauf nicht ladbar.</p>'}
-}
-
-function cryptoShow(id){
-  const it=(window._chist||[]).find(x=>x.id===id);
-  if(!it)return;
-  const rep=document.getElementById('creport');
-  rep.className='crypto-report';
-  rep.innerHTML=mdLite(it.report);
-  document.getElementById('cmeta').textContent=it.query+' · '+new Date(it.created_at+'Z').toLocaleString('de-CH');
-}
-
-async function cryptoDelete(id){
-  await fetch(BASE+'/api/crypto/history/'+id,{method:'DELETE'});
-  cryptoHistory();
-}
-
-
-// ── Memecoin-Scanner ───────────────────────────────────────────────────────
-let scannerLoaded=false, scTokens=[], scThresholds={opportunity:65};
-
-function scoreCls(n){ if(n==null)return'sc-s-low'; if(n>=75)return'sc-s-high'; if(n>=60)return'sc-s-mid'; return'sc-s-low' }
-function riskCls(n){ if(n==null)return'sc-r-low'; if(n>=70)return'sc-r-critical'; if(n>=45)return'sc-r-high'; if(n>=25)return'sc-r-medium'; return'sc-r-low' }
-
-function scAge(h){
-  if(h==null)return'—';
-  if(h<1)return Math.round(h*60)+'m';
-  if(h<48)return h.toFixed(1)+'h';
-  return Math.round(h/24)+'d';
-}
-function scAgo(ts){
-  if(!ts)return'—';
-  const ms=Date.now()-Date.parse(ts.replace(' ','T')+'Z');
-  if(!isFinite(ms))return'—';
-  const m=Math.round(ms/60000);
-  if(m<1)return'gerade eben';
-  if(m<60)return'vor '+m+'min';
-  const h=Math.round(m/60);
+function btAgo(ms){
+  if(!ms)return'—';
+  const min=Math.round((Date.now()-ms)/60000);
+  if(min<1)return'gerade eben';
+  if(min<60)return'vor '+min+'min';
+  const h=Math.round(min/60);
   return h<48?('vor '+h+'h'):('vor '+Math.round(h/24)+'d');
 }
-// Fehlende Werte bleiben "—", nie 0.
-function scUsd(n){
-  if(n==null||!isFinite(n))return'—';
-  const a=Math.abs(n);
-  if(a>=1e9)return'$'+(n/1e9).toFixed(2)+'B';
-  if(a>=1e6)return'$'+(n/1e6).toFixed(2)+'M';
-  if(a>=1e3)return'$'+(n/1e3).toFixed(1)+'k';
-  return'$'+n.toFixed(0);
+function btDur(m){
+  if(m==null||!isFinite(m))return'—';
+  if(m<60)return Math.round(m)+'m';
+  if(m<1440)return (m/60).toFixed(1)+'h';
+  return (m/1440).toFixed(1)+'d';
 }
-function scPrice(n){
-  if(n==null||!isFinite(n))return'—';
-  if(n===0)return'$0';
-  if(n<0.000001)return'$'+n.toExponential(2);
-  if(n<1)return'$'+n.toPrecision(3);
-  return'$'+n.toFixed(2);
-}
-function scPct(n){ return (n==null||!isFinite(n))?'—':((n>=0?'+':'')+n.toFixed(1)+'%') }
-function scNum(n){ return (n==null||!isFinite(n))?'—':Math.round(n).toLocaleString('de-CH') }
 
-async function scannerLoad(){
+async function btcLoad(){
   try{
-    const [st,tk]=await Promise.all([api('/api/crypto/scanner-status'),api('/api/crypto/tokens?limit=300')]);
-    scTokens=tk.tokens||[]; scThresholds=tk.thresholds||scThresholds;
-    document.getElementById('sc-seen').textContent=st.seen_24h??'—';
-    document.getElementById('sc-opps').textContent=st.opportunities??'—';
-    document.getElementById('sc-opps-note').textContent='ab '+(st.thresholds?.opportunity??65)+' Punkten';
-    const lr=st.last_run;
-    document.getElementById('sc-last').textContent=lr?scAgo(lr.ran_at):'nie';
-    document.getElementById('sc-last-note').textContent=lr
-      ? (lr.scored+' bewertet in '+lr.duration_ms+'ms') : 'noch kein Lauf';
-    document.getElementById('sc-auto').textContent=st.enabled?('alle '+st.interval_minutes+' Min'):'aus';
-    if(lr){
-      document.getElementById('sc-runinfo').textContent=
-        lr.discovered+' gefunden · '+lr.rejected_by_filters+' gefiltert · '+lr.scored+' bewertet';
-      scannerRejects(lr.rejections||[]);
-    }
-    scannerRender();
+    const [o,tr,cv]=await Promise.all([
+      api('/api/btc/overview'),api('/api/btc/trades'),api('/api/btc/curves')]);
+
+    document.getElementById('bt-price').textContent=o.price?btUsd(o.price,0):'—';
+    document.getElementById('bt-change').innerHTML=
+      '1h '+btPct(o.change_1h,2)+' · 24h '+btPct(o.change_24h,2);
+    document.getElementById('bt-fee').textContent=(o.taker_fee_pct??0).toFixed(3)+'%';
+
+    const sorted=[...o.strategies].sort((a,b)=>b.equity-a.equity);
+    const best=sorted[0];
+    document.getElementById('bt-best').textContent=best?best.name:'—';
+    document.getElementById('bt-best-note').innerHTML=best
+      ? (btUsd(best.equity)+' · '+btPct(best.total_return_pct)) : '—';
+
+    const total=o.strategies.reduce((a,s)=>a+s.trades,0);
+    const liqs=o.strategies.reduce((a,s)=>a+s.liquidations,0);
+    document.getElementById('bt-trades').textContent=total;
+    document.getElementById('bt-liqs').textContent=liqs+' davon liquidiert';
+    document.getElementById('bt-data').textContent=(o.hours_covered??0)+'h';
+    document.getElementById('bt-data-note').textContent=(o.candles??0).toLocaleString('de-CH')+' Minutenkerzen';
+
+    btcTable(sorted);
+    btcChart(cv.curves||{},o.strategies);
+    btcLog(tr.closed||[]);
+    btcOpen(tr.open||[],o.price);
   }catch(e){
-    document.getElementById('sc-table').innerHTML='<p class="crypto-empty" style="padding:16px">Daten nicht ladbar.</p>';
-  }
-}
-
-function scannerRejects(rej){
-  const box=document.getElementById('sc-rejects');
-  if(!rej.length){box.innerHTML='<p class="crypto-empty">Nichts aussortiert.</p>';return}
-  const byRule={};
-  rej.forEach(r=>{byRule[r.rule]=(byRule[r.rule]||0)+1});
-  box.innerHTML=Object.entries(byRule).sort((a,b)=>b[1]-a[1])
-    .map(([rule,n])=>`<div class="sc-kv"><span class="k">${cesc(rule)}</span><span class="v">${n}</span></div>`).join('');
-}
-
-function scannerRender(){
-  const min=Number(document.getElementById('sc-filter').value||0);
-  const rows=scTokens.filter(t=>(t.overall_score??-1)>=min);
-  const box=document.getElementById('sc-table');
-  if(!rows.length){
-    box.innerHTML='<p class="crypto-empty" style="padding:16px">'+
-      (scTokens.length?'Nichts über dieser Schwelle. Das ist ein normales Ergebnis — die meisten Token sollten sie nicht schaffen.'
-                      :'Noch keine Token. „Scan starten“ drücken.')+'</p>';
-    return;
-  }
-  box.innerHTML='<table><thead><tr>'+
-    ['Token','Alter','MCap','Liquidität','Vol 24h','Käufe/Verkäufe 1h','1h','24h','Risiko','Score']
-      .map(h=>`<th>${h}</th>`).join('')+'</tr></thead><tbody>'+
-    rows.map(t=>`<tr class="sc-row" onclick="scannerDetail('${cesc(t.contract)}')">
-      <td><strong>${cesc(t.symbol||'?')}</strong> <span style="color:var(--dim)">${cesc((t.name||'').slice(0,20))}</span></td>
-      <td>${scAge(t.pair_age_hours)}</td>
-      <td>${scUsd(t.market_cap)}</td>
-      <td>${scUsd(t.liquidity_usd)}</td>
-      <td>${scUsd(t.volume_h24)}</td>
-      <td>${scNum(t.buys_h1)} / ${scNum(t.sells_h1)}</td>
-      <td class="${t.change_h1_pct>=0?'up':'down'}">${scPct(t.change_h1_pct)}</td>
-      <td class="${t.change_h24_pct>=0?'up':'down'}">${scPct(t.change_h24_pct)}</td>
-      <td><span class="sc-pill ${riskCls(t.risk_score)}">${t.risk_score??'—'}</span></td>
-      <td><span class="sc-pill ${scoreCls(t.overall_score)}">${t.overall_score??'—'}</span></td>
-    </tr>`).join('')+'</tbody></table>';
-}
-
-async function scannerScan(){
-  const btn=document.getElementById('sc-btn');
-  btn.disabled=true; btn.textContent='Scannt…';
-  try{
-    const r=await fetch(BASE+'/api/crypto/scan',{method:'POST'});
-    const d=await r.json();
-    if(!r.ok)throw new Error(d.error||'Scan fehlgeschlagen');
-    showToast(d.scored+' Token bewertet, '+d.opportunities+' Chancen','ok');
-    await scannerLoad();
-  }catch(e){ showToast('Scan fehlgeschlagen: '+e.message,'error') }
-  finally{ btn.disabled=false; btn.textContent='Scan starten' }
-}
-
-const SC_LABELS={market_structure:'Marktstruktur',momentum:'Momentum',liquidity:'Liquiditätsqualität',
-                 social:'Soziale Dynamik',onchain:'On-Chain / Wallets',catalyst:'Narrativ / Auslöser'};
-
-async function scannerDetail(contract){
-  const box=document.getElementById('sc-detail');
-  box.className='crypto-empty'; box.textContent='Lädt…';
-  try{
-    const t=await api('/api/crypto/token/'+encodeURIComponent(contract));
-    document.getElementById('sc-detail-name').textContent=(t.symbol||'')+(t.live?' · Direktabfrage':'');
-    const w=t.weights||{};
-    const comp=t.components||{};
-    const missing=t.missing_inputs||[];
-    const bars=Object.keys(SC_LABELS).map(k=>{
-      const max=w[k]||0, got=comp[k]||0, na=missing.includes(k);
-      return `<div style="margin-bottom:9px">
-        <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:2px">
-          <span style="color:${na?'var(--dim)':'var(--muted)'}">${SC_LABELS[k]}${na?' · noch keine Datenquelle':''}</span>
-          <span style="font-family:'JetBrains Mono',monospace">${na?'—':got.toFixed(1)+' / '+max}</span>
-        </div>
-        <div class="sc-bar"><i style="width:${max?Math.min(100,(got/max)*100):0}%"></i></div></div>`;
-    }).join('');
-    const flags=(t.flags||[]).map(f=>`<div class="sc-flag">
-        <span class="sc-pill sc-r-${f.severity}">${f.severity}</span>
-        <div class="c" style="margin-top:4px">${cesc(f.code)}</div>
-        <div style="color:var(--muted)">${cesc(f.description)}</div></div>`).join('')
-      || '<p class="crypto-empty">Keine Auffälligkeiten in den Prüfungen, die laufen konnten.</p>';
-    const link=(u,l)=>u?`<a href="${cesc(u)}" target="_blank" rel="noopener" style="color:var(--cyan)">${l} ↗</a>`:'—';
-
-    box.className='';
-    box.innerHTML=`
-      <div class="sc-kv"><span class="k">Contract</span><span class="v" style="font-size:10px">${cesc(t.contract||'')}</span></div>
-      <div class="sc-kv"><span class="k">Kurs</span><span class="v">${scPrice(t.price_usd)}</span></div>
-      <div class="sc-kv"><span class="k">MCap / Liquidität</span><span class="v">${scUsd(t.market_cap)} / ${scUsd(t.liquidity_usd)}</span></div>
-      <div class="sc-kv"><span class="k">Liquidität zu MCap</span><span class="v">${t.liquidity_to_mcap!=null?(t.liquidity_to_mcap*100).toFixed(1)+'%':'—'}</span></div>
-      <div class="sc-kv"><span class="k">Volumen zu Liquidität</span><span class="v">${t.volume_to_liquidity!=null?t.volume_to_liquidity.toFixed(1)+'x':'—'}</span></div>
-      <div class="sc-kv"><span class="k">Kaufanteil 1h</span><span class="v">${t.buy_ratio_h1!=null?(t.buy_ratio_h1*100).toFixed(0)+'%':'—'}</span></div>
-      <div class="sc-kv"><span class="k">Alter</span><span class="v">${scAge(t.pair_age_hours)}</span></div>
-      <div class="sc-kv"><span class="k">Links</span><span class="v">
-        ${link(t.website,'Web')} ${link(t.twitter,'X')} ${link(t.pair_address?'https://dexscreener.com/solana/'+t.pair_address:null,'Chart')}</span></div>
-
-      <h3 style="font-size:12px;margin:16px 0 8px">Punkte im Detail</h3>
-      ${bars}
-      <div class="sc-kv"><span class="k">Risiko-Abzug</span><span class="v down">−${comp.risk_penalty??0}</span></div>
-      <div class="sc-kv"><span class="k">Gesamt</span><span class="v"><strong>${t.overall_score??'—'}</strong></span></div>
-      <p style="color:var(--dim);font-size:10px;margin-top:8px">
-        Kategorien ohne Datenquelle geben null Punkte; die Summe wird über die messbaren normalisiert.</p>
-
-      <h3 style="font-size:12px;margin:16px 0 4px">Risiko-Signale</h3>
-      ${flags}
-      ${(t.unavailable_checks||[]).length?`<p style="color:var(--dim);font-size:10px;margin-top:10px">
-        Nicht geprüft (braucht einen On-Chain-Anbieter): ${cesc((t.unavailable_checks||[]).join(', '))}</p>`:''}`;
-  }catch(e){
-    box.className='crypto-empty';
-    box.textContent='Token nicht ladbar.';
-  }
-}
-
-
-// ── Paper-Trades ───────────────────────────────────────────────────────────
-let tradesLoaded=false;
-
-function ptRet(n){
-  if(n==null||!isFinite(n))return '<span class="dim">—</span>';
-  return `<span class="${n>=0?'up':'down'}">${n>=0?'+':''}${n.toFixed(1)}%</span>`;
-}
-function ptUsd(n){
-  if(n==null||!isFinite(n))return '<span class="dim">—</span>';
-  return `<span class="${n>=0?'up':'down'}">${n>=0?'+':''}$${n.toFixed(2)}</span>`;
-}
-function ptDur(min){
-  if(min==null||!isFinite(min))return '—';
-  if(min<60)return Math.round(min)+'m';
-  if(min<2880)return (min/60).toFixed(1)+'h';
-  return Math.round(min/1440)+'d';
-}
-// Erreichte Ziele als Punktkette, damit der Verlauf auf einen Blick lesbar ist.
-function ptTargets(t){
-  return ['tp1_hit_at','tp2_hit_at','tp3_hit_at']
-    .map((k,i)=>`<span style="color:${t[k]?'var(--green)':'var(--dim)'}">${i+1}</span>`)
-    .join('·');
-}
-
-async function tradesLoad(){
-  try{
-    const [d,perf]=await Promise.all([api('/api/crypto/trades'),api('/api/crypto/performance')]);
-    const o=perf.overall||{};
-
-    document.getElementById('pt-open').textContent=perf.open_trades??0;
-    document.getElementById('pt-open-pnl').innerHTML=
-      'unrealisiert '+ptUsd(perf.open_unrealised_pnl_usd);
-    document.getElementById('pt-closed').textContent=o.trades??0;
-    document.getElementById('pt-closed-note').textContent=
-      o.trades?('Ø Haltedauer '+(o.avg_hold_hours??'—')+'h'):'noch keine';
-
-    // Eine Trefferquote aus fünf Positionen ist Rauschen, keine Kennzahl.
-    const enough=o.enough_data;
-    document.getElementById('pt-win').textContent=
-      enough?((o.win_rate??0)+'%'):'—';
-    document.getElementById('pt-win-note').textContent=
-      enough?('Ø Gewinner '+(o.avg_winner??'—')+'% / Verlierer '+(o.avg_loser??'—')+'%')
-            :('erst ab '+perf.min_trades_for_stats+' geschlossenen Positionen aussagekräftig');
-    document.getElementById('pt-pnl').innerHTML=
-      o.trades?ptUsd(o.total_pnl_usd):'<span class="dim">—</span>';
-    document.getElementById('pt-pnl-note').textContent=
-      o.trades?('Erwartungswert '+(o.expectancy_usd??'—')+' $ je Position'
-               +(o.profit_factor!=null?(' · Profitfaktor '+o.profit_factor):'')):'—';
-
-    tradesLog();
-    tradesRenderOpen(d.open||[]);
-    tradesRenderClosed(d.closed||[]);
-    tradesRenderBands(perf);
-    tradesRenderStrategy(d,perf);
-  }catch(e){
-    document.getElementById('pt-open-table').innerHTML=
+    document.getElementById('bt-table').innerHTML=
       '<p class="crypto-empty" style="padding:16px">Daten nicht ladbar.</p>';
   }
 }
 
-function tradesRenderOpen(rows){
-  const box=document.getElementById('pt-open-table');
-  if(!rows.length){
-    box.innerHTML='<p class="crypto-empty" style="padding:16px">Keine offene Position. '+
-      'Der Scanner eröffnet eine, sobald ein Token die Schwelle erreicht.</p>';
-    return;
-  }
+function btcTable(rows){
+  const box=document.getElementById('bt-table');
   box.innerHTML='<table><thead><tr>'+
-    ['Token','Score','Einstieg','Aktuell','Ergebnis','Beste','Schlechteste','Ziele','Stop','Rest','Offen seit']
-      .map(h=>`<th>${h}</th>`).join('')+'</tr></thead><tbody>'+
-    rows.map(t=>`<tr>
-      <td><strong>${cesc(t.symbol||'?')}</strong></td>
-      <td><span class="sc-pill ${scoreCls(t.score_at_entry)}">${t.score_at_entry??'—'}</span></td>
-      <td>${scPrice(t.entry_price)}</td>
-      <td>${scPrice(t.last_price)}</td>
-      <td>${ptRet(t.unrealized_return_pct)}</td>
-      <td>${ptRet(t.mfe_pct)}</td>
-      <td>${ptRet(t.mae_pct)}</td>
-      <td>${ptTargets(t)}</td>
-      <td>${scPrice(t.stop_price)}</td>
-      <td>${Math.round((t.remaining_fraction||0)*100)}%</td>
-      <td class="dim">${scAgo(t.opened_at)}</td>
-    </tr>`).join('')+'</tbody></table>';
-}
-
-function tradesRenderClosed(rows){
-  const box=document.getElementById('pt-closed-table');
-  if(!rows.length){box.innerHTML='<p class="crypto-empty" style="padding:16px">Noch nichts geschlossen.</p>';return}
-  box.innerHTML='<table><thead><tr>'+
-    ['Token','Score','Einstieg','Ausstieg','Ergebnis','P&L','Beste','Schlechteste','Dauer','Grund']
-      .map(h=>`<th>${h}</th>`).join('')+'</tr></thead><tbody>'+
-    rows.map(t=>`<tr>
-      <td><strong>${cesc(t.symbol||'?')}</strong></td>
-      <td><span class="sc-pill ${scoreCls(t.score_at_entry)}">${t.score_at_entry??'—'}</span></td>
-      <td>${scPrice(t.entry_price)}</td>
-      <td>${scPrice(t.exit_price)}</td>
-      <td>${ptRet(t.return_pct)}</td>
-      <td>${ptUsd(t.pnl_usd)}</td>
-      <td>${ptRet(t.mfe_pct)}</td>
-      <td>${ptRet(t.mae_pct)}</td>
-      <td class="dim">${ptDur(t.duration_minutes)}</td>
-      <td class="dim">${cesc(t.exit_reason||'')}</td>
-    </tr>`).join('')+'</tbody></table>';
-}
-
-function tradesRenderBands(perf){
-  const box=document.getElementById('pt-bands');
-  const bands=perf.by_score||{};
-  const keys=Object.keys(bands);
-  if(!keys.length){
-    box.innerHTML='<p class="crypto-empty" style="padding:16px">Noch keine geschlossene Position. '+
-      'Hier steht später, ob ein hoher Punktestand tatsächlich besser abschneidet als ein tiefer.</p>';
-    return;
-  }
-  box.innerHTML='<table><thead><tr>'+
-    ['Punkte','Positionen','Trefferquote','Ø Ergebnis','Median','Ø Beste','Ø Schlechteste']
-      .map(h=>`<th>${h}</th>`).join('')+'</tr></thead><tbody>'+
-    keys.map(k=>{
-      const b=bands[k];
-      const thin=!b.enough_data;
-      const cell=v=>thin?'<span class="dim">—</span>':v;
-      return `<tr>
-        <td><span class="sc-pill ${scoreCls(parseInt(k))}">${cesc(k)}</span></td>
-        <td>${b.trades}</td>
-        <td>${cell(b.win_rate+'%')}</td>
-        <td>${cell(ptRet(b.avg_return))}</td>
-        <td>${cell(ptRet(b.median_return))}</td>
-        <td>${cell(ptRet(b.avg_mfe))}</td>
-        <td>${cell(ptRet(b.avg_mae))}</td>
+    ['Strategie','Auslösung','Hebel','Kapital','Rendite','Positionen','Treffer','Liquidiert',
+     'Max. Rückgang','Ø Dauer'].map(h=>`<th>${h}</th>`).join('')+
+    '</tr></thead><tbody>'+rows.map(s=>{
+      // Bei 100x liquidiert genau 1% Gegenlauf — das gehört neben den Hebel.
+      const liqAt=(100/s.leverage).toFixed(s.leverage>=50?1:0);
+      return `<tr title="${cesc(s.note||'')}">
+        <td><strong>${cesc(s.name)}</strong>${s.ruined?' <span class="down">ruiniert</span>':''}</td>
+        <td class="dim">−${s.drop_pct}% in ${s.window_min}min</td>
+        <td>${s.leverage}x <span class="dim">(Liq. −${liqAt}%)</span></td>
+        <td><strong>${btUsd(s.equity)}</strong></td>
+        <td>${btPct(s.total_return_pct)}</td>
+        <td>${s.trades}</td>
+        <td>${s.win_rate!=null?s.win_rate+'%':'<span class="dim">—</span>'}</td>
+        <td>${s.liquidations>0?('<span class="down">'+s.liquidations+'</span>'
+             +(s.liquidation_rate!=null?' <span class="dim">('+s.liquidation_rate+'%)</span>':'')):'0'}</td>
+        <td class="down">−${(s.max_drawdown_pct||0).toFixed(1)}%</td>
+        <td class="dim">${btDur(s.avg_hold_min)}</td>
       </tr>`;
-    }).join('')+'</tbody></table>'+
-    `<p style="color:var(--dim);font-size:10px;padding:8px 12px">
-       Gruppen mit weniger als ${perf.min_trades_for_stats} Positionen zeigen keine Quoten —
-       eine Trefferquote aus drei Trades ist Zufall, keine Erkenntnis.</p>`;
+    }).join('')+'</tbody></table>';
 }
 
-function tradesRenderStrategy(d,perf){
-  const c=d.config||{};
-  const ex=perf.exit_reasons||{};
-  const exRows=Object.entries(ex).sort((a,b)=>b[1]-a[1])
-    .map(([k,n])=>`<div class="sc-kv"><span class="k">${cesc(k)}</span><span class="v">${n}</span></div>`).join('')
-    || '<div class="sc-kv"><span class="k">noch keine Ausstiege</span><span class="v">—</span></div>';
-  document.getElementById('pt-strategy').className='';
-  document.getElementById('pt-strategy').innerHTML=`
-    <div class="sc-kv"><span class="k">Position</span><span class="v">$${c.position_usd} virtuell</span></div>
-    <div class="sc-kv"><span class="k">Einstieg ab</span><span class="v">Score ${c.min_score}, Risiko ≤ ${c.max_risk}</span></div>
-    <div class="sc-kv"><span class="k">Stop</span><span class="v">${c.stop_pct}%</span></div>
-    <div class="sc-kv"><span class="k">Ziele</span><span class="v">+${c.tp1_pct}% / +${c.tp2_pct}% / +${c.tp3_pct}%</span></div>
-    <div class="sc-kv"><span class="k">Teilverkäufe</span><span class="v">⅓ bei Ziel 1 und 2</span></div>
-    <div class="sc-kv"><span class="k">Nach Ziel 1</span><span class="v">${c.breakeven_after_tp1?'Stop auf Einstieg':'Stop bleibt'}</span></div>
-    <div class="sc-kv"><span class="k">Haltefrist</span><span class="v">max. ${c.max_hold_hours}h</span></div>
-    <div class="sc-kv"><span class="k">Gleichzeitig offen</span><span class="v">max. ${c.max_open_trades}</span></div>
-    <div class="sc-kv"><span class="k">Version</span><span class="v">${cesc(d.strategy_version||'')}</span></div>
-    <h3 style="font-size:12px;margin:14px 0 6px">Ausstiegsgründe</h3>
-    ${exRows}
-    <p style="color:var(--dim);font-size:10px;margin-top:12px">
-      Keine dieser Zahlen ist optimiert. Sie sind Startwerte und werden mit jeder Position
-      gespeichert, damit später überhaupt etwas zu vergleichen ist.</p>`;
+// Kapitalkurven als ein SVG. Die X-Achse ist die Position in der Reihenfolge,
+// nicht die Zeit — die Strategien handeln unterschiedlich oft, und so bleiben
+// die Verläufe vergleichbar.
+const BT_COLORS=['#6366F1','#A855F7','#EC4899','#F59E0B','#22C55E','#06B6D4','#EF4444'];
+function btcChart(curves,strategies){
+  const box=document.getElementById('bt-chart');
+  const keys=Object.keys(curves).filter(k=>curves[k].length>1);
+  if(!keys.length){
+    box.innerHTML='<p class="crypto-empty">Noch keine geschlossene Position.</p>';
+    return;
+  }
+  const W=900,H=240,P=34;
+  const maxLen=Math.max(...keys.map(k=>curves[k].length));
+  const all=keys.flatMap(k=>curves[k].map(p=>p.equity));
+  const lo=Math.min(...all,0),hi=Math.max(...all,1000);
+  const x=i=>P+(i/Math.max(1,maxLen-1))*(W-P*2);
+  const y=v=>H-P-((v-lo)/Math.max(1e-9,hi-lo))*(H-P*2);
+  const names=Object.fromEntries((strategies||[]).map(s=>[s.key,s.name]));
+
+  const lines=keys.map((k,i)=>{
+    const d=curves[k].map((p,j)=>(j?'L':'M')+x(j).toFixed(1)+' '+y(p.equity).toFixed(1)).join(' ');
+    return `<path d="${d}" fill="none" stroke="${BT_COLORS[i%BT_COLORS.length]}" stroke-width="1.8"/>`;
+  }).join('');
+  const zero=`<line x1="${P}" y1="${y(1000)}" x2="${W-P}" y2="${y(1000)}"
+      stroke="rgba(255,255,255,.22)" stroke-dasharray="4 4"/>
+    <text x="${W-P+4}" y="${y(1000)+4}" fill="var(--dim)" font-size="10">1000 $</text>`;
+  const legend=keys.map((k,i)=>
+    `<span style="display:inline-flex;align-items:center;gap:5px;margin-right:14px;font-size:11px">
+       <i style="width:10px;height:2px;background:${BT_COLORS[i%BT_COLORS.length]};display:inline-block"></i>
+       ${cesc(names[k]||k)}</span>`).join('');
+
+  box.innerHTML=`<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto">
+      <text x="4" y="${y(hi)+4}" fill="var(--dim)" font-size="10">${btUsd(hi,0)}</text>
+      <text x="4" y="${y(lo)+4}" fill="var(--dim)" font-size="10">${btUsd(lo,0)}</text>
+      ${zero}${lines}</svg>
+    <div style="margin-top:8px">${legend}</div>`;
 }
 
+function btcLog(rows){
+  const box=document.getElementById('bt-log');
+  if(!rows.length){
+    box.innerHTML='<p class="crypto-empty" style="padding:16px">Noch keine geschlossene Position.</p>';
+    return;
+  }
+  box.innerHTML=rows.map(t=>{
+    const liq=t.exit_reason==='liquidiert';
+    const dot=liq?'d-close-loss':((t.pnl_usd||0)>=0?'d-close-win':'d-close-loss');
+    return `<div class="pt-ev">
+      <span class="t">${btAgo(t.closed_at)}</span>
+      <span class="dot ${dot}"></span>
+      <span class="sym" style="min-width:104px">${cesc(t.strategy_key)}</span>
+      <span class="txt">${t.leverage}x ab ${btUsd(t.entry_price,0)} → ${btUsd(t.exit_price,0)}
+        <span class="det">${cesc(t.exit_reason||'')} · ${btDur(t.duration_min)} · Einsatz ${btUsd(t.margin_usd)}</span></span>
+      <span class="val">${btPct(t.return_on_margin_pct)} <span class="dim">${btUsd(t.pnl_usd)}</span></span>
+    </div>`;
+  }).join('');
+}
 
-async function tradesLog(){
-  const box=document.getElementById('pt-log');
+function btcOpen(rows,price){
+  const box=document.getElementById('bt-open');
+  if(!rows.length){
+    box.className='crypto-empty';
+    box.textContent='Keine offene Position. Es wird eingestiegen, sobald eine Auslösung greift.';
+    return;
+  }
+  box.className='';
+  box.innerHTML=rows.map(t=>{
+    const cur=price?((price/t.entry_price-1)*100*t.leverage):null;
+    return `<div style="padding:9px 0;border-bottom:1px solid var(--border)">
+      <div style="display:flex;justify-content:space-between">
+        <strong>${cesc(t.strategy_key)}</strong>
+        <span>${btPct(cur)}</span></div>
+      <div class="sc-kv" style="border:0;padding:3px 0"><span class="k">Einstieg</span>
+        <span class="v">${btUsd(t.entry_price,0)} · ${t.leverage}x</span></div>
+      <div class="sc-kv" style="border:0;padding:3px 0"><span class="k">Liquidation</span>
+        <span class="v down">${btUsd(t.liq_price,0)}</span></div>
+      <div class="sc-kv" style="border:0;padding:3px 0"><span class="k">Stop / Ziel</span>
+        <span class="v">${btUsd(t.sl_price,0)} / ${btUsd(t.tp_price,0)}</span></div>
+      <div class="sc-kv" style="border:0;padding:3px 0"><span class="k">Offen seit</span>
+        <span class="v">${btAgo(t.opened_at)}</span></div>
+    </div>`;
+  }).join('');
+}
+
+async function btcRun(){
+  const btn=document.getElementById('bt-btn');
+  btn.disabled=true; btn.textContent='Rechnet…';
   try{
-    const d=await api('/api/crypto/log');
-    const ev=d.events||[];
-    if(!ev.length){
-      box.innerHTML='<p class="crypto-empty" style="padding:16px">Noch keine Ereignisse. '+
-        'Sobald der Scanner eine Position eröffnet, steht sie hier.</p>';
-      return;
-    }
-    box.innerHTML=ev.map(e=>{
-      const dot=e.kind==='close'
-        ? ((e.value??0)>=0?'d-close-win':'d-close-loss')
-        : ('d-'+e.kind);
-      const val=(e.kind==='close'&&e.value!=null)?ptRet(e.value):'';
-      return `<div class="pt-ev">
-        <span class="t">${scAgo(e.at)}</span>
-        <span class="dot ${dot}"></span>
-        <span class="sym">${cesc(e.symbol||'')}</span>
-        <span class="txt">${cesc(e.text||'')} <span class="det">${cesc(e.detail||'')}</span></span>
-        <span class="val">${val}</span>
-      </div>`;
-    }).join('');
-  }catch(e){ box.innerHTML='<p class="crypto-empty" style="padding:16px">Log nicht ladbar.</p>' }
-}
-
-async function tradesCycle(){
-  const btn=document.getElementById('pt-btn');
-  btn.disabled=true; btn.textContent='Läuft…';
-  try{
-    const r=await fetch(BASE+'/api/crypto/cycle',{method:'POST'});
+    const r=await fetch(BASE+'/api/btc/run',{method:'POST'});
     const d=await r.json();
     if(!r.ok)throw new Error(d.error||'Durchgang fehlgeschlagen');
-    const tr=d.tracking||{}, op=d.opening||{}, sc=d.scan||{};
-    document.getElementById('pt-cycle-info').textContent=
-      `${tr.tracked||0} nachgeführt · ${tr.closed||0} geschlossen · ${sc.scored||0} bewertet · ${op.opened||0} eröffnet`;
-    showToast(`${op.opened||0} eröffnet, ${tr.closed||0} geschlossen`,'ok');
-    await tradesLoad();
+    const sy=d.sync||{}, en=d.engine||{};
+    document.getElementById('bt-runinfo').textContent=
+      `${sy.added||0} neue Kerzen (${sy.source||'—'}) · ${en.processed||0} verarbeitet · `+
+      `${en.opened||0} eröffnet · ${en.closed||0} geschlossen`;
+    showToast(`${en.opened||0} eröffnet, ${en.closed||0} geschlossen`,'ok');
+    await btcLoad();
   }catch(e){ showToast('Durchgang fehlgeschlagen: '+e.message,'error') }
-  finally{ btn.disabled=false; btn.textContent='Durchgang starten' }
+  finally{ btn.disabled=false; btn.textContent='Jetzt rechnen' }
 }
 
-try{const v=localStorage.getItem('si_view'); if(['crypto','scanner','trades'].includes(v))showView(v)}catch(e){}
+try{if(localStorage.getItem('si_view')==='btc')showView('btc')}catch(e){}
 </script>
 </body>
 </html>

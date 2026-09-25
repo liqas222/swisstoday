@@ -11,8 +11,7 @@ from apscheduler.schedulers.blocking import BlockingScheduler
 
 import ai_processor
 import article_fetcher
-import crypto_scanner
-import crypto_paper
+import btc_trader
 import database
 import monitor
 import publisher
@@ -38,17 +37,13 @@ except ValueError:
     AUTO_UPDATE_INTERVAL_MINUTES = 15
 
 
-# Memecoin-Scanner: läuft im selben Prozess mit, weil hier bereits ein
-# Scheduler rund um die Uhr läuft und die SQLite-Datei wirklich bestehen bleibt.
-CRYPTO_SCAN_ENABLED = os.getenv("CRYPTO_SCAN_ENABLED", "true").lower() == "true"
+# BTC-Dip-Handel: läuft im selben Prozess mit, weil hier bereits ein Scheduler
+# rund um die Uhr läuft und die SQLite-Datei wirklich bestehen bleibt.
+BTC_ENABLED = os.getenv("BTC_ENABLED", "true").lower() == "true"
 try:
-    CRYPTO_SCAN_MINUTES = max(5, int(os.getenv("CRYPTO_SCAN_MINUTES", "15")))
+    BTC_INTERVAL_MINUTES = max(1, int(os.getenv("BTC_INTERVAL_MINUTES", "3")))
 except ValueError:
-    CRYPTO_SCAN_MINUTES = 15
-try:
-    CRYPTO_TRACK_MINUTES = max(2, int(os.getenv("CRYPTO_TRACK_MINUTES", "5")))
-except ValueError:
-    CRYPTO_TRACK_MINUTES = 5
+    BTC_INTERVAL_MINUTES = 3
 
 
 REPO_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -342,22 +337,13 @@ def sync_views(cfg):
         logger.error("Views sync failed: %s", e)
 
 
-def crypto_scan_job():
-    """Ein voller Durchgang: offene Papier-Positionen verfolgen, scannen, neue
-    Positionen eröffnen. Fehler dürfen den Nachrichten-Bot nie mitreissen."""
+def btc_job():
+    """Kurse holen und die Strategien rechnen lassen. Fehler dürfen den
+    Nachrichten-Bot nie mitreissen."""
     try:
-        crypto_paper.run_cycle(os.getenv("DB_PATH", "swissintel.db"))
+        btc_trader.run_cycle(os.getenv("DB_PATH", "swissintel.db"))
     except Exception:
-        logger.exception("Memecoin-Durchgang fehlgeschlagen")
-
-
-def crypto_track_job():
-    """Nur die offenen Positionen nachführen — häufiger als der volle Scan,
-    damit ein Stop nicht eine Viertelstunde zu spät greift."""
-    try:
-        crypto_paper.track_trades(os.getenv("DB_PATH", "swissintel.db"))
-    except Exception:
-        logger.exception("Verfolgen der Papier-Positionen fehlgeschlagen")
+        logger.exception("BTC-Durchgang fehlgeschlagen")
 
 
 def main():
@@ -375,11 +361,11 @@ def main():
     auto_update_job()
     run_pipeline(cfg, anthropic_client)
     sync_views(cfg)
-    if CRYPTO_SCAN_ENABLED:
-        # Auch sofort, nicht erst nach dem ersten Intervall: der Prozess startet
-        # bei jedem Auto-Deploy neu, und offene Positionen dürfen nicht jedes
-        # Mal eine Viertelstunde unbeaufsichtigt bleiben.
-        crypto_scan_job()
+    if BTC_ENABLED:
+        # Sofort, nicht erst nach dem ersten Intervall: der Prozess startet bei
+        # jedem Auto-Deploy neu, und offene Positionen mit Hebel dürfen nicht
+        # jedes Mal unbeaufsichtigt bleiben.
+        btc_job()
 
     scheduler = BlockingScheduler()
     scheduler.add_job(
@@ -407,24 +393,15 @@ def main():
         max_instances=1,
         coalesce=True,
     )
-    if CRYPTO_SCAN_ENABLED:
+    if BTC_ENABLED:
         scheduler.add_job(
-            crypto_scan_job,
+            btc_job,
             "interval",
-            minutes=CRYPTO_SCAN_MINUTES,
+            minutes=BTC_INTERVAL_MINUTES,
             max_instances=1,
             coalesce=True,
         )
-        scheduler.add_job(
-            crypto_track_job,
-            "interval",
-            minutes=CRYPTO_TRACK_MINUTES,
-            max_instances=1,
-            coalesce=True,
-        )
-        logger.info("Memecoin-Scanner aktiv: Durchgang alle %d Min, "
-                    "Positionen nachführen alle %d Min",
-                    CRYPTO_SCAN_MINUTES, CRYPTO_TRACK_MINUTES)
+        logger.info("BTC-Dip-Handel aktiv, alle %d Minuten", BTC_INTERVAL_MINUTES)
 
     try:
         scheduler.start()
