@@ -19,6 +19,13 @@ from config import load_config
 
 logger = logging.getLogger(__name__)
 
+# Gestoppt auf Wunsch (28.10.2026). Solange dies True ist, wird nichts gepostet,
+# nicht gehandelt und keine Reichweite abgefragt — der Prozess läuft nur noch,
+# um auf neue Commits zu warten. Das ist bewusst so: würde der Auto-Deploy
+# mitgestoppt, liesse sich ohne Serverzugriff nichts mehr starten.
+# Zum Fortsetzen: auf False setzen und pushen, oder PAUSED=false in der .env.
+PAUSED = os.getenv("PAUSED", "true").strip().lower() in ("1", "true", "yes")
+
 # Items with viral_score >= this are posted as a thread, else as a single post
 THREAD_MIN_SCORE = 75
 
@@ -352,6 +359,27 @@ def main():
         level=getattr(logging, cfg.log_level, logging.INFO),
         format="%(asctime)s %(levelname)s %(name)s: %(message)s",
     )
+    if PAUSED:
+        # Vor allem anderen: ein gestoppter Bot baut keine Verbindungen auf und
+        # braucht keine Schlüssel. Nur der Auto-Deploy läuft weiter, sonst
+        # liesse sich ohne Serverzugriff nichts mehr starten.
+        logger.warning("PAUSIERT — es wird nicht gepostet, nicht gehandelt und "
+                       "keine Reichweite abgefragt. Es wird nur auf neue Commits geprüft.")
+        auto_update_job()
+        scheduler = BlockingScheduler()
+        scheduler.add_job(
+            auto_update_job,
+            "interval",
+            minutes=AUTO_UPDATE_INTERVAL_MINUTES,
+            max_instances=1,
+            coalesce=True,
+        )
+        try:
+            scheduler.start()
+        except (KeyboardInterrupt, SystemExit):
+            logger.info("Shutting down.")
+        return
+
     database.init_db(cfg.db_path)
     anthropic_client = anthropic.Anthropic(api_key=cfg.anthropic_api_key, max_retries=0)
 
@@ -359,6 +387,7 @@ def main():
 
     # Pick up any commit pushed while we were down, then run once immediately
     auto_update_job()
+
     run_pipeline(cfg, anthropic_client)
     sync_views(cfg)
     if BTC_ENABLED:
